@@ -1,0 +1,86 @@
+{
+    "products": [
+        {
+            "id": "COMBO_BIG_MAC",
+            "name": "Combo Big Mac",
+            "category": "combo",
+            "base_price": 10500,
+            "available": true,
+            "modifier_groups": [
+                {
+                    "id": "size",
+                    "required": true,
+                    "options": [
+                        {
+                            "id": "MEDIUM",
+                            "name": "Mediano",
+                            "price_delta": 0
+                        },
+                        {
+                            "id": "LARGE",
+                            "name": "Grande",
+                            "price_delta": 2000
+                        }
+                    ]
+                },
+                {
+                    "id": "drink",
+                    "required": true,
+                    "options": [
+                        {
+                            "id": "COCA",
+                            "name": "Coca-Cola",
+                            "price_delta": 0
+                        },
+                        {
+                            "id": "SPRITE",
+                            "name": "Sprite",
+                            "price_delta": 0
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "COMBO_QUARTER_POUNDER",
+            "name": "Combo Cuarto de Libra",
+            "category": "combo",
+            "base_price": 11500,
+            "available": true,
+            "modifier_groups": [
+                {
+                    "id": "size",
+                    "required": true,
+                    "options": [
+                        {
+                            "id": "MEDIUM",
+                            "name": "Mediano",
+                            "price_delta": 0
+                        },
+                        {
+                            "id": "LARGE",
+                            "name": "Grande",
+                            "price_delta": 2000
+                        }
+                    ]
+                },
+                {
+                    "id": "drink",
+                    "required": true,
+                    "options": [
+                        {
+                            "id": "COCA",
+                            "name": "Coca-Cola",
+                            "price_delta": 0
+                        },
+                        {
+                            "id": "SPRITE",
+                            "name": "Sprite",
+                            "price_delta": 0
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
