@@ -223,3 +223,15 @@ la conversación con interrupciones requiere una etapa adicional bien probada.
 **Motivo:** la guía mezcla decisiones de producto, hardware y operación con componentes que todavía no tienen un entorno de prueba. Implementarlos ahora agregaría complejidad sin evidencia de que resuelvan el flujo principal.
 
 **Consecuencia:** la demo no puede presentarse como kiosco listo para producción. Sí puede presentarse como el núcleo conversacional y transaccional que luego se integra con el hardware y los sistemas externos.
+
+## 12. Evaluación futura de Edge y proveedores
+
+**Estado:** pendiente de investigación y pruebas comparativas.
+
+**Definición:** Edge significa procesar el audio cerca del dispositivo que captura la voz, en vez de enviarlo siempre a un servidor remoto. Puede ejecutarse en una PC industrial, Intel NUC, Raspberry Pi 5 u otro equipo con acelerador NPU/GPU; el hardware permite ejecutar el motor, pero Edge no es un motor específico.
+
+**Motores candidatos:** Whisper (por ejemplo, una variante optimizada para CPU/GPU) y Vosk son alternativas de reconocimiento local. Cambiar de Gemini a STT significa cambiar únicamente la etapa que convierte audio en texto; el texto resultante seguiría entrando al mismo orquestador y `OrderService`.
+
+**Decisión provisional:** mantener Gemini para la demo y medir antes de cambiarlo. La comparación debe usar audios equivalentes y registrar latencia total, calidad con ruido, costo por pedido, hardware disponible y funcionamiento sin internet.
+
+**Consecuencia:** si un motor local resulta más conveniente, se incorpora mediante un adaptador de transcripción. No debería ser necesario reescribir las reglas de menú, carrito, pagos o frontend.

@@ -239,3 +239,20 @@ La interfaz adoptó la identidad visual de SIA Interactive: tipografía Inter, v
 La identidad visual incorpora también el amarillo distintivo en estados y detalles de interacción, junto con el logotipo oficial de SIA servido como recurso local para no depender de la disponibilidad del sitio externo.
 
 La guía externa de arquitectura se incorporó como referencia de evolución. El estado actual debe presentarse como una prueba de concepto de software con voz cloud y pagos simulados; hardware industrial, Edge STT, POS, KDS y pasarela real pertenecen al piloto de producción.
+
+## Pendientes para escalar hacia un kiosco real
+
+Estos puntos son una hoja de evolución; no forman parte de la demo actual.
+
+- **Evaluar STT local/Edge:** comparar Gemini Transcribe Live con motores locales como Whisper o Vosk usando el mismo conjunto de audios. Medir latencia total, calidad con ruido, costo por pedido, hardware necesario y comportamiento sin internet.
+- **Definir un adaptador de transcripción:** encapsular el proveedor detrás de una interfaz común para cambiar de Gemini a un motor local sin modificar el flujo de pedido.
+- **Captura para ambiente ruidoso:** probar un micrófono de matriz con beamforming y cancelación de eco acústico en el gabinete real. La configuración del navegador actual sirve para pruebas, pero no reemplaza esta validación física.
+- **Experiencia de kiosco:** ejecutar el frontend en pantalla táctil y modo kiosco; agregar indicador de volumen, detección de silencio e interrupción del asistente cuando existan mediciones que justifiquen esas mejoras.
+- **Persistencia e idempotencia:** guardar sesiones y pedidos en una base durable y asignar un identificador de operación para evitar duplicados ante reconexiones o reintentos.
+- **Disponibilidad y stock:** reemplazar el menú estático por una fuente administrada o un adaptador al sistema que tenga el stock real.
+- **Pasarela de pago:** después de confirmar el carrito, delegar QR, tarjeta o caja a un proveedor habilitado para el local. El proyecto conservaría la selección de método y recibiría un resultado de pago mediante un adaptador, sin almacenar datos sensibles.
+- **POS y KDS:** publicar el pedido confirmado mediante clientes separados para el POS y la pantalla de cocina. Si un sistema externo falla, registrar el estado y permitir reintento idempotente sin volver a cobrar ni duplicar el pedido.
+- **Ticketera:** agregar un adaptador de impresión que reciba el pedido aceptado por el POS, en lugar de imprimir directamente desde el navegador.
+- **Operación y seguridad:** configurar autenticación del dispositivo, métricas de latencia, monitoreo, políticas de logs y recuperación ante caída de red.
+
+El criterio de escalabilidad es agregar adaptadores detrás de contratos pequeños. La conversación y `OrderService` deben mantenerse estables mientras cambian el motor de voz, el proveedor de pago o el sistema externo.

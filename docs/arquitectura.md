@@ -229,3 +229,29 @@ Conviene conservar la separación `domain`/`services`/`ai`/`api`, porque permite
 La siguiente etapa técnica debería definir adaptadores explícitos para `SpeechToText`, POS, KDS, pagos y ticket, medir la latencia por etapa y probar el frontend con el micrófono elegido. Después habría que agregar almacenamiento durable e idempotencia de pedidos, disponibilidad proveniente del POS y un flujo de pago certificado. El número de tarjeta no debe capturarse en el navegador en una integración real: debe utilizarse un pinpad o tokenización del proveedor.
 
 El proyecto no debe incorporar hardware Edge, una PWA, un POS real o una pasarela real solo para parecerse a la guía. Cada integración debe entrar cuando exista un entorno de prueba y un contrato verificable.
+
+## Justificación de las decisiones frente a la guía de Adrián
+
+La guía propone un kiosco físico completo. El repositorio se encuentra en una etapa de validación del núcleo de software, por lo que cada decisión prioriza comprobar el recorrido de pedido antes de incorporar infraestructura externa.
+
+### Por qué Gemini se usa con tools y no como generador de JSON final
+
+Gemini se utiliza como intérprete de lenguaje y no como autoridad del pedido. Recibe el catálogo y solicita operaciones estructuradas mediante function calls. Cada operación es ejecutada por una tool adaptadora y validada por `OrderService`.
+
+Esta elección se tomó porque un JSON generado libremente por el modelo todavía puede contener productos inexistentes, precios inventados, modificadores inválidos o cantidades ambiguas. Con tools, el modelo expresa una intención y el backend decide si esa intención es válida. El mismo servicio puede ser utilizado por texto, voz, botones y futuras integraciones, sin duplicar reglas.
+
+La alternativa de JSON puede evaluarse más adelante como contrato de intercambio con un POS u otro servicio, pero no debe reemplazar la validación central del dominio.
+
+### Por qué usamos STT cloud en esta etapa
+
+La transcripción utiliza Gemini Transcribe Live porque permite probar el flujo con el micrófono disponible, sin comprar hardware ni mantener un modelo local. Esto reduce el tiempo hasta una demo funcional y mantiene una sola integración configurable mediante `.env`.
+
+La contrapartida es la dependencia de internet, el costo por uso y una latencia que todavía debe medirse por etapa. Por eso la elección es válida para la prueba de concepto, pero queda abierta para el piloto físico. La configuración permite cambiar el modelo sin modificar el dominio ni el frontend.
+
+### Por qué el frontend es web y el estado vive en backend
+
+Una interfaz web permite probar rápidamente escritura, voz, carrito y pagos simulados desde cualquier equipo. El backend conserva el estado y valida las mutaciones para que la pantalla no pueda convertirse en la autoridad de precios o disponibilidad. En una instalación futura, esta misma interfaz puede ejecutarse en modo kiosco o empaquetarse como PWA sin cambiar `OrderService`.
+
+### Por qué los pagos, POS y hardware quedan fuera de la demo
+
+Una integración real depende del proveedor, del país, de certificaciones, del hardware disponible y del contrato con el local. Simular un pinpad, un POS o una pasarela como si fueran reales daría una falsa sensación de seguridad. Por eso el proyecto deja puntos de integración claros y usa pagos demo hasta contar con contratos y entornos de prueba verificables.
