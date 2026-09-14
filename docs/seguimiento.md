@@ -64,8 +64,8 @@ Prueba manual escrita sugerida (usa Gemini y puede consumir cuota):
 3. Escribir «Confirmo el pedido». Debe aparecer el estado confirmado y bloquearse la escritura.
 
 Esta es una guía de prueba para la autora, no evidencia de una prueba real nueva.
-Los controles de micrófono y voz siguen parcialmente implementados; consultar
-`estado-y-pruebas.md` antes de atribuirles nuevas capacidades.
+Los controles de micrófono y lectura ya permiten voz por turnos explícitos;
+consultar [la guía de voz](voz.md) para los pasos de prueba y límites actuales.
 
 ## Revisar cambios y logs
 

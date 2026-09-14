@@ -1,115 +1,29 @@
+import { VoiceInput, speak } from "/static/voice.js";
+
 let sessionId = null;
 let sessionClosed = false;
-
 let socket = null;
-
-let microphoneStream = null;
-let microphoneEnabled = false;
-
+let phase = "connecting";
 let assistantAudioEnabled = true;
+let voiceTimer = null;
 
-let audioContext = null;
-let audioSource = null;
-let audioProcessor = null;
+const conversation = document.getElementById("conversation");
+const messageForm = document.getElementById("message-form");
+const messageInput = document.getElementById("message-input");
+const sendButton = document.getElementById("send-button");
+const cartItems = document.getElementById("cart-items");
+const cartTotal = document.getElementById("cart-total");
+const sessionState = document.getElementById("session-state");
+const systemStatus = document.getElementById("system-status");
+const micButton = document.getElementById("mic-button");
+const audioButton = document.getElementById("audio-button");
+const transcript = document.getElementById("voice-transcript");
 
+const voice = new VoiceInput(sendAudio, failVoice);
 
-const conversation =
-    document.getElementById("conversation");
-
-const messageForm =
-    document.getElementById("message-form");
-
-const messageInput =
-    document.getElementById("message-input");
-
-const sendButton =
-    document.getElementById("send-button");
-
-const cartItems =
-    document.getElementById("cart-items");
-
-const cartTotal =
-    document.getElementById("cart-total");
-
-const sessionState =
-    document.getElementById("session-state");
-
-const systemStatus =
-    document.getElementById("system-status");
-
-const micButton =
-    document.getElementById("mic-button");
-
-const audioButton =
-    document.getElementById("audio-button");
-
-
-function downsampleTo16K(
-    inputBuffer,
-    inputSampleRate
-) {
-    const targetSampleRate = 16000;
-
-    if (inputSampleRate === targetSampleRate) {
-        return inputBuffer;
-    }
-
-    const ratio =
-        inputSampleRate / targetSampleRate;
-
-    const outputLength = Math.round(
-        inputBuffer.length / ratio
-    );
-
-    const outputBuffer =
-        new Float32Array(outputLength);
-
-    for (
-        let outputIndex = 0;
-        outputIndex < outputLength;
-        outputIndex++
-    ) {
-        const inputIndex = Math.floor(
-            outputIndex * ratio
-        );
-
-        outputBuffer[outputIndex] =
-            inputBuffer[inputIndex];
-    }
-
-    return outputBuffer;
-}
-
-
-function convertFloat32ToInt16(
-    floatBuffer
-) {
-    const int16Buffer =
-        new Int16Array(floatBuffer.length);
-
-    for (
-        let index = 0;
-        index < floatBuffer.length;
-        index++
-    ) {
-        const sample = Math.max(
-            -1,
-            Math.min(
-                1,
-                floatBuffer[index]
-            )
-        );
-
-        int16Buffer[index] =
-            sample < 0
-                ? sample * 32768
-                : sample * 32767;
-    }
-
-    return int16Buffer;
-}
-
-
+/** Formatea un importe del carrito en pesos argentinos.
+ * @param {number} value Importe entero.
+ * @returns {string} Importe para pantalla. */
 function formatCurrency(value) {
     return new Intl.NumberFormat(
         "es-AR",
@@ -122,6 +36,9 @@ function formatCurrency(value) {
 }
 
 
+/** Actualiza el indicador del estado de interacción.
+ * @param {string} text Mensaje visible.
+ * @param {string} type Tipo visual del estado. */
 function setStatus(
     text,
     type = "ready"
@@ -152,6 +69,10 @@ function setStatus(
 }
 
 
+/** Agrega un mensaje usando texto seguro y desplaza la conversación.
+ * @param {string} author Autor visible.
+ * @param {string} text Contenido textual.
+ * @param {string} type Tipo visual del mensaje. */
 function appendMessage(
     author,
     text,
@@ -210,6 +131,8 @@ function appendMessage(
 }
 
 
+/** Muestra exclusivamente el snapshot validado del backend.
+ * @param {Object} cart Líneas, total y estado del pedido. */
 function renderCart(cart) {
     cartItems.innerHTML = "";
 
@@ -318,596 +241,196 @@ function renderCart(cart) {
 }
 
 
-function setInteractionEnabled(
-    enabled
-) {
-    messageInput.disabled =
-        !enabled;
 
-    sendButton.disabled =
-        !enabled;
+/** Actualiza controles según conexión, turno en curso y cierre del pedido. */
+function updateControls() {
+    const ready = phase === "ready" && !sessionClosed;
+    messageInput.disabled = !ready;
+    sendButton.disabled = !ready;
+    micButton.disabled = sessionClosed || !["ready", "recording"].includes(phase);
+    micButton.textContent = phase === "recording" ? "Enviar audio" : "🎤 Hablar";
+    micButton.classList.toggle("active", phase === "recording");
+    audioButton.textContent = assistantAudioEnabled ? "🔊 Voz ON" : "🔇 Voz OFF";
 }
 
-
-async function enableMicrophone() {
-    try {
-        microphoneStream =
-            await navigator.mediaDevices.getUserMedia(
-                {
-                    audio: true,
-                }
-            );
-
-        microphoneEnabled = true;
-
-        audioContext =
-            new AudioContext();
-
-        audioSource =
-            audioContext.createMediaStreamSource(
-                microphoneStream
-            );
-
-        audioProcessor =
-            audioContext.createScriptProcessor(
-                4096,
-                1,
-                1
-            );
-
-        audioProcessor.onaudioprocess =
-            (event) => {
-                if (
-                    !microphoneEnabled
-                    || !socket
-                    || socket.readyState
-                    !== WebSocket.OPEN
-                ) {
-                    return;
-                }
-
-                const inputData =
-                    event.inputBuffer.getChannelData(
-                        0
-                    );
-
-                const downsampled =
-                    downsampleTo16K(
-                        inputData,
-                        audioContext.sampleRate
-                    );
-
-                const pcm16 =
-                    convertFloat32ToInt16(
-                        downsampled
-                    );
-
-                socket.send(
-                    pcm16.buffer
-                );
-            };
-
-        audioSource.connect(
-            audioProcessor
-        );
-
-        audioProcessor.connect(
-            audioContext.destination
-        );
-
-        micButton.textContent =
-            "🎤 Mic ON";
-
-        micButton.classList.add(
-            "active"
-        );
-
-        console.log(
-            "Micrófono habilitado.",
-            microphoneStream
-        );
-
-    } catch (error) {
-        console.error(
-            "No se pudo acceder al micrófono:",
-            error
-        );
-
-        microphoneEnabled = false;
-
-        micButton.textContent =
-            "🎤 Mic OFF";
-
-        micButton.classList.remove(
-            "active"
-        );
-
-        appendMessage(
-            "Sistema",
-            "No se pudo acceder al micrófono. Revisá los permisos del navegador.",
-            "error"
-        );
-    }
+/**
+ * Envía un evento JSON por la conexión abierta.
+ * @param {string} type Tipo del evento.
+ * @param {Object} data Datos del evento.
+ */
+function sendEvent(type, data = {}) {
+    if (socket?.readyState !== WebSocket.OPEN) throw new Error("No hay conexión con el backend.");
+    socket.send(JSON.stringify({ type, data }));
 }
 
-
-function disableMicrophone() {
-    microphoneEnabled = false;
-
-    if (audioProcessor) {
-        audioProcessor.disconnect();
-
-        audioProcessor.onaudioprocess =
-            null;
-
-        audioProcessor = null;
+/**
+ * Envía PCM sin acumular una cola ilimitada en el navegador.
+ * @param {ArrayBuffer} buffer Audio mono PCM16.
+ */
+function sendAudio(buffer) {
+    if (socket?.readyState !== WebSocket.OPEN || socket.bufferedAmount > 256000) {
+        throw new Error("La conexión no permite enviar el audio a tiempo.");
     }
-
-    if (audioSource) {
-        audioSource.disconnect();
-        audioSource = null;
-    }
-
-    if (audioContext) {
-        audioContext.close();
-        audioContext = null;
-    }
-
-    if (microphoneStream) {
-        for (
-            const track
-            of microphoneStream.getTracks()
-        ) {
-            track.stop();
-        }
-    }
-
-    microphoneStream = null;
-
-    micButton.textContent =
-        "🎤 Mic OFF";
-
-    micButton.classList.remove(
-        "active"
-    );
-
-    console.log(
-        "Micrófono deshabilitado."
-    );
+    socket.send(buffer);
 }
 
+/**
+ * Cancela el turno de audio ante un error local y conserva la opción de escribir.
+ * @param {Error} error Error de captura o transporte.
+ */
+function failVoice(error) {
+    clearTimeout(voiceTimer);
+    voice.dispose();
+    try { sendEvent("audio.cancel"); } catch (_) { /* La conexión ya está cerrada. */ }
+    transcript.textContent = "Audio cancelado; el pedido no fue enviado.";
+    appendMessage("Sistema", error.message, "error");
+    phase = socket?.readyState === WebSocket.OPEN ? "ready" : "disconnected";
+    setStatus("No se pudo enviar el audio", "error");
+    updateControls();
+}
 
+/**
+ * Prepara un turno o termina la grabación actual con un segundo clic.
+ * @returns {Promise<void>} Se resuelve al preparar o finalizar la captura.
+ */
 async function toggleMicrophone() {
-    if (microphoneEnabled) {
-        disableMicrophone();
+    if (phase === "recording") {
+        phase = "processing";
+        clearTimeout(voiceTimer);
+        updateControls();
+        setStatus("Procesando audio...", "processing");
+        try { await voice.finish(); sendEvent("audio.stop"); }
+        catch (error) { failVoice(error); }
         return;
     }
-
-    await enableMicrophone();
-}
-
-
-function toggleAssistantAudio() {
-    assistantAudioEnabled =
-        !assistantAudioEnabled;
-
-    if (assistantAudioEnabled) {
-        audioButton.textContent =
-            "🔊 Voz ON";
-
-        audioButton.classList.add(
-            "active"
-        );
-    } else {
-        audioButton.textContent =
-            "🔇 Voz OFF";
-
-        audioButton.classList.remove(
-            "active"
-        );
-    }
-
-    console.log(
-        "Audio del asistente:",
-        assistantAudioEnabled
-    );
-}
-
-
-function connectWebSocket() {
-    if (!sessionId) {
-        return;
-    }
-
-    const protocol =
-        window.location.protocol === "https:"
-            ? "wss"
-            : "ws";
-
-    const socketUrl =
-        `${protocol}://${window.location.host}`
-        + `/ws/sessions/${sessionId}`;
-
-    socket =
-        new WebSocket(socketUrl);
-
-    socket.addEventListener(
-        "open",
-        () => {
-            console.log(
-                "WebSocket conectado."
-            );
-
-            setStatus(
-                "Listo",
-                "ready"
-            );
-
-            setInteractionEnabled(
-                true
-            );
-
-            messageInput.focus();
-        }
-    );
-
-    socket.addEventListener(
-        "message",
-        (event) => {
-            const message =
-                JSON.parse(event.data);
-
-            console.log(
-                "Evento WebSocket:",
-                message
-            );
-
-            if (
-                message.type
-                === "connection.ready"
-            ) {
-                return;
-            }
-
-            // -----------------------------------------
-            // TEST TEMPORAL DE AUDIO
-            // -----------------------------------------
-
-            if (
-                message.type
-                === "audio.received"
-            ) {
-                console.log(
-                    "Audio recibido por backend:",
-                    message.data.bytes,
-                    "bytes"
-                );
-
-                return;
-            }
-
-            // -----------------------------------------
-            // ACTUALIZACIÓN DEL CARRITO
-            // -----------------------------------------
-
-            if (
-                message.type
-                === "cart.updated"
-            ) {
-                renderCart(
-                    message.data.cart
-                );
-
-                return;
-            }
-
-            // -----------------------------------------
-            // CONFIRMACIÓN DEL PEDIDO
-            // -----------------------------------------
-
-            if (
-                message.type
-                === "order.confirmed"
-            ) {
-                renderCart(
-                    message.data.cart
-                );
-
-                sessionClosed = true;
-
-                setStatus(
-                    "Pedido confirmado",
-                    "ready"
-                );
-
-                setInteractionEnabled(
-                    false
-                );
-
-                messageInput.placeholder =
-                    "El pedido ya fue confirmado.";
-
-                return;
-            }
-
-            // -----------------------------------------
-            // RESPUESTA DEL ASISTENTE
-            // -----------------------------------------
-
-            if (
-                message.type
-                === "assistant.text"
-            ) {
-                appendMessage(
-                    "Asistente",
-                    message.data.text,
-                    "assistant"
-                );
-
-                if (!sessionClosed) {
-                    setStatus(
-                        "Listo",
-                        "ready"
-                    );
-
-                    setInteractionEnabled(
-                        true
-                    );
-
-                    messageInput.focus();
-                }
-
-                return;
-            }
-
-            // -----------------------------------------
-            // ERROR DE GEMINI
-            // -----------------------------------------
-
-            if (
-                message.type
-                === "ai.error"
-            ) {
-                appendMessage(
-                    "Sistema",
-                    message.data.message,
-                    "error"
-                );
-
-                setStatus(
-                    `Error Gemini ${message.data.status_code || ""
-                    }`,
-                    "error"
-                );
-
-                if (!sessionClosed) {
-                    setInteractionEnabled(
-                        true
-                    );
-
-                    messageInput.focus();
-                }
-
-                return;
-            }
-
-            // -----------------------------------------
-            // ERROR DEL BACKEND O DEL CLIENTE
-            // -----------------------------------------
-
-            if (
-                message.type
-                === "backend.error"
-                || message.type
-                === "client.error"
-            ) {
-                appendMessage(
-                    "Sistema",
-                    message.data.message,
-                    "error"
-                );
-
-                setStatus(
-                    "Error",
-                    "error"
-                );
-
-                if (!sessionClosed) {
-                    setInteractionEnabled(
-                        true
-                    );
-
-                    messageInput.focus();
-                }
-            }
-        }
-    );
-
-    socket.addEventListener(
-        "close",
-        () => {
-            console.log(
-                "WebSocket desconectado."
-            );
-
-            if (!sessionClosed) {
-                setStatus(
-                    "Sin conexión",
-                    "error"
-                );
-
-                setInteractionEnabled(
-                    false
-                );
-            }
-        }
-    );
-
-    socket.addEventListener(
-        "error",
-        (error) => {
-            console.error(
-                "Error WebSocket:",
-                error
-            );
-
-            setStatus(
-                "Error de conexión",
-                "error"
-            );
-        }
-    );
-}
-
-
-async function createSession() {
-    setStatus(
-        "Iniciando...",
-        "processing"
-    );
-
-    setInteractionEnabled(
-        false
-    );
-
+    if (phase !== "ready" || sessionClosed) return;
+    phase = "preparing";
+    updateControls();
+    window.speechSynthesis?.cancel();
+    setStatus("Preparando micrófono...", "processing");
+    transcript.textContent = "Preparando la escucha...";
     try {
-        const response =
-            await fetch(
-                "/api/sessions",
-                {
-                    method: "POST",
-                }
-            );
+        await voice.prepare();
+        sendEvent("audio.start");
+        voiceTimer = setTimeout(() => failVoice(new Error("La conexión de voz tardó demasiado.")), 20000);
+    } catch (error) { failVoice(error); }
+}
 
-        if (!response.ok) {
-            throw new Error(
-                `No se pudo crear la sesión (${response.status}).`
-            );
-        }
+/** Alterna la lectura del asistente y detiene inmediatamente el audio al apagarla. */
+function toggleAssistantAudio() {
+    assistantAudioEnabled = !assistantAudioEnabled;
+    if (!assistantAudioEnabled) window.speechSynthesis?.cancel();
+    updateControls();
+}
 
-        const data =
-            await response.json();
+/**
+ * Aplica el estado real recibido, incluyendo el cierre de la sesión.
+ * @param {Object} cart Snapshot del carrito.
+ */
+function applyCart(cart) {
+    renderCart(cart);
+    sessionClosed = cart.state === "CONFIRMED";
+    if (sessionClosed) {
+        voice.dispose();
+        clearTimeout(voiceTimer);
+        setStatus("Pedido confirmado");
+        messageInput.placeholder = "El pedido ya fue confirmado.";
+    }
+    updateControls();
+}
 
-        sessionId =
-            data.session_id;
+/**
+ * Maneja eventos de transcripción, carrito, respuestas y errores.
+ * @param {MessageEvent} event Mensaje JSON del backend.
+ */
+function onServerMessage(event) {
+    const { type, data } = JSON.parse(event.data);
+    if (data.cart) applyCart(data.cart);
+    if (type === "connection.ready") {
+        phase = "ready";
+        if (!sessionClosed) setStatus("Listo");
+    } else if (type === "voice.ready" && phase === "preparing") {
+        clearTimeout(voiceTimer);
+        voice.start();
+        phase = "recording";
+        transcript.textContent = "Escuchando… tocá Enviar audio cuando termines.";
+        setStatus("Escuchando", "processing");
+        voiceTimer = setTimeout(toggleMicrophone, 55000);
+    } else if (type === "voice.transcript") {
+        transcript.textContent = data.final ? "Audio enviado." : `Escuchando (provisional): ${data.text}`;
+        if (data.final) appendMessage("Vos (voz)", data.text, "user");
+    } else if (type === "assistant.text") {
+        appendMessage("Asistente", data.text, "assistant");
+        phase = "ready";
+        if (!sessionClosed) setStatus("Listo");
+        if (assistantAudioEnabled) speak(data.text, text => appendMessage("Sistema", text, "error"));
+    } else if (["voice.error", "backend.error", "ai.error", "client.error", "voice.cancelled"].includes(type)) {
+        clearTimeout(voiceTimer);
+        voice.dispose();
+        phase = "ready";
+        transcript.textContent = "";
+        if (data.message) appendMessage("Sistema", data.message, "error");
+        if (!sessionClosed) setStatus(type === "voice.cancelled" ? "Listo" : "Error", type === "voice.cancelled" ? "ready" : "error");
+    }
+    updateControls();
+}
 
-        renderCart(
-            data.cart
-        );
+/** Abre el canal y restaura controles desde el snapshot inicial del backend. */
+function connectWebSocket() {
+    const protocol = location.protocol === "https:" ? "wss" : "ws";
+    socket = new WebSocket(`${protocol}://${location.host}/ws/sessions/${sessionId}`);
+    socket.addEventListener("message", onServerMessage);
+    socket.addEventListener("close", () => {
+        phase = "disconnected";
+        clearTimeout(voiceTimer);
+        voice.dispose();
+        window.speechSynthesis?.cancel();
+        setStatus("Sin conexión. Recargá para iniciar otra sesión.", "error");
+        updateControls();
+    });
+    socket.addEventListener("error", () => setStatus("Error de conexión", "error"));
+}
 
+/**
+ * Crea la sesión de pedido y conecta el canal de conversación.
+ * @returns {Promise<void>} Se resuelve después de solicitar la conexión.
+ */
+async function createSession() {
+    updateControls();
+    setStatus("Iniciando...", "processing");
+    try {
+        const response = await fetch("/api/sessions", { method: "POST" });
+        if (!response.ok) throw new Error("No se pudo iniciar una sesión de pedido.");
+        const data = await response.json();
+        sessionId = data.session_id;
+        applyCart(data.cart);
         connectWebSocket();
-
     } catch (error) {
-        console.error(
-            error
-        );
-
-        setStatus(
-            "Error interno",
-            "error"
-        );
-
-        appendMessage(
-            "Sistema",
-            "No se pudo iniciar una nueva sesión de pedido.",
-            "error"
-        );
+        setStatus("Error de inicio", "error");
+        appendMessage("Sistema", error.message, "error");
     }
 }
 
-
+/**
+ * Envía texto solo cuando no hay un turno hablado o escrito pendiente.
+ * @param {string} message Mensaje del usuario.
+ */
 function sendMessage(message) {
-    if (
-        !sessionId
-        || sessionClosed
-    ) {
-        return;
-    }
-
-    if (
-        !socket
-        || socket.readyState
-        !== WebSocket.OPEN
-    ) {
-        appendMessage(
-            "Sistema",
-            "La conexión con el backend no está disponible.",
-            "error"
-        );
-
-        setStatus(
-            "Sin conexión",
-            "error"
-        );
-
-        return;
-    }
-
-    appendMessage(
-        "Vos",
-        message,
-        "user"
-    );
-
-    setStatus(
-        "Procesando...",
-        "processing"
-    );
-
-    setInteractionEnabled(
-        false
-    );
-
-    socket.send(
-        JSON.stringify(
-            {
-                type: "user.text",
-                data: {
-                    message: message,
-                },
-            }
-        )
-    );
+    if (phase !== "ready" || sessionClosed) return;
+    window.speechSynthesis?.cancel();
+    sendEvent("user.text", { message });
+    appendMessage("Vos", message, "user");
+    phase = "processing";
+    setStatus("Procesando...", "processing");
+    updateControls();
 }
 
-
-messageForm.addEventListener(
-    "submit",
-    (event) => {
-        event.preventDefault();
-
-        const message =
-            messageInput.value.trim();
-
-        if (!message) {
-            return;
-        }
-
-        messageInput.value =
-            "";
-
-        sendMessage(
-            message
-        );
-    }
-);
-
-
-micButton.addEventListener(
-    "click",
-    toggleMicrophone
-);
-
-
-audioButton.addEventListener(
-    "click",
-    toggleAssistantAudio
-);
-
-
-audioButton.classList.add(
-    "active"
-);
-
-
+messageForm.addEventListener("submit", event => {
+    event.preventDefault();
+    const message = messageInput.value.trim();
+    if (message) { sendMessage(message); messageInput.value = ""; }
+});
+micButton.addEventListener("click", toggleMicrophone);
+audioButton.addEventListener("click", toggleAssistantAudio);
+window.addEventListener("pagehide", () => { voice.dispose(); window.speechSynthesis?.cancel(); socket?.close(); });
 createSession();

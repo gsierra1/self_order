@@ -16,13 +16,14 @@ class WebSocketManager:
         Inicializa el administrador de conexiones WebSocket.
         """
         self.connections: dict[str, WebSocket] = {}
+        self.send_locks: dict[str, asyncio.Lock] = {}
         self.event_loop: asyncio.AbstractEventLoop | None = None
 
     async def connect(
         self,
         session_id: str,
         websocket: WebSocket,
-    ) -> None:
+    ) -> bool:
         """
         Acepta y registra una conexión WebSocket.
 
@@ -32,12 +33,20 @@ class WebSocketManager:
         Args:
             session_id: Identificador técnico de la sesión.
             websocket: Conexión WebSocket iniciada por el navegador.
+
+        Returns:
+            True si se aceptó la conexión; False si la sesión ya tiene otra.
         """
+        if session_id in self.connections:
+            await websocket.close(code=4409)
+            return False
         await websocket.accept()
 
         self.event_loop = asyncio.get_running_loop()
 
         self.connections[session_id] = websocket
+        self.send_locks[session_id] = asyncio.Lock()
+        return True
 
     def disconnect(
         self,
@@ -53,6 +62,8 @@ class WebSocketManager:
             session_id,
             None,
         )
+
+        self.send_locks.pop(session_id, None)
 
     async def send_event(
         self,
@@ -72,15 +83,12 @@ class WebSocketManager:
             session_id
         )
 
-        if websocket is None:
+        lock = self.send_locks.get(session_id)
+        if websocket is None or lock is None:
             return
-
-        await websocket.send_json(
-            {
-                "type": event_type,
-                "data": data,
-            }
-        )
+        async with lock:
+            if self.connections.get(session_id) is websocket:
+                await websocket.send_json({"type": event_type, "data": data})
 
     def send_event_threadsafe(
         self,

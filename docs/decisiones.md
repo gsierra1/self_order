@@ -88,8 +88,9 @@ pero introduce espera y peticiones repetidas para saber si hubo cambios.
 
 **Consecuencia:** el callback desacopla el servicio del transporte; el puente entre
 threads permite usar el SDK síncrono. Faltan reconexión, sincronización del snapshot,
-control de envíos concurrentes y manejo completo de desconexión. Tener WebSocket
-no convierte automáticamente el flujo en una conversación de voz en tiempo real.
+control de envíos concurrentes y manejo completo de desconexión en la revisión
+inicial. En la etapa de voz se resolvieron limpieza, snapshot al conectar y
+serialización de envíos; sigue pendiente la reconexión automática del navegador.
 
 ## 06. Catálogo y precios locales estructurados
 
@@ -136,7 +137,7 @@ indica que hubo alguna mutación, no que se completó todo el turno.
 
 ## 09. Integración de voz sobre el mismo pedido
 
-**Estado:** propuesta pendiente de diseño e implementación.
+**Estado:** adoptada e implementada para turnos explícitos el 14/09/2026.
 
 **Restricción:** conservar `OrderService` como autoridad y un único estado de
 sesión para voz y texto. Mostrar transcripciones parciales separadas del carrito.
@@ -148,10 +149,21 @@ sesión para voz y texto. Mostrar transcripciones parciales separadas del carrit
 | Transcripción → orquestador actual → síntesis de voz | Reutiliza el flujo escrito y facilita probar cada etapa. | Puede sumar latencia y exige coordinar varios pasos. |
 | Sesión conversacional Live con tools de pedido | Puede acercar escucha y respuesta a una conversación continua. | Requiere adaptar tools, turnos, interrupciones, recuperación y convivencia con texto. |
 
-Los experimentos existentes exploran Live, pero todavía no deciden ni implementan
-el recorrido de pedidos. No se seleccionó un proveedor o modelo adicional en esta
-revisión. Antes de adoptar una opción hay que verificar documentación vigente,
-disponibilidad, formatos de audio, latencia y costos mediante pruebas medibles.
+**Decisión:** transcripción con `gemini-3.5-transcribe-live`, orquestador existente
+y síntesis del navegador. Se verificaron documentación del proveedor, acceso al
+modelo y transcripción real con el PCM de prueba. No se midieron todavía costos
+ni latencias comparativas contra un agente Live con tools.
+
+**Motivo:** conservar un solo historial y las mismas validaciones para texto y
+voz, evitando dos agentes independientes intentando administrar el pedido.
+El módulo de transcripción no recibe tools. La voz de salida depende del navegador
+y no agrega otra integración de generación de audio en esta etapa.
+
+**Consecuencias:** clic para empezar y clic para enviar; transcripción provisional
+visible, sin mutar el carrito durante la frase. Se suman transcripción y generación
+de texto, lo que puede aumentar la latencia. El timbre depende de las voces del
+equipo. Detección de silencio, interrupciones y evaluación acústica quedan para
+una etapa posterior. Contratos y pruebas en [voz](voz.md).
 
 **Criterio para decidir:** la persona debe poder completar y corregir un pedido
 sin duplicados, recibir aclaraciones, ver el estado real y continuar escribiendo

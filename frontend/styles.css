@@ -490,3 +490,4 @@ h2 {
     color: white;
     border-color: #22252a;
 }
+.voice-transcript { margin: 0; padding: 8px 24px; color: #656970; min-height: 36px; }

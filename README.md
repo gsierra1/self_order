@@ -4,10 +4,13 @@ Prueba de concepto de autoservicio conversacional: Gemini interpreta pedidos y
 un backend Python valida productos, modificadores y precios. El dashboard muestra
 la conversación y el carrito actualizado por WebSocket.
 
-**Estado:** flujo escrito implementado, captura/transporte de micrófono parcial
-y experimentos aislados de Gemini Live. Todavía no se pueden completar pedidos
-por voz desde el dashboard ni escuchar sus respuestas. La confirmación es local,
-sin integración POS ni pagos.
+**Estado:** texto y voz por turnos implementados. Tocá **Hablar**, esperá la
+escucha y tocá **Enviar audio** al terminar; el texto definitivo usa el mismo
+orquestador del chat. La respuesta puede leerse con la voz del navegador.
+La confirmación es local, sin integración POS ni pagos.
+
+Ver [la guía de voz](docs/voz.md) para funcionamiento, límites y pruebas. Todavía
+no se detectan silencios ni se agregan productos durante una frase en curso.
 
 ## Documentación
 
@@ -57,9 +60,11 @@ una unidad es $12.500. Una solicitud incompleta debe generar preguntas antes de
 agregar. Para una nueva sesión, recargar la página; reiniciar el backend pierde
 todas las sesiones. Usar un solo worker mientras el estado permanezca en memoria.
 
-El modelo de chat configurado en código es `gemini-3.5-flash-lite`; los
-experimentos Live usan `gemini-3.1-flash-live-preview`. Su disponibilidad depende
-del proveedor y de la cuenta y no fue verificada de nuevo en la revisión inicial.
+El chat usa `gemini-3.5-flash-lite`; la transcripción usa
+`gemini-3.5-transcribe-live`, configurable con `GEMINI_TRANSCRIPTION_MODEL`.
+Los experimentos anteriores siguen usando `gemini-3.1-flash-live-preview`.
+Se comprobó conexión y transcripción real con el nuevo modelo el 14/09/2026.
+La disponibilidad futura depende del proveedor y de la cuenta.
 
 ## Scripts manuales existentes
 

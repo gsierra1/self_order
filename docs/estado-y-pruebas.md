@@ -1,8 +1,34 @@
 # Estado, evidencia y pendientes
 
 Revisión inicial: 14/09/2026. Base Git revisada: `94aa4fc` (`bot hasta ahora`).
-Esta entrega agrega documentación y reglas de mantenimiento; no cambia lógica
-de aplicación. Ya existían cambios locales en archivos `__pycache__` y se conservaron.
+La primera entrega agregó documentación; las siguientes actualizaciones se
+registran aquí con su evidencia. Los hallazgos iniciales se conservan como historial.
+
+## Voz por turnos implementada — 14/09/2026
+
+Se conectó micrófono → transcripción Live → orquestador existente → carrito y
+respuesta, con lectura opcional del navegador. Se corrigió desconexión WebSocket,
+validación de estructura JSON, exclusión de turnos HTTP/voz/texto, sincronización
+al conectar y serialización de envíos. Ver [voz.md](voz.md) para límites y comandos.
+
+Evidencia nueva:
+
+- Conexión real a `gemini-3.5-transcribe-live` y transcripción del archivo existente
+  `sample.pcm`, sin copiar su contenido a documentación ni logs.
+- Prueba real por WebSocket con ese audio: transcripciones provisionales/final,
+  procesamiento por el orquestador real y respuesta `assistant.text`. El carrito
+  de esa prueba quedó vacío; no demuestra un alta completa de voz con micrófono físico.
+- Suite local: 16 pruebas aprobadas de productos/opciones, cancelación, formato y límites PCM,
+  exclusión de turnos, cierre del proveedor y recuperación de conexión. Proveedor
+  simulado y logging deshabilitado para no mezclar evidencia.
+- Edge headless: una prueba aprobada de micrófono sintético → AudioWorklet → WebSocket → transcripción
+  simulada → alta mediante servicio real → total $12.500 → confirmación escrita.
+  Se comprobó solicitud de síntesis y apagado, sin reproducir audio real.
+- Pendiente de evaluación humana: micrófono/parlantes físicos, comprensión con
+  ruido, timbre, latencias, silencios automáticos e interrupciones.
+
+Dependencias de pruebas en `requirements-dev.txt`; no se cambiaron dependencias
+de ejecución del bot. `tests/` ahora contiene regresiones reproducibles.
 
 ## Actualización de seguimiento — 14/09/2026
 
@@ -33,16 +59,16 @@ Es una actualización documental, sin cambios de comportamiento del bot.
 | Capacidad | Estado y evidencia |
 | --- | --- |
 | Crear sesión y servir dashboard | Implementado; HTTP y entrega de recursos comprobados localmente con `TestClient`. |
-| Pedido por texto con Gemini | Implementado; logs históricos muestran conversaciones exitosas. Nueva prueba local del transporte con Gemini simulado. No se comprobó hoy el proveedor real. |
+| Pedido por texto con Gemini | Implementado; se reutilizó el orquestador real en el ensayo nuevo de audio a conversación. |
 | Agregar, quitar, reemplazar y confirmar | Implementado; evidencia histórica y verificaciones locales de servicio/eventos. |
 | Validar productos y opciones obligatorias | Comprobado localmente: rechazo de producto desconocido, opciones inválidas y configuración incompleta sin modificar carrito. |
 | Preguntar antes de agregar | Tool `needs_clarification` comprobada; tres eventos históricos de aclaración. Que el LLM no invente valores válidos requiere evaluación conversacional. |
 | Cambiar cantidad / vaciar carrito | Existe en servicio; no expuesto como tools. |
 | Carrito actualizado durante el procesamiento | Eventos WebSocket implementados y comprobados localmente. No equivale a interpretar audio parcial. |
-| Captura de micrófono y envío PCM | Implementado en frontend; 367 fragmentos recibidos en logs históricos. No se probó hardware/navegador en esta revisión. |
+| Captura de micrófono y envío PCM | AudioWorklet verificado en Edge con micrófono sintético; falta evaluación del hardware físico. |
 | Experimentos Gemini Live | Hay scripts de conexión textual y envío de archivo PCM. No se ejecutaron ahora ni se verificó el contenido del audio. |
-| Pedir por voz desde el dashboard | Pendiente: no hay enlace audio recibido → Live/tools/pedido. |
-| Escuchar al asistente | Pendiente: el botón solo cambia estado visual/local. |
+| Pedir por voz desde el dashboard | Implementado por turnos explícitos, con vista provisional y mismo orquestador del chat. |
+| Escuchar al asistente | Implementado con speechSynthesis; solicitud y apagado probados, calidad audible pendiente de la autora. |
 | Persistencia, POS, pagos | No implementados. |
 
 ## Evidencia histórica disponible
@@ -94,6 +120,11 @@ ni el audio de los experimentos. Los nombres de modelos se documentan como
 configuración encontrada, no como disponibilidad verificada en la cuenta.
 
 ## Hallazgos para resolver
+
+Esta lista conserva el diagnóstico inicial. La etapa de voz resolvió los puntos
+1 (desconexión), 2 (integración básica), 3 (reserva por sesión/snapshot/envíos),
+5 (estructura JSON) y 7 (captura/cierre) de la sección siguiente. Siguen pendientes
+reconexión automática, conversación continua y las validaciones del punto 4.
 
 ### Antes o durante la integración de voz
 

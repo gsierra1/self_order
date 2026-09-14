@@ -32,14 +32,16 @@
                     </span>
 
                     <p>
-                        Hola. Podés escribir tu pedido para comenzar.
+                        Hola. Podés escribir tu pedido o tocar Hablar para comenzar.
                     </p>
                 </div>
             </div>
 
+            <p id="voice-transcript" class="voice-transcript" role="status" aria-live="polite"></p>
+
             <form id="message-form" class="message-form">
-                <button id="mic-button" class="control-button" type="button" title="Activar o desactivar micrófono">
-                    🎤 Mic OFF
+                <button id="mic-button" class="control-button" type="button" title="Hablar y luego enviar el audio">
+                    🎤 Hablar
                 </button>
                 <input id="message-input" type="text" autocomplete="off"
                     placeholder="Ej.: Quiero un Big Mac grande con Coca">
@@ -86,7 +88,7 @@
 
     </main>
 
-    <script src="/static/app.js"></script>
+    <script type="module" src="/static/app.js"></script>
 </body>
 
 </html>

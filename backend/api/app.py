@@ -1,12 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from threading import Lock
 from pathlib import Path
-import asyncio
-import json
 from fastapi import (
     FastAPI,
     HTTPException,
     WebSocket,
-    WebSocketDisconnect,
 )
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.ai.errors import AIProviderError
 from backend.ai.orchestrator import OrderConversationOrchestrator
 from backend.api.websocket_manager import WebSocketManager
+from backend.api.conversation_socket import handle_conversation
 from backend.domain.menu import load_menu
 from backend.domain.session import Session, SessionState
 from backend.logging.event_logger import log_event
@@ -64,10 +63,12 @@ class SessionRuntime:
     Attributes:
         service: Servicio que administra el estado real del pedido.
         assistant: Orquestador conversacional conectado a Gemini.
+        turn_lock: Reserva compartida entre HTTP, texto WebSocket y voz.
     """
 
     service: OrderService
     assistant: OrderConversationOrchestrator
+    turn_lock: Lock = field(default_factory=Lock)
 
 
 sessions: dict[str, SessionRuntime] = {}
@@ -270,6 +271,9 @@ def send_message(
     mientras que OrderService conserva la autoridad sobre las modificaciones
     reales del carrito.
 
+    Reserva el turno para impedir que HTTP procese un mensaje mientras voz u
+    otro mensaje de la misma sesión están en curso; en ese caso devuelve 409.
+
     Args:
         session_id: Identificador técnico de la sesión.
         payload: Cuerpo JSON que debe contener la clave "message".
@@ -322,9 +326,16 @@ def send_message(
         )
 
     try:
-        assistant_text = assistant.send_message(
-            message.strip()
-        )
+        if not runtime.turn_lock.acquire(blocking=False):
+            return JSONResponse(status_code=409, content={
+                "ok": False, "error": {"message": "Hay un turno en curso."},
+            })
+        try:
+            if service.session.state == SessionState.CONFIRMED:
+                return JSONResponse(status_code=409, content={"ok": False})
+            assistant_text = assistant.send_message(message.strip())
+        finally:
+            runtime.turn_lock.release()
 
         cart = serialize_cart(
             service
@@ -410,226 +421,19 @@ def send_message(
         )
 
 
-@app.websocket(
-    "/ws/sessions/{session_id}"
-)
-async def session_websocket(
-    websocket: WebSocket,
-    session_id: str,
-) -> None:
-    """
-    Mantiene el canal WebSocket bidireccional de una sesión.
-
-    El navegador puede enviar mensajes de usuario y el backend puede publicar
-    respuestas del asistente, actualizaciones transaccionales y errores sin
-    depender del ciclo tradicional de request/response HTTP.
+@app.websocket("/ws/sessions/{session_id}")
+async def session_websocket(websocket: WebSocket, session_id: str) -> None:
+    """Abre el canal de texto y voz de una sesión y delega su ciclo de vida.
 
     Args:
-        websocket: Conexión WebSocket iniciada por el navegador.
-        session_id: Identificador técnico de la sesión.
+        websocket: Conexión iniciada por el navegador.
+        session_id: Identificador técnico del pedido.
     """
     if session_id not in sessions:
-        await websocket.close(
-            code=4404
-        )
+        await websocket.close(code=4404)
         return
-
-    await websocket_manager.connect(
-        session_id,
-        websocket,
+    if not await websocket_manager.connect(session_id, websocket):
+        return
+    await handle_conversation(
+        websocket, sessions[session_id], websocket_manager, serialize_cart,
     )
-
-    log_event(
-        "INFO",
-        "websocket.connected",
-        session_id=session_id,
-    )
-
-    await websocket_manager.send_event(
-        session_id,
-        "connection.ready",
-        {
-            "session_id": session_id,
-            "state": (
-                sessions[
-                    session_id
-                ].service.session.state.value
-            ),
-        },
-    )
-
-    runtime = sessions[session_id]
-    service = runtime.service
-    assistant = runtime.assistant
-
-    try:
-        while True:
-            incoming = await websocket.receive()
-
-            audio_bytes = incoming.get("bytes")
-
-            if audio_bytes is not None:
-                log_event(
-                    "DEBUG",
-                    "audio.chunk_received",
-                    session_id=session_id,
-                    bytes_received=len(audio_bytes),
-                )
-
-                await websocket_manager.send_event(
-                    session_id,
-                    "audio.received",
-                    {
-                        "bytes": len(audio_bytes),
-                    },
-                )
-
-                continue
-
-            raw_text = incoming.get("text")
-
-            if raw_text is None:
-                continue
-
-            try:
-                message = json.loads(
-                    raw_text
-                )
-
-            except json.JSONDecodeError:
-                await websocket_manager.send_event(
-                    session_id,
-                    "client.error",
-                    {
-                        "message": (
-                            "El mensaje recibido no contiene "
-                            "un JSON válido."
-                        ),
-                    },
-                )
-                continue
-
-            event_type = message.get(
-                "type"
-            )
-
-            data = message.get(
-                "data",
-                {},
-            )
-
-            if event_type != "user.text":
-                await websocket_manager.send_event(
-                    session_id,
-                    "client.error",
-                    {
-                        "message": (
-                            "Tipo de evento no soportado."
-                        ),
-                    },
-                )
-                continue
-
-            user_text = data.get(
-                "message"
-            )
-
-            if (
-                not isinstance(user_text, str)
-                or not user_text.strip()
-            ):
-                await websocket_manager.send_event(
-                    session_id,
-                    "client.error",
-                    {
-                        "message": (
-                            "El mensaje debe contener texto."
-                        ),
-                    },
-                )
-                continue
-
-            if (
-                service.session.state
-                == SessionState.CONFIRMED
-            ):
-                await websocket_manager.send_event(
-                    session_id,
-                    "client.error",
-                    {
-                        "message": (
-                            "El pedido ya fue confirmado y "
-                            "no admite nuevas modificaciones."
-                        ),
-                    },
-                )
-                continue
-
-            try:
-                assistant_text = await asyncio.to_thread(
-                    assistant.send_message,
-                    user_text.strip(),
-                )
-
-                await websocket_manager.send_event(
-                    session_id,
-                    "assistant.text",
-                    {
-                        "text": assistant_text,
-                        "session_closed": (
-                            service.session.state
-                            == SessionState.CONFIRMED
-                        ),
-                    },
-                )
-
-            except AIProviderError as exc:
-                await websocket_manager.send_event(
-                    session_id,
-                    "ai.error",
-                    {
-                        "source": "gemini",
-                        "type": exc.error_type,
-                        "status_code": exc.status_code,
-                        "stage": exc.stage,
-                        "retryable": exc.retryable,
-                        "transaction_applied": (
-                            exc.transaction_applied
-                        ),
-                        "last_tool": exc.last_tool,
-                        "message": exc.user_message,
-                    },
-                )
-
-            except Exception as exc:
-                log_event(
-                    "ERROR",
-                    "websocket.internal_error",
-                    exception=exc,
-                    session_id=session_id,
-                    exception_type=type(exc).__name__,
-                    exception_message=str(exc),
-                )
-
-                await websocket_manager.send_event(
-                    session_id,
-                    "backend.error",
-                    {
-                        "source": "backend",
-                        "type": "INTERNAL_ERROR",
-                        "message": (
-                            "Ocurrió un error interno al "
-                            "procesar la solicitud."
-                        ),
-                    },
-                )
-    except WebSocketDisconnect:
-        websocket_manager.disconnect(
-            session_id
-        )
-
-        log_event(
-            "INFO",
-            "websocket.disconnected",
-            session_id=session_id,
-        )

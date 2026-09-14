@@ -3,6 +3,16 @@ import os
 from dotenv import load_dotenv
 
 
+def get_transcription_model() -> str:
+    """Obtiene el modelo dedicado de transcripción configurable en el entorno.
+
+    Returns:
+        Nombre del modelo Live que recibe audio y devuelve transcripciones.
+    """
+    load_dotenv()
+    return os.getenv("GEMINI_TRANSCRIPTION_MODEL", "gemini-3.5-transcribe-live")
+
+
 def get_gemini_api_key() -> str:
     """
     Obtiene la API key de Gemini desde las variables de entorno.

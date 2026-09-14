@@ -38,14 +38,15 @@ Hay dos estados distintos que la interfaz debe representar:
 2. **Carrito validado:** líneas completas aceptadas por `OrderService`, con precios
    calculados por el backend.
 
-Esta separación es una propuesta para conciliar la actualización inmediata con
-la regla de no agregar productos incompletos. La interfaz actual solo muestra
-mensajes completos y el carrito validado; no tiene una vista provisional.
+Esta separación se implementó en la primera versión de voz por turnos: la
+interfaz muestra transcripción provisional y agrega al carrito solo después de
+enviar el turno y completar la validación. Todavía no muestra tarjetas de
+productos provisionales ni agrega líneas mientras se sigue hablando.
 
 ## Alcance actual y futuro
 
 La implementación actual es una prueba de concepto local. Hay dos combos de
-ejemplo, chat escrito, estado en memoria y confirmación local. No existen pagos,
+ejemplo, chat escrito y voz por turnos, estado en memoria y confirmación local. No existen pagos,
 envío a cocina, persistencia de pedidos ni integración real con un sistema de
 ventas. El código menciona DEX/POS como futuro destino; el contrato real con SIA
 todavía debe conocerse.

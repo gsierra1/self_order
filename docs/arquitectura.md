@@ -1,5 +1,7 @@
 # Arquitectura y contratos actuales
 
+Actualizada con [voz por turnos](voz.md) el 14/09/2026.
+
 ## Visión general
 
 Es una aplicación Python modular con FastAPI, un frontend de HTML/CSS/JavaScript
@@ -145,11 +147,11 @@ Ejemplo de entrada WebSocket:
 
 | Evento de salida | Contenido principal de `data` |
 | --- | --- |
-| `connection.ready` | `session_id`, `state`; no incluye snapshot de recuperación. |
-| `assistant.text` | `text`, `session_closed`. |
+| `connection.ready` | `session_id`, `state`, `cart` para sincronizar al conectar. |
+| `assistant.text` | `text`, `session_closed`, `cart`. |
 | `cart.updated` | `action`, `line_id`, `cart`. |
 | `order.confirmed` | `cart` con estado confirmado. |
-| `audio.received` | Cantidad de bytes recibidos; no significa audio transcripto. |
+| `voice.ready`, `voice.transcript`, `voice.error`, `voice.cancelled` | Protocolo de voz detallado en `voz.md`; reemplaza el acuse experimental `audio.received`. |
 | `ai.error` | Tipo, código, etapa, `retryable`, `transaction_applied`, última tool y mensaje. |
 | `client.error`, `backend.error` | Mensaje y, según el caso, tipo/origen. |
 
@@ -157,22 +159,23 @@ El callback de eventos evita importar WebSocket desde el servicio.
 `send_event_threadsafe()` usa `asyncio.run_coroutine_threadsafe()`. El envío es
 asíncrono y no se espera su resultado; no hay entrega garantizada ni replay.
 
-## Audio existente
+## Audio integrado
 
 ```mermaid
 flowchart LR
-    MIC[Micrófono navegador] --> PCM[app.js: conversión a PCM16 / 16 kHz]
+    MIC[Micrófono navegador] --> PCM[voice.js / pcm-worklet.js: PCM16 / 16 kHz]
     PCM --> WS[WebSocket binario]
-    WS --> ACK[Log + audio.received]
-    SAMPLE[sample.pcm] --> TEST[test_live_audio.py]
-    TEST <--> LIVE[Gemini Live]
-    LIVE --> PRINT[Transcripciones en terminal]
+    WS --> T[LiveTranscriber]
+    T <--> LIVE[Gemini Transcribe Live]
+    T -->|Texto definitivo| O[Orquestador de pedidos]
+    O --> S[OrderService]
 ```
 
-Son dos recorridos separados. El backend descarta los bytes después de acusar
-recibo; no crea una sesión Live de pedidos. Los scripts Live no registran tools
-de pedido y no reproducen el audio generado. `toggleAssistantAudio()` solo
-cambia una variable y el botón.
+La API delega el WebSocket en `conversation_socket.py`. La sesión reserva un turno
+con `turn_lock`; la transcripción final sigue el mismo historial y tools que el
+texto escrito. Los scripts Live anteriores siguen siendo experimentos separados.
+El frontend lee la respuesta final con `speechSynthesis`; `toggleAssistantAudio()`
+permite apagar y cancelar esa lectura. Detalles, límites y pruebas en [voz](voz.md).
 
 ## Observabilidad y errores
 
@@ -184,5 +187,5 @@ Los logs no son almacenamiento transaccional ni permiten restaurar sesiones.
 `AIProviderError.transaction_applied` informa si alguna tool ya modificó el
 pedido antes de una falla del proveedor. No revierte cambios ni indica que
 todo un pedido de varias operaciones se haya completado. El HTTP devuelve
-además el carrito actual; el WebSocket envía el error y depende de los eventos
-de estado ya publicados.
+además el carrito actual; el WebSocket también incluye snapshot en la respuesta
+final y los errores de interpretación, además de publicar eventos de estado.
