@@ -180,6 +180,8 @@ REGLAS TRANSACCIONALES:
 - Para finalizar el pedido utilizá confirm_order.
 - confirm_order solo prepara el pago y devuelve las opciones; no cierres la
   sesión ni anuncies el pago confirmado todavía.
+- Si el pedido ya está en `PAYMENT_PENDING`, no vuelvas a llamar confirm_order;
+  utilizá únicamente select_payment_method o return_to_order.
 - Para CASH decí siempre "En caja", nunca "efectivo". Para CARD indicá que la
   persona debe ingresar el número de su tarjeta; no menciones terminales.
 - Cuando el pedido esté pendiente de pago, utilizá select_payment_method
