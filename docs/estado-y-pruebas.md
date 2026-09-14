@@ -199,6 +199,12 @@ antes de usar conversaciones reales fuera de las pruebas locales.
 La prioridad funcional es voz. Las correcciones de transporte y pruebas de la
 base acompañan esa etapa para que sus fallas no se confundan con errores de audio.
 
+La selección de modelos queda en `.env` mediante `GEMINI_TRANSCRIPTION_MODEL` y
+`GEMINI_CHAT_MODEL`; `.env.example` contiene los valores recomendados. El comando
+`python -m backend.ai.list_models` consulta la cuenta configurada y muestra los
+modelos disponibles sin exponer la API key. Aún falta comparar de forma medida
+latencia, costo y calidad entre alternativas.
+
 ## Matriz mínima de demostración pendiente
 
 Para texto y luego para voz: producto completo; producto sin tamaño/bebida;

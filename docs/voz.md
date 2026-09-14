@@ -88,6 +88,9 @@ cancela la lectura, manteniendo el texto disponible.
 El chat usa `GEMINI_CHAT_MODEL`, cuyo valor predeterminado es
 `gemini-3.5-flash-lite`; ambos modelos se pueden cambiar en `.env` sin modificar
 el código. Las credenciales quedan en backend.
+Para consultar los modelos habilitados para la cuenta local, ejecutar
+`python -m backend.ai.list_models` con el entorno virtual activo. La salida es
+informativa: la disponibilidad y los nombres pueden cambiar por cuenta o fecha.
 Los scripts Live anteriores se conservan como experimentos independientes.
 
 Se eligió transcribir y reutilizar el orquestador para mantener un solo historial

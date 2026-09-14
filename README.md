@@ -34,6 +34,8 @@ solo si todavía no existe y configurar una API key de Gemini:
 
 ```dotenv
 GEMINI_API_KEY=tu_api_key
+GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live
+GEMINI_CHAT_MODEL=gemini-3.5-flash-lite
 ```
 
 Las credenciales locales no deben versionarse. El SDK carga la clave desde el
@@ -66,6 +68,15 @@ El modelo del chat también es configurable con `GEMINI_CHAT_MODEL`.
 Los experimentos anteriores siguen usando `gemini-3.1-flash-live-preview`.
 Se comprobó conexión y transcripción real con el nuevo modelo el 14/09/2026.
 La disponibilidad futura depende del proveedor y de la cuenta.
+
+Para consultar los modelos visibles para la API key configurada, ejecutar:
+
+```powershell
+python -m backend.ai.list_models
+```
+
+El comando requiere red y credenciales, y solo muestra nombres y acciones del
+proveedor. La lista puede cambiar según la cuenta y la fecha.
 
 ## Scripts manuales existentes
 

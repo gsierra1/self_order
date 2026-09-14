@@ -35,6 +35,11 @@ que la latencia también puede venir de la red, cuota o la segunda llamada despu
 de una tool. La configuración permite comparar modelos con el mismo flujo y
 mediciones antes de tomar una decisión.
 
+La lista de modelos se consulta con `python -m backend.ai.list_models` usando la
+API key local. Se mantiene como diagnóstico explícito porque la disponibilidad
+depende de la cuenta y puede cambiar; los comentarios de `.env.example` son una
+guía, no una garantía futura.
+
 ## 02. UUID para sesión y número local para línea
 
 **Estado:** implementado mediante `uuid4()` y `max(line_id) + 1` respectivamente.
