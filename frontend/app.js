@@ -8,6 +8,7 @@ let assistantAudioEnabled = true;
 let voiceTimer = null;
 let voiceBackendReady = false;
 let voicePrepared = false;
+let paymentTimer = null;
 
 const conversation = document.getElementById("conversation");
 const messageForm = document.getElementById("message-form");
@@ -20,6 +21,8 @@ const systemStatus = document.getElementById("system-status");
 const micButton = document.getElementById("mic-button");
 const audioButton = document.getElementById("audio-button");
 const transcript = document.getElementById("voice-transcript");
+const paymentPanel = document.getElementById("payment-panel");
+const paymentContent = document.getElementById("payment-content");
 
 const voice = new VoiceInput(sendAudio, failVoice);
 
@@ -292,6 +295,81 @@ function failVoice(error) {
     updateControls();
 }
 
+/** Muestra el selector y el estado del pago de demostración.
+ * @param {Object} cart Snapshot validado con estado y método de pago.
+ * @returns {void} Actualiza el panel de pago y sus controles. */
+function renderPayment(cart) {
+    clearTimeout(paymentTimer);
+    paymentPanel.hidden = cart.state !== "PAYMENT_PENDING";
+    if (paymentPanel.hidden) {
+        paymentContent.innerHTML = "";
+        return;
+    }
+    const method = cart.payment_method;
+    if (!method) {
+        paymentContent.innerHTML = "<p>Elegí una opción para continuar.</p>";
+        return;
+    }
+    if (method === "QR") {
+        paymentContent.innerHTML = `
+            <p>Escaneá este QR de demostración. No contiene un pago real.</p>
+            <div class="fake-qr" aria-label="QR inválido de demostración"></div>
+            <p>Procesando pago...</p>`;
+        const qr = paymentContent.querySelector(".fake-qr");
+        for (let index = 0; index < 225; index += 1) {
+            const cell = document.createElement("span");
+            cell.style.opacity = ((index * 17 + 3) % 5) ? "1" : "0";
+            qr.appendChild(cell);
+        }
+        paymentTimer = setTimeout(() => completePayment(), 5000);
+    } else if (method === "CARD") {
+        paymentContent.innerHTML = `
+            <label for="card-number">Número de tarjeta (demo)</label>
+            <input id="card-number" class="card-input" inputmode="numeric"
+                autocomplete="off" placeholder="Escribí cualquier número">
+            <button type="button" class="payment-action" id="card-confirm">Continuar</button>`;
+        document.getElementById("card-confirm").addEventListener("click", () => {
+            const value = document.getElementById("card-number").value.trim();
+            if (!value) {
+                appendMessage("Sistema", "Ingresá un número para continuar con la demo.", "error");
+                return;
+            }
+            completePayment();
+        });
+    } else {
+        paymentContent.innerHTML = `
+            <p>Tu número de pedido es <strong>${cart.order_number}</strong>.</p>
+            <p>Acercate a caja, indicá ese número y realizá el pago.</p>
+            <button type="button" class="payment-action" id="cash-confirm">CONFIRMAR</button>`;
+        document.getElementById("cash-confirm").addEventListener("click", completePayment);
+    }
+}
+
+/** Completa el pago demo y muestra el número para retirar en caja.
+ * @returns {Promise<void>} Finaliza el pedido o muestra el error recibido. */
+async function completePayment() {
+    clearTimeout(paymentTimer);
+    try {
+        const response = await fetch(`/api/sessions/${sessionId}/payment/complete`, { method: "POST" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "No se pudo completar el pago.");
+        sessionClosed = true;
+        voice.dispose();
+        paymentPanel.hidden = false;
+        paymentContent.innerHTML = `
+            <p class="payment-success">Pago confirmado.</p>
+            <p>Tu número de pedido es <strong>${data.order_number}</strong>.</p>
+            <p>Acercate a caja para retirarlo.</p>
+            <button type="button" class="payment-action" id="new-order">NUEVO PEDIDO</button>`;
+        document.getElementById("new-order").addEventListener("click", startNewSession);
+        sessionState.textContent = "CONFIRMED";
+        setStatus("Pago confirmado");
+        updateControls();
+    } catch (error) {
+        appendMessage("Sistema", error.message, "error");
+    }
+}
+
 /** Inicia la captura solo cuando backend y navegador están preparados.
  * @returns {void} No devuelve valor.
  */
@@ -350,6 +428,7 @@ function toggleAssistantAudio() {
  */
 function applyCart(cart) {
     renderCart(cart);
+    renderPayment(cart);
     sessionClosed = cart.state === "CONFIRMED";
     if (sessionClosed) {
         voice.dispose();
@@ -426,6 +505,28 @@ async function createSession() {
         setStatus("Error de inicio", "error");
         appendMessage("Sistema", error.message, "error");
     }
+}
+
+/** Cierra la interfaz anterior y comienza automáticamente otro pedido.
+ * @returns {Promise<void>} Crea y conecta una nueva sesión. */
+async function startNewSession() {
+    clearTimeout(paymentTimer);
+    voice.dispose();
+    window.speechSynthesis?.cancel();
+    socket?.close();
+    conversation.innerHTML = `<div class="message assistant-message"><span class="message-author">Asistente</span><p>Hola. Podés escribir tu pedido o tocar Hablar para comenzar.</p></div>`;
+    sessionClosed = false;
+    phase = "connecting";
+    paymentContent.innerHTML = "";
+    await createSession();
+}
+
+for (const button of document.querySelectorAll("[data-payment-method]")) {
+    button.addEventListener("click", () => {
+        const method = button.dataset.paymentMethod;
+        const labels = { QR: "QR", CARD: "tarjeta", CASH: "caja" };
+        sendMessage(`Quiero pagar con ${labels[method]}.`);
+    });
 }
 
 /**

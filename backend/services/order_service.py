@@ -4,6 +4,7 @@ from backend.domain.menu import Menu
 from backend.domain.session import Session, SessionState
 from backend.logging.event_logger import log_event
 from collections.abc import Callable
+from uuid import uuid4
 
 class OrderService:
     """
@@ -714,4 +715,122 @@ class OrderService:
                 self.session.session_id
             ),
             "total": cart.total,
+        }
+
+    def prepare_payment(self) -> dict:
+        """Prepara el pedido para seleccionar un método de pago.
+
+        Genera el número de pedido en backend y bloquea nuevas modificaciones
+        mientras la persona elige cómo pagar.
+
+        Returns:
+            Estado de pago pendiente, número de pedido y métodos disponibles.
+
+        Raises:
+            ValueError: Si el carrito está vacío o la sesión no está activa.
+        """
+        self._ensure_active()
+        if not self.session.cart.items:
+            raise ValueError("Cannot prepare payment for an empty cart")
+
+        self.session.state = SessionState.PAYMENT_PENDING
+        self.session.order_number = str(uuid4().int % 900000 + 100000)
+        self.session.payment_method = None
+        snapshot = self._get_cart_snapshot()
+        log_event(
+            "INFO",
+            "payment.pending",
+            session_id=self.session.session_id,
+            order_number=self.session.order_number,
+            total=self.session.cart.total,
+        )
+        self._emit_event(
+            "payment.pending",
+            {
+                "cart": snapshot,
+                "order_number": self.session.order_number,
+                "payment_methods": ["QR", "CARD", "CASH"],
+            },
+        )
+        return {
+            "status": "payment_pending",
+            "order_number": self.session.order_number,
+            "payment_methods": ["QR", "CARD", "CASH"],
+            "total": self.session.cart.total,
+        }
+
+    def select_payment_method(self, method: str) -> dict:
+        """Selecciona el método de pago para un pedido pendiente.
+
+        Args:
+            method: Método ``QR``, ``CARD`` o ``CASH``.
+
+        Returns:
+            Método seleccionado y número de pedido.
+
+        Raises:
+            ValueError: Si la sesión no espera pago o el método no es válido.
+        """
+        if self.session.state != SessionState.PAYMENT_PENDING:
+            raise ValueError("The order is not waiting for payment")
+        normalized = method.upper()
+        if normalized not in {"QR", "CARD", "CASH"}:
+            raise ValueError("Unsupported payment method")
+        self.session.payment_method = normalized
+        log_event(
+            "INFO",
+            "payment.method_selected",
+            session_id=self.session.session_id,
+            order_number=self.session.order_number,
+            payment_method=normalized,
+        )
+        self._emit_event(
+            "payment.method_selected",
+            {
+                "method": normalized,
+                "order_number": self.session.order_number,
+            },
+        )
+        return {
+            "status": "payment_method_selected",
+            "payment_method": normalized,
+            "order_number": self.session.order_number,
+        }
+
+    def complete_payment(self) -> dict:
+        """Finaliza el pago de demostración y cierra la sesión.
+
+        Returns:
+            Estado final y número de pedido para retirar en caja.
+
+        Raises:
+            ValueError: Si todavía no se seleccionó un método de pago.
+        """
+        if self.session.state != SessionState.PAYMENT_PENDING:
+            raise ValueError("The order is not waiting for payment")
+        if self.session.payment_method is None:
+            raise ValueError("Select a payment method first")
+        self.session.state = SessionState.CONFIRMED
+        snapshot = self._get_cart_snapshot()
+        log_event(
+            "INFO",
+            "payment.completed",
+            session_id=self.session.session_id,
+            order_number=self.session.order_number,
+            payment_method=self.session.payment_method,
+            total=self.session.cart.total,
+        )
+        self._emit_event(
+            "order.confirmed",
+            {
+                "cart": snapshot,
+                "order_number": self.session.order_number,
+                "payment_method": self.session.payment_method,
+            },
+        )
+        return {
+            "status": "confirmed",
+            "order_number": self.session.order_number,
+            "payment_method": self.session.payment_method,
+            "total": self.session.cart.total,
         }

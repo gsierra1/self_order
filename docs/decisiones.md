@@ -89,6 +89,22 @@ orden recibido y sus resultados se envían juntos al modelo; una llamada repetid
 se detiene antes de ejecutarse. Las firmas tipadas ayudan
 al SDK a describir las tools; Python no valida esos tipos en ejecución por sí solo.
 
+## 09. Separar confirmación, pago y cierre de sesión
+
+**Estado:** implementado como flujo de demostración local.
+
+**Decisión:** confirmar el carrito lleva la sesión a `PAYMENT_PENDING` y genera
+un número de pedido en backend. La selección de método puede llegar por botones,
+texto o voz mediante la misma tool. QR, tarjeta y caja terminan en una pantalla
+de retiro y el botón final cierra la sesión.
+
+**Motivo:** no mezclar la validación del pedido con un pago real y permitir que
+la interfaz empiece un nuevo pedido sin recargar la página.
+
+**Límites:** el QR es deliberadamente inválido y el campo de tarjeta es solo de
+demo; una integración real requiere un proveedor que tokenice los datos y
+confirme el pago.
+
 ## 05. HTTP para inicio y consulta, WebSocket para interacción
 
 **Estado:** implementado.

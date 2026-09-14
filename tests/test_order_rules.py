@@ -134,3 +134,21 @@ class OrderRulesTests(unittest.TestCase):
             orchestrator._validate_function_calls(calls + calls, set())
 
         self.assertFalse(self.service.get_cart().items)
+
+    def test_payment_demo_requires_method_before_closing_session(self) -> None:
+        """Genera pedido, método y cierre en tres estados controlados."""
+        self.service.add_item("COMBO_BIG_MAC", 1, self.options)
+
+        pending = self.service.prepare_payment()
+        self.assertEqual(self.service.session.state.value, "PAYMENT_PENDING")
+        self.assertRegex(pending["order_number"], r"^\d{6}$")
+        with self.assertRaises(ValueError):
+            self.service.complete_payment()
+
+        selected = self.service.select_payment_method("QR")
+        self.assertEqual(selected["payment_method"], "QR")
+        completed = self.service.complete_payment()
+        self.assertEqual(completed["status"], "confirmed")
+        self.assertEqual(self.service.session.state.value, "CONFIRMED")
+        with self.assertRaises(ValueError):
+            self.service.add_item("COMBO_BIG_MAC", 1, self.options)

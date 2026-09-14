@@ -110,6 +110,8 @@ def serialize_cart(
         ],
         "total": cart.total,
         "state": service.session.state.value,
+        "order_number": service.session.order_number,
+        "payment_method": service.session.payment_method,
     }
 
 
@@ -256,6 +258,28 @@ def get_cart(
     return serialize_cart(
         runtime.service
     )
+
+
+@app.post("/api/sessions/{session_id}/payment/complete")
+def complete_payment(session_id: str) -> dict:
+    """Completa el pago de demostración y devuelve el número de pedido.
+
+    Args:
+        session_id: Identificador técnico de la sesión.
+
+    Returns:
+        Estado final, número de pedido y carrito confirmado.
+
+    Raises:
+        HTTPException: Si no se seleccionó un método o la sesión no espera
+            pago.
+    """
+    runtime = get_runtime(session_id)
+    try:
+        result = runtime.service.complete_payment()
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True, **result, "cart": serialize_cart(runtime.service)}
 
 
 @app.post(

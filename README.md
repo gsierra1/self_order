@@ -7,7 +7,8 @@ la conversación y el carrito actualizado por WebSocket.
 **Estado:** texto y voz por turnos implementados. Tocá **Hablar**, esperá la
 escucha y tocá **Enviar audio** al terminar; el texto definitivo usa el mismo
 orquestador del chat. La respuesta puede leerse con la voz del navegador.
-La confirmación es local, sin integración POS ni pagos.
+La confirmación y el pago son demostraciones locales, sin integración POS ni
+procesamiento real de tarjetas. El QR mostrado es deliberadamente inválido.
 
 Ver [la guía de voz](docs/voz.md) para funcionamiento, límites y pruebas. Todavía
 no se detectan silencios ni se agregan productos durante una frase en curso.

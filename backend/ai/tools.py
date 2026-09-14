@@ -341,6 +341,35 @@ def create_confirm_order_tool(service: OrderService):
             Raises:
                 ValueError: Si el carrito está vacío y no puede confirmarse.
             """
-            return service.confirm_order()
+            return service.prepare_payment()
 
         return confirm_order
+
+
+def create_select_payment_method_tool(service: OrderService):
+    """Crea una función para seleccionar el método de pago del pedido.
+
+    Args:
+        service: Servicio de pedidos asociado a la sesión actual.
+
+    Returns:
+        Función preparada para ser utilizada como tool de Gemini.
+    """
+
+    def select_payment_method(method: str) -> dict:
+        """Selecciona QR, tarjeta o caja para el pedido pendiente.
+
+        Args:
+            method: Método indicado por la persona: ``QR``, ``CARD`` o
+                ``CASH``.
+
+        Returns:
+            Resultado estructurado de la selección.
+
+        Raises:
+            ValueError: Si el pedido no está esperando pago o el método no es
+                válido.
+        """
+        return service.select_payment_method(method)
+
+    return select_payment_method

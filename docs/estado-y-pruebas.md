@@ -208,6 +208,12 @@ distinguir modelos de chat (`generateContent`) y transcripción en vivo
 (`bidiGenerateContent`). Aún falta comparar de forma medida latencia, costo y
 calidad entre alternativas.
 
+El flujo de pago demo quedó implementado: `PAYMENT_PENDING` genera un número de
+pedido en backend, permite elegir QR, tarjeta o caja por texto, voz o botones y
+finaliza en `CONFIRMED`. El QR es inválido a propósito, la tarjeta no se envía
+ni se almacena y el botón final inicia otra sesión. Falta realizar la prueba
+manual de los tres recorridos desde el navegador.
+
 ## Matriz mínima de demostración pendiente
 
 Para texto y luego para voz: producto completo; producto sin tamaño/bebida;

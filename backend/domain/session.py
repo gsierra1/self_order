@@ -15,6 +15,7 @@ class SessionState(str, Enum):
     """
 
     ACTIVE = "ACTIVE"
+    PAYMENT_PENDING = "PAYMENT_PENDING"
     CONFIRMED = "CONFIRMED"
 
 
@@ -37,3 +38,5 @@ class Session:
     )
     cart: Cart = field(default_factory=Cart)
     state: SessionState = SessionState.ACTIVE
+    order_number: str | None = None
+    payment_method: str | None = None

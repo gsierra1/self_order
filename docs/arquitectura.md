@@ -108,6 +108,12 @@ y argumentos repetida dentro del turno. Esto también puede rechazar consultas
 repetidas legítimas; no es una garantía general contra duplicados entre mensajes
 o reconexiones.
 
+La confirmación conversacional pasa primero la sesión a `PAYMENT_PENDING` y
+genera el número de pedido en backend. `select_payment_method` acepta `QR`,
+`CARD` o `CASH`; el frontend completa la demo mediante un endpoint y recién
+entonces la sesión pasa a `CONFIRMED`. El QR es una imagen inválida de demo,
+sin datos de pago ni destino real; la tarjeta tampoco se envía ni se almacena.
+
 ## Modelo de datos y precios
 
 El menú contiene Combo Big Mac (ARS 10.500 base) y Combo Cuarto de Libra (ARS 11.500
