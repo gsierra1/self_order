@@ -360,7 +360,7 @@ async function completePayment() {
             <p class="payment-success">Pago confirmado.</p>
             <p>Tu número de pedido es <strong>${data.order_number}</strong>.</p>
             <p>Acercate a caja para retirarlo.</p>
-            <button type="button" class="payment-action" id="new-order">NUEVO PEDIDO</button>`;
+            <button type="button" class="payment-action" id="new-order">CONFIRMAR</button>`;
         document.getElementById("new-order").addEventListener("click", startNewSession);
         sessionState.textContent = "CONFIRMED";
         setStatus("Pago confirmado");
