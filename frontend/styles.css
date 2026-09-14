@@ -514,6 +514,8 @@ h2 {
 :root {
     --sia-purple: #7332fa;
     --sia-purple-dark: #4e19d5;
+    --sia-yellow: #ffe500;
+    --sia-yellow-soft: #fff8b8;
     --sia-ink: #111322;
     --sia-lilac: #f3efff;
     --sia-line: #e8e3f4;
@@ -561,6 +563,20 @@ body {
 
 .brand-heading { position: relative; }
 
+.brand-line {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+
+.brand-logo {
+    width: 66px;
+    height: 49px;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+}
+
 .eyebrow {
     display: flex;
     align-items: center;
@@ -574,7 +590,7 @@ body {
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: var(--sia-purple);
+    background: var(--sia-yellow);
     box-shadow: 12px 0 0 #b68cff;
 }
 
@@ -585,6 +601,17 @@ h3 { color: var(--sia-ink); letter-spacing: -.035em; }
 h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.05; }
 
 .heading-accent { color: var(--sia-purple); }
+
+.heading-accent::after {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 7px;
+    content: "";
+    border-radius: 50%;
+    background: var(--sia-yellow);
+    vertical-align: 4px;
+}
 
 .header-subtitle {
     max-width: 390px;
@@ -678,8 +705,15 @@ h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.05; }
 
 .payment-options button:hover { background: var(--sia-purple); transform: translateY(-1px); }
 
+.status-ready {
+    background: var(--sia-yellow-soft);
+    color: #5b4d00;
+    border-color: rgba(255, 229, 0, .55);
+}
+
 @media (max-width: 850px) {
     .panel-header { min-height: 116px; padding: 22px; }
     .conversation { padding: 22px; }
     .message-form { padding: 16px; }
+    .brand-logo { width: 58px; height: 43px; }
 }

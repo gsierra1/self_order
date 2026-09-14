@@ -211,3 +211,5 @@ la conversación con interrupciones requiere una etapa adicional bien probada.
 **Alternativas consideradas:** mantener el estilo neutro existente o introducir una biblioteca visual completa. Se mantiene CSS propio para no sumar dependencias ni acoplar la lógica a un framework de interfaz.
 
 **Consecuencias:** mejora el reconocimiento de marca y la jerarquía visual, conserva los contratos y controles existentes, y requiere una validación responsive antes de una presentación pública.
+
+**Ajuste posterior:** se incorporó el logotipo oficial como recurso local y amarillo de acento para reforzar la asociación visual sin introducir una dependencia de red en tiempo de ejecución.
