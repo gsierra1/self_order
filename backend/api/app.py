@@ -275,10 +275,15 @@ def complete_payment(session_id: str) -> dict:
             pago.
     """
     runtime = get_runtime(session_id)
+    if not runtime.turn_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Hay un turno en curso.")
     try:
-        result = runtime.service.complete_payment()
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        try:
+            result = runtime.service.complete_payment()
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        runtime.turn_lock.release()
     return {"ok": True, **result, "cart": serialize_cart(runtime.service)}
 
 
@@ -296,10 +301,15 @@ def return_to_order(session_id: str) -> dict:
         HTTPException: Si la sesión no está pendiente de pago.
     """
     runtime = get_runtime(session_id)
+    if not runtime.turn_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Hay un turno en curso.")
     try:
-        runtime.service.return_to_order()
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        try:
+            runtime.service.return_to_order()
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        runtime.turn_lock.release()
     return {"ok": True, "cart": serialize_cart(runtime.service)}
 
 
@@ -318,10 +328,15 @@ def delete_cart_item(session_id: str, line_id: int) -> dict:
         HTTPException: Si la línea no existe o la sesión está cerrada.
     """
     runtime = get_runtime(session_id)
+    if not runtime.turn_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Hay un turno en curso.")
     try:
-        runtime.service.remove_item(line_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+        try:
+            runtime.service.remove_item(line_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        runtime.turn_lock.release()
     return {"ok": True, "cart": serialize_cart(runtime.service)}
 
 
