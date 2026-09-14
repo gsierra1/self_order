@@ -170,6 +170,7 @@ function renderCart(cart) {
 
         itemElement.className =
             "cart-item";
+        itemElement.dataset.lineId = String(item.line_id);
 
         const title =
             document.createElement("h3");
@@ -398,12 +399,15 @@ async function returnToOrder() {
  * @param {number} lineId Identificador de la línea a eliminar.
  * @returns {Promise<void>} Actualiza el carrito o informa el error. */
 async function removeCartItem(lineId) {
+    const currentItem = [...document.querySelectorAll(".cart-item")]
+        .find(element => element.dataset.lineId === String(lineId));
+    const itemName = currentItem?.querySelector(".cart-item-title")?.textContent || "el producto";
     try {
         const response = await fetch(`/api/sessions/${sessionId}/cart/items/${lineId}`, { method: "DELETE" });
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "No se pudo eliminar el producto.");
         applyCart(data.cart);
-        appendMessage("Sistema", "Producto eliminado del carrito.", "assistant");
+        appendMessage("Sistema", `Eliminé ${itemName} del carrito.`, "assistant");
     } catch (error) {
         appendMessage("Sistema", error.message, "error");
     }
