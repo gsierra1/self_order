@@ -1,0 +1,55 @@
+# Producto y alcance
+
+## Contexto
+
+Según su autora, el proyecto surge de una propuesta de Adrián, de SIA Interactive,
+para explorar pedidos por voz. Además de mostrar una demo, la autora necesita
+entender y defender el diseño técnico como parte de una oportunidad laboral.
+
+SIA presenta soluciones digitales para espacios físicos y audiovisuales en su
+[sitio oficial](https://www.siainteractive.com/es/). Esa orientación es compatible
+con el escenario de una interfaz de pedidos en un punto de atención; esto último
+es una interpretación del contexto, no un requisito de integración confirmado.
+
+La referencia de inspiración es [el video compartido por la autora](https://www.youtube.com/watch?v=tsxXTB78RUE).
+No fue posible recuperar su contenido durante esta revisión. No se atribuyen al
+video funciones, proveedores ni arquitectura que no se hayan podido verificar.
+
+## Experiencia deseada
+
+- La persona puede hablar o escribir dentro de una misma sesión de pedido.
+- La pantalla refleja lo que se va pidiendo sin esperar al cierre del pedido.
+- Si el producto no existe o está indisponible, el asistente lo informa.
+- Si faltan opciones obligatorias, pregunta antes de agregar la línea al carrito.
+- Se pueden corregir productos y opciones durante la conversación.
+- El asistente puede responder por texto y por voz; la voz puede desactivarse.
+- La confirmación debe representar el estado real del pedido.
+
+Ejemplo: «Quiero un Big Mac» requiere preguntar tamaño y bebida. Si la persona
+responde «grande con Coca», recién entonces se agrega el combo configurado y se
+actualiza el importe. «Quiero una pizza» no debe crear un producto inexistente.
+
+## Qué significa mostrar el pedido mientras se habla
+
+Hay dos estados distintos que la interfaz debe representar:
+
+1. **Información provisional:** transcripción parcial o producto todavía por
+   completar. Puede cambiar si la persona se corrige.
+2. **Carrito validado:** líneas completas aceptadas por `OrderService`, con precios
+   calculados por el backend.
+
+Esta separación es una propuesta para conciliar la actualización inmediata con
+la regla de no agregar productos incompletos. La interfaz actual solo muestra
+mensajes completos y el carrito validado; no tiene una vista provisional.
+
+## Alcance actual y futuro
+
+La implementación actual es una prueba de concepto local. Hay dos combos de
+ejemplo, chat escrito, estado en memoria y confirmación local. No existen pagos,
+envío a cocina, persistencia de pedidos ni integración real con un sistema de
+ventas. El código menciona DEX/POS como futuro destino; el contrato real con SIA
+todavía debe conocerse.
+
+La prioridad expresada es completar voz manteniendo el canal escrito. Ampliar el
+menú y mejorar la estética quedan para después. Una presentación y un speech
+se prepararán sobre capacidades demostrables y decisiones comprendidas.

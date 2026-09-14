@@ -1,0 +1,42 @@
+# Reglas de trabajo del proyecto
+
+## Objetivo y alcance
+
+Construir un autoservicio conversacional de pedidos por voz, con escritura
+alternativa y actualización visual del pedido. El proyecto también debe poder
+explicarse y defenderse técnicamente por su autora. Consultar `docs/README.md`
+antes de modificar comportamiento o arquitectura.
+
+## Documentación obligatoria
+
+- Toda función Python nueva o modificada debe tener docstring de estilo Google,
+  en español, con descripción y secciones `Args`, `Returns` y `Raises` cuando
+  correspondan. Documentar efectos sobre el estado si existen.
+- Conservar y actualizar los docstrings existentes. Hay deuda previa identificada
+  en `Cart.total`, `Menu.get_product` y `load_menu`; no usarla como precedente.
+- En JavaScript, documentar funciones nuevas o modificadas mediante comentarios
+  JSDoc con propósito, parámetros, retorno y efectos relevantes; es la adaptación
+  de la misma exigencia de documentación al lenguaje.
+- Todo cambio de comportamiento, contratos, módulos o configuración debe incluir
+  la actualización de los documentos afectados en `docs/` y, si corresponde,
+  del README. Registrar validación y pendientes en `docs/estado-y-pruebas.md`.
+- Registrar decisiones de arquitectura con contexto, alternativas, motivos,
+  consecuencias y estado en `docs/decisiones.md`. Diferenciar intención expresada
+  por la autora, comportamiento comprobado e interpretación de decisiones previas.
+- Explicar los cambios en español, conectando el problema, la solución y sus
+  límites. No presentar propuestas como implementaciones ni pruebas simuladas
+  como verificaciones reales de Gemini.
+
+## Invariantes de producto
+
+- `OrderService` es la autoridad sobre validación, precios y estado del pedido.
+  Voz, texto, frontend y LLM deben utilizar esa misma lógica.
+- Rechazar productos inexistentes o no disponibles. Preguntar por modificadores
+  obligatorios faltantes; no elegirlos por el usuario ni agregar ítems incompletos.
+- Separar transcripciones o selecciones provisionales del carrito validado.
+- Preservar la línea original cuando falla un reemplazo.
+- No repetir automáticamente mutaciones ante fallas de IA o reconexiones.
+- No ampliar el menú ni rediseñar el frontend como efecto incidental de incorporar
+  voz. Son etapas posteriores según la prioridad expresada por la autora.
+- No exponer claves ni incorporar `.env`, conversaciones locales o audio de
+  usuarios a documentación/versionado sin una necesidad explícita.
