@@ -24,8 +24,31 @@ Elegir PowerShell. Con el entorno y `.env` ya configurados:
 
 ```powershell
 Set-Location C:\Users\User\Desktop\self_order
-.\.venv\Scripts\python.exe -m uvicorn backend.api.app:app --reload
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn backend.api.app:app --reload
 ```
+
+La activación suele mostrar `(.venv)` al inicio de la línea de la terminal y
+hace que `python` y `pip` usen el entorno del proyecto. Repetirla en cada terminal
+nueva donde se vaya a ejecutar Python. Para desactivarlo, ejecutar `deactivate`.
+Invocar directamente `.\.venv\Scripts\python.exe` también usa ese entorno aunque
+no esté activado; por eso los comandos anteriores funcionaban sin ese paso.
+
+Si PowerShell informa que la ejecución de scripts está deshabilitada, permitir
+scripts locales solo en esa terminal y volver a activar:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\.venv\Scripts\Activate.ps1
+```
+
+El permiso termina al cerrar la terminal. Para comprobar el intérprete activo:
+
+```powershell
+python -c "import sys; print(sys.executable)"
+```
+
+Debe mostrar `C:\Users\User\Desktop\self_order\.venv\Scripts\python.exe`.
 
 Mantener esa terminal abierta y visitar `http://127.0.0.1:8000/` en el navegador.
 No hace falta Live Server: FastAPI sirve frontend y backend. Si ya está corriendo,

@@ -41,6 +41,9 @@ antes de modificar comportamiento o arquitectura.
 - Entregar comandos exactos para PowerShell en la terminal integrada de VS Code,
   indicando directorio, URL del frontend, acciones de prueba y resultados esperados.
   Si el cambio no tiene efecto visual, explicar cómo verificarlo por terminal.
+- Al dar comandos para ejecutar Python o levantar el bot, incluir primero la
+  activación del entorno en PowerShell: `.\.venv\Scripts\Activate.ps1` desde
+  la raíz del proyecto. Recordar que se activa en cada terminal nueva.
 - Diferenciar pruebas automáticas, pruebas manuales con el proveedor real y
   pruebas con simulaciones. No dar por ejecutadas las pruebas propuestas a la autora.
 

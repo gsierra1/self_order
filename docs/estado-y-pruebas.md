@@ -22,6 +22,14 @@ de los archivos locales después de retirarlos del índice. No cambia el bot.
 
 ## Capacidades actuales
 
+La guía de ejecución y las reglas de seguimiento ahora incluyen activar el
+entorno con `.\.venv\Scripts\Activate.ps1` en cada terminal PowerShell nueva.
+La primera prueba fue bloqueada por la política de scripts de PowerShell.
+Tras usar `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`,
+se verificó la activación y que `python` resuelve al ejecutable de `.venv`.
+La guía incluye esa alternativa, limitada a la terminal actual.
+Es una actualización documental, sin cambios de comportamiento del bot.
+
 | Capacidad | Estado y evidencia |
 | --- | --- |
 | Crear sesión y servir dashboard | Implementado; HTTP y entrega de recursos comprobados localmente con `TestClient`. |
