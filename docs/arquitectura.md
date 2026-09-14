@@ -207,3 +207,25 @@ pedido antes de una falla del proveedor. No revierte cambios ni indica que
 todo un pedido de varias operaciones se haya completado. El HTTP devuelve
 además el carrito actual; el WebSocket también incluye snapshot en la respuesta
 final y los errores de interpretación, además de publicar eventos de estado.
+
+## Comparación con la arquitectura objetivo del kiosco
+
+La guía de Adrián describe una arquitectura de producción para un kiosco físico. El repositorio actual implementa una prueba de concepto avanzada y cubre principalmente las capas de interfaz, reconocimiento, comprensión y reglas transaccionales. La diferencia es de etapa y de alcance; no implica que el diseño actual contradiga la guía.
+
+| Capa de la guía | Implementación actual | Evaluación |
+| --- | --- | --- |
+| Hardware y captura | Micrófono del navegador con `echoCancellation` y `noiseSuppression`; audio PCM mono a 16 kHz. | Adecuado para validar el flujo. Falta mic array con beamforming/AEC real, equipo industrial, pantalla táctil, pinpad y ticketeadora. |
+| Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo kiosco/PWA, indicador de volumen, detección de silencio, interrupciones y empaquetado de dispositivo. |
+| STT | `LiveTranscriber` envía audio por WebSocket a Gemini Transcribe Live. | Es el enfoque cloud de la guía, configurable y útil para avanzar rápido. Introduce dependencia de red y latencia; todavía no se justifica reemplazarlo por Edge sin medir calidad, costo y hardware. |
+| NLU y extracción | Gemini Chat recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
+| Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR inválido, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisión de ticket. |
+
+### Qué conservar
+
+Conviene conservar la separación `domain`/`services`/`ai`/`api`, porque permite cambiar Gemini, la interfaz de voz o el proveedor de pago sin trasladar reglas de negocio. También conviene conservar el mismo `OrderService` para texto, voz y controles de pantalla, la validación server-side y la separación entre transcripción provisional y carrito confirmado.
+
+### Qué incorporar cuando el proyecto pase a piloto
+
+La siguiente etapa técnica debería definir adaptadores explícitos para `SpeechToText`, POS, KDS, pagos y ticket, medir la latencia por etapa y probar el frontend con el micrófono elegido. Después habría que agregar almacenamiento durable e idempotencia de pedidos, disponibilidad proveniente del POS y un flujo de pago certificado. El número de tarjeta no debe capturarse en el navegador en una integración real: debe utilizarse un pinpad o tokenización del proveedor.
+
+El proyecto no debe incorporar hardware Edge, una PWA, un POS real o una pasarela real solo para parecerse a la guía. Cada integración debe entrar cuando exista un entorno de prueba y un contrato verificable.

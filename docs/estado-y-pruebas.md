@@ -237,3 +237,5 @@ resultado observado, fecha/modelo y latencias; no evaluar solo si el bot habló.
 La interfaz adoptó la identidad visual de SIA Interactive: tipografía Inter, violeta de marca y una composición con gradientes suaves, tarjetas redondeadas y jerarquía visual orientada a la acción. El encabezado ahora invita a iniciar el pedido con “Hace tu pedido” y conserva los mismos controles y estados funcionales. La mejora es exclusivamente visual y debe verificarse en escritorio y en la vista responsive antes de incorporarla a una demo formal.
 
 La identidad visual incorpora también el amarillo distintivo en estados y detalles de interacción, junto con el logotipo oficial de SIA servido como recurso local para no depender de la disponibilidad del sitio externo.
+
+La guía externa de arquitectura se incorporó como referencia de evolución. El estado actual debe presentarse como una prueba de concepto de software con voz cloud y pagos simulados; hardware industrial, Edge STT, POS, KDS y pasarela real pertenecen al piloto de producción.

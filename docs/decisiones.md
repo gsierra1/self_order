@@ -213,3 +213,13 @@ la conversación con interrupciones requiere una etapa adicional bien probada.
 **Consecuencias:** mejora el reconocimiento de marca y la jerarquía visual, conserva los contratos y controles existentes, y requiere una validación responsive antes de una presentación pública.
 
 **Ajuste posterior:** se incorporó el logotipo oficial como recurso local y amarillo de acento para reforzar la asociación visual sin introducir una dependencia de red en tiempo de ejecución.
+
+## 11. Alcance de la guía de kiosco físico
+
+**Estado:** referencia de evolución, no implementación requerida todavía.
+
+**Decisión:** mantener el diseño actual para validar conversación, reglas de pedido y estados con texto, voz por turnos y frontend web. Incorporar interfaces de adaptador antes de conectar STT local, POS, KDS, pagos o ticketera reales.
+
+**Motivo:** la guía mezcla decisiones de producto, hardware y operación con componentes que todavía no tienen un entorno de prueba. Implementarlos ahora agregaría complejidad sin evidencia de que resuelvan el flujo principal.
+
+**Consecuencia:** la demo no puede presentarse como kiosco listo para producción. Sí puede presentarse como el núcleo conversacional y transaccional que luego se integra con el hardware y los sistemas externos.
