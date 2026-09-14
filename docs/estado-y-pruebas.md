@@ -231,3 +231,7 @@ Para voz además: activar/desactivar, silencio, ruido, autocorrección («Coca, 
 Sprite»), interrupción del asistente, pasar a escritura, pérdida de conexión y
 apagado del micrófono al finalizar. Registrar entrada, carrito esperado,
 resultado observado, fecha/modelo y latencias; no evaluar solo si el bot habló.
+
+### Actualización visual del frontend (14/09/2026)
+
+La interfaz adoptó la identidad visual de SIA Interactive: tipografía Inter, violeta de marca y una composición con gradientes suaves, tarjetas redondeadas y jerarquía visual orientada a la acción. El encabezado ahora invita a iniciar el pedido con “Hace tu pedido” y conserva los mismos controles y estados funcionales. La mejora es exclusivamente visual y debe verificarse en escritorio y en la vista responsive antes de incorporarla a una demo formal.

@@ -199,3 +199,15 @@ una etapa posterior. Contratos y pruebas en [voz](voz.md).
 sin duplicados, recibir aclaraciones, ver el estado real y continuar escribiendo
 si falla o desactiva el audio. La primera demo puede delimitar turnos explícitos;
 la conversación con interrupciones requiere una etapa adicional bien probada.
+
+## 10. Identidad visual alineada con SIA Interactive
+
+**Estado:** adoptada para la capa de presentación el 14/09/2026.
+
+**Contexto:** la autora pidió que el autoservicio se reconozca como una experiencia de SIA y que la interfaz comunique intención de producto, sin alterar el flujo de pedidos.
+
+**Decisión:** usar Inter, la paleta violeta de marca (`#7332fa`, `#4e19d5`) y fondos oscuros y claros con gradientes sutiles. El título visible pasa a ser “Hace tu pedido” y se suma una bajada que explica las alternativas de voz y escritura.
+
+**Alternativas consideradas:** mantener el estilo neutro existente o introducir una biblioteca visual completa. Se mantiene CSS propio para no sumar dependencias ni acoplar la lógica a un framework de interfaz.
+
+**Consecuencias:** mejora el reconocimiento de marca y la jerarquía visual, conserva los contratos y controles existentes, y requiere una validación responsive antes de una presentación pública.

@@ -506,3 +506,180 @@ h2 {
     border-color: #22252a;
 }
 .voice-transcript { margin: 0; padding: 8px 24px; color: #656970; min-height: 36px; }
+
+/* =========================================================
+   IDENTIDAD SIA Y EXPERIENCIA DE BIENVENIDA
+   ========================================================= */
+
+:root {
+    --sia-purple: #7332fa;
+    --sia-purple-dark: #4e19d5;
+    --sia-ink: #111322;
+    --sia-lilac: #f3efff;
+    --sia-line: #e8e3f4;
+}
+
+body {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+        radial-gradient(circle at 8% 8%, rgba(115, 50, 250, .18), transparent 27rem),
+        radial-gradient(circle at 92% 92%, rgba(78, 25, 213, .13), transparent 24rem),
+        #f7f7fb;
+}
+
+.app-container {
+    position: relative;
+    border: 1px solid rgba(115, 50, 250, .15);
+    border-radius: 24px;
+    box-shadow: 0 24px 70px rgba(34, 20, 85, .13);
+}
+
+.app-container::before {
+    position: absolute;
+    top: -110px;
+    left: 38%;
+    width: 280px;
+    height: 180px;
+    content: "";
+    pointer-events: none;
+    background: linear-gradient(120deg, rgba(115, 50, 250, .18), rgba(255, 255, 255, 0));
+    filter: blur(22px);
+    transform: rotate(-12deg);
+}
+
+.conversation-panel {
+    border-right-color: var(--sia-line);
+    background: linear-gradient(180deg, #fff 0%, #fdfcff 100%);
+}
+
+.panel-header,
+.cart-header {
+    min-height: 126px;
+    padding: 25px 30px;
+    border-bottom-color: var(--sia-line);
+}
+
+.brand-heading { position: relative; }
+
+.eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--sia-purple);
+    letter-spacing: .16em;
+}
+
+.brand-mark {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--sia-purple);
+    box-shadow: 12px 0 0 #b68cff;
+}
+
+h1,
+h2,
+h3 { color: var(--sia-ink); letter-spacing: -.035em; }
+
+h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.05; }
+
+.heading-accent { color: var(--sia-purple); }
+
+.header-subtitle {
+    max-width: 390px;
+    margin: 9px 0 0;
+    color: #77738b;
+    font-size: 13px;
+}
+
+.status {
+    border: 1px solid rgba(115, 50, 250, .16);
+    box-shadow: 0 5px 16px rgba(115, 50, 250, .08);
+}
+
+.conversation { padding: 30px; }
+
+.message {
+    border-radius: 18px;
+    box-shadow: 0 8px 20px rgba(32, 23, 67, .05);
+}
+
+.assistant-message {
+    background: var(--sia-lilac);
+    color: #29233e;
+    border: 1px solid rgba(115, 50, 250, .08);
+}
+
+.user-message { background: var(--sia-ink); }
+
+.message-form {
+    padding: 20px 26px 24px;
+    border-top-color: var(--sia-line);
+    background: rgba(255, 255, 255, .84);
+}
+
+.message-form input {
+    border-color: #ddd8eb;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.message-form input:focus {
+    border-color: var(--sia-purple);
+    box-shadow: 0 0 0 4px rgba(115, 50, 250, .11);
+}
+
+.message-form button:not(.control-button),
+.payment-action {
+    background: linear-gradient(135deg, var(--sia-purple), var(--sia-purple-dark));
+    box-shadow: 0 8px 18px rgba(115, 50, 250, .22);
+}
+
+.control-button {
+    border-color: #ddd8eb;
+    background: #fff;
+    color: var(--sia-ink);
+}
+
+.control-button:hover { border-color: #bda6f5; background: #faf8ff; }
+.control-button.active { background: var(--sia-ink); border-color: var(--sia-ink); }
+
+.cart-panel {
+    background: #fbfaff;
+    border-left: 1px solid rgba(115, 50, 250, .04);
+}
+
+.cart-items { padding: 26px 30px; }
+
+.cart-item {
+    padding: 18px 0;
+    border-bottom-color: var(--sia-line);
+}
+
+.cart-item-title { color: var(--sia-ink); }
+.cart-item-price, .total-row strong { color: var(--sia-purple-dark); }
+
+.cart-footer {
+    padding: 24px 30px;
+    border-top-color: var(--sia-line);
+}
+
+.payment-panel {
+    border-color: rgba(115, 50, 250, .2);
+    background: #fff;
+    box-shadow: 0 22px 70px rgba(39, 18, 96, .28);
+}
+
+.payment-options button {
+    background: var(--sia-ink);
+    transition: transform .18s ease, background .18s ease;
+}
+
+.payment-options button:hover { background: var(--sia-purple); transform: translateY(-1px); }
+
+@media (max-width: 850px) {
+    .panel-header { min-height: 116px; padding: 22px; }
+    .conversation { padding: 22px; }
+    .message-form { padding: 16px; }
+}
