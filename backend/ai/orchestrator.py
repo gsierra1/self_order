@@ -247,6 +247,7 @@ CATÁLOGO ACTUAL:
         )
         text = re.sub(r"\bUSD\b", "pesos argentinos", text, flags=re.IGNORECASE)
         text = re.sub(r"\bdólares?\b", "pesos argentinos", text, flags=re.IGNORECASE)
+        text = re.sub(r"\ben efectivo\b", "en caja", text, flags=re.IGNORECASE)
         text = re.sub(r"\befectivo\b", "en caja", text, flags=re.IGNORECASE)
         text = re.sub(
             r"(?i)acercate a la terminal(?: o lectora)? para completar el pago de",
