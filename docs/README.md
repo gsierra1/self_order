@@ -15,6 +15,8 @@ como las decisiones que la hacen confiable.
 3. [Decisiones de arquitectura](decisiones.md): razones, alternativas y límites.
 4. [Estado y pruebas](estado-y-pruebas.md): evidencia, problemas y siguientes etapas.
 5. [README principal](../README.md): configuración y ejecución local.
+6. [Seguimiento desde VS Code](seguimiento.md): acuerdos de commits y comandos
+   para probar el frontend y revisar cambios.
 
 ## Cómo mantener estos documentos
 

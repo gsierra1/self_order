@@ -4,7 +4,15 @@ Revisión inicial: 14/09/2026. Base Git revisada: `94aa4fc` (`bot hasta ahora`).
 Esta entrega agrega documentación y reglas de mantenimiento; no cambia lógica
 de aplicación. Ya existían cambios locales en archivos `__pycache__` y se conservaron.
 
-## Capacidades
+## Actualización de seguimiento — 14/09/2026
+
+Se incorporó la regla de un commit local por cambio coherente, con mensaje breve
+en español, explicación por etapa y comandos reproducibles para la autora.
+La guía `seguimiento.md` permite levantar el frontend, probar el flujo escrito
+y consultar commits/logs desde VS Code. Validación: revisión del diff y de enlaces
+locales de documentación; este cambio no modifica el comportamiento del bot.
+
+## Capacidades actuales
 
 | Capacidad | Estado y evidencia |
 | --- | --- |

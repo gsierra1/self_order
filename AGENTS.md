@@ -27,6 +27,23 @@ antes de modificar comportamiento o arquitectura.
   límites. No presentar propuestas como implementaciones ni pruebas simuladas
   como verificaciones reales de Gemini.
 
+## Commits y seguimiento de cada etapa
+
+- Cada cambio coherente debe quedar acompañado de su commit local, después de
+  revisar el diff y ejecutar las verificaciones apropiadas. El mensaje debe ser
+  una oración breve en español que explique qué cambia y/o por qué se necesita.
+- Incluir código y documentación correspondiente en el mismo commit. Separar
+  cambios con objetivos distintos; no incluir modificaciones ajenas por accidente.
+- Informar al finalizar los identificadores de los commits y qué se verificó.
+  Un commit local no implica publicar los cambios mediante push.
+- Antes de cada etapa, explicar qué se hará y para qué. Durante el trabajo,
+  comunicar hallazgos y resultados de pruebas de forma comprensible.
+- Entregar comandos exactos para PowerShell en la terminal integrada de VS Code,
+  indicando directorio, URL del frontend, acciones de prueba y resultados esperados.
+  Si el cambio no tiene efecto visual, explicar cómo verificarlo por terminal.
+- Diferenciar pruebas automáticas, pruebas manuales con el proveedor real y
+  pruebas con simulaciones. No dar por ejecutadas las pruebas propuestas a la autora.
+
 ## Invariantes de producto
 
 - `OrderService` es la autoridad sobre validación, precios y estado del pedido.
