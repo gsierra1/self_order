@@ -12,6 +12,14 @@ La guía `seguimiento.md` permite levantar el frontend, probar el flujo escrito
 y consultar commits/logs desde VS Code. Validación: revisión del diff y de enlaces
 locales de documentación; este cambio no modifica el comportamiento del bot.
 
+## Limpieza de caché Python — 14/09/2026
+
+Se agregaron `__pycache__/` y `*.py[cod]` a `.gitignore` y se retiraron del índice
+los cinco `.pyc` del dominio previamente versionados, conservando los archivos
+locales. Son artefactos regenerables, no código fuente. Validación: ausencia de
+bytecode en `git ls-files`, reglas verificadas con `git check-ignore` y presencia
+de los archivos locales después de retirarlos del índice. No cambia el bot.
+
 ## Capacidades actuales
 
 | Capacidad | Estado y evidencia |
@@ -120,8 +128,8 @@ configuración encontrada, no como disponibilidad verificada en la cuenta.
 - Deduplicar una tool dentro del turno no evita duplicados al repetir mensajes.
 - Faltan docstrings en `Cart.total`, `Menu.get_product` y `load_menu`; el frontend
   también necesita documentación de funciones cuando se modifique.
-- Hay bytecode versionado y `.gitignore` no excluye `__pycache__`; ordenar la
-  higiene del repositorio en un cambio específico.
+- La deuda de bytecode versionado se resolvió en la limpieza del 14/09/2026:
+  `.gitignore` excluye cachés y el índice ya no contiene los cinco `.pyc` originales.
 
 ### Para una integración operativa
 

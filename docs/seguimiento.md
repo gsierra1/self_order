@@ -46,6 +46,18 @@ Los controles de micrófono y voz siguen parcialmente implementados; consultar
 
 ## Revisar cambios y logs
 
+Python genera `__pycache__` con archivos `.pyc` (bytecode) para reutilizar la
+compilación de módulos. No se versionan: se regeneran a partir del código `.py`
+y pueden variar por versión de Python. `session.cpython-312.pyc`, por ejemplo,
+corresponde a CPython 3.12. Las reglas del `.gitignore` los excluyen. Los archivos
+ya versionados requieren además retirarse del índice con `git rm --cached`;
+esa opción conserva la copia local. La limpieza inicial ya fue realizada.
+
+Para comprobarlo, `git ls-files '*.pyc'` no debe listar archivos y
+`git check-ignore backend/domain/__pycache__/session.cpython-312.pyc` debe mostrar
+la ruta ignorada. Las carpetas pueden seguir visibles en el explorador de VS Code;
+lo esperado es que dejen de aparecer como cambios de Git.
+
 En una segunda terminal PowerShell, desde la raíz:
 
 ```powershell
