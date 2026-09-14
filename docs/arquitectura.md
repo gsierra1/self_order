@@ -102,10 +102,11 @@ realmente cada opción depende de la interpretación y del prompt: el servicio
 comprueba validez, pero no puede probar el origen de un valor enviado por el LLM.
 
 El orquestador desactiva la ejecución automática de funciones del SDK. Admite
-exactamente una function call por respuesta del modelo, hasta cinco ciclos de
-tools por mensaje. Rechaza una misma combinación de nombre y argumentos repetida
-dentro del turno. Esto también puede rechazar consultas repetidas legítimas;
-no es una garantía general contra duplicados entre mensajes o reconexiones.
+varias function calls distintas por respuesta y las ejecuta en el orden recibido,
+hasta cinco ciclos de tools por mensaje. Rechaza una misma combinación de nombre
+y argumentos repetida dentro del turno. Esto también puede rechazar consultas
+repetidas legítimas; no es una garantía general contra duplicados entre mensajes
+o reconexiones.
 
 ## Modelo de datos y precios
 

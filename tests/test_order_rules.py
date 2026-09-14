@@ -2,7 +2,8 @@
 
 import unittest
 from dataclasses import asdict
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from backend.ai.tools import create_add_item_tool
 from backend.ai.orchestrator import OrderConversationOrchestrator
@@ -68,3 +69,68 @@ class OrderRulesTests(unittest.TestCase):
             "Elegiste Mediano (12.500 pesos argentinos) en lugar de Grande; "
             "no es pesos argentinos.",
         )
+
+    def test_orchestrator_executes_multiple_requested_operations(self) -> None:
+        """Ejecuta dos tools distintas del mismo turno en el orden recibido."""
+        orchestrator = OrderConversationOrchestrator.__new__(
+            OrderConversationOrchestrator
+        )
+        orchestrator.service = self.service
+        orchestrator.max_tool_rounds = 5
+        orchestrator.available_tools = orchestrator._create_tools()
+        first_response = SimpleNamespace(
+            function_calls=[
+                SimpleNamespace(
+                    name="add_item",
+                    args={
+                        "product_id": "COMBO_BIG_MAC",
+                        "size": "LARGE",
+                        "drink": "COCA",
+                    },
+                ),
+                SimpleNamespace(
+                    name="add_item",
+                    args={
+                        "product_id": "COMBO_QUARTER_POUNDER",
+                        "size": "MEDIUM",
+                        "drink": "SPRITE",
+                    },
+                ),
+            ],
+            text=None,
+        )
+        final_response = SimpleNamespace(function_calls=[], text="Listo")
+        orchestrator._send_to_gemini = Mock(
+            side_effect=[first_response, final_response]
+        )
+
+        response = orchestrator.send_message(
+            "Agregá un Big Mac grande con Coca y un Cuarto de Libra mediano "
+            "con Sprite."
+        )
+
+        self.assertEqual(response, "Listo")
+        self.assertEqual(len(self.service.get_cart().items), 2)
+        self.assertEqual(orchestrator._send_to_gemini.call_count, 2)
+
+    def test_orchestrator_rejects_duplicate_operation_in_batch(self) -> None:
+        """No ejecuta un lote que repite exactamente la misma operación."""
+        orchestrator = OrderConversationOrchestrator.__new__(
+            OrderConversationOrchestrator
+        )
+        orchestrator.service = self.service
+        calls = [
+            SimpleNamespace(
+                name="add_item",
+                args={
+                    "product_id": "COMBO_BIG_MAC",
+                    "size": "LARGE",
+                    "drink": "COCA",
+                },
+            )
+        ]
+
+        with self.assertRaises(RuntimeError):
+            orchestrator._validate_function_calls(calls + calls, set())
+
+        self.assertFalse(self.service.get_cart().items)

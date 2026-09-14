@@ -166,6 +166,9 @@ REGLAS TRANSACCIONALES:
 - Para sustituir un producto utilizá replace_item.
 - Para eliminar una línea utilizá remove_item.
 - Para finalizar el pedido utilizá confirm_order.
+- Si el usuario pide varias operaciones independientes en una misma frase,
+  podés emitir varias llamadas distintas; se ejecutarán en el orden recibido.
+- Nunca emitas dos veces la misma operación con los mismos argumentos.
 
 REGLAS SOBRE INFORMACIÓN FALTANTE:
 
@@ -299,6 +302,103 @@ CATÁLOGO ACTUAL:
             )
 
             raise
+
+    def _validate_function_calls(
+        self,
+        function_calls: list,
+        executed_calls: set,
+    ) -> None:
+        """Verifica que un lote de llamadas no repita operaciones.
+
+        Args:
+            function_calls: Llamadas propuestas por Gemini en una respuesta.
+            executed_calls: Firmas ya ejecutadas durante el turno actual.
+
+        Raises:
+            RuntimeError: Si una operación se repite en el turno.
+        """
+        batch_signatures = set()
+        for function_call in function_calls:
+            arguments = dict(function_call.args or {})
+            signature = (
+                function_call.name,
+                json.dumps(arguments, sort_keys=True, ensure_ascii=False, default=str),
+            )
+            if signature in executed_calls or signature in batch_signatures:
+                log_event(
+                    "ERROR",
+                    "orchestrator.duplicate_tool_call",
+                    session_id=self.service.session.session_id,
+                    tool=function_call.name,
+                    arguments=arguments,
+                )
+                raise RuntimeError(
+                    "Gemini intentó repetir exactamente la misma operación "
+                    "dentro del mismo turno. La ejecución fue detenida para "
+                    "evitar una mutación duplicada."
+                )
+            batch_signatures.add(signature)
+
+    def _execute_function_call_with_response(
+        self,
+        function_call,
+        executed_calls: set,
+    ) -> tuple:
+        """Ejecuta una llamada y construye la respuesta para Gemini.
+
+        Args:
+            function_call: Llamada solicitada por Gemini.
+            executed_calls: Firmas ejecutadas durante el turno actual.
+
+        Returns:
+            Tupla con la parte de respuesta, nombre de tool y mutación realizada.
+        """
+        arguments = dict(function_call.args or {})
+        signature = (
+            function_call.name,
+            json.dumps(arguments, sort_keys=True, ensure_ascii=False, default=str),
+        )
+        executed_calls.add(signature)
+        log_event(
+            "DEBUG",
+            "tool.requested",
+            session_id=self.service.session.session_id,
+            tool=function_call.name,
+            arguments=arguments,
+        )
+
+        result = self._execute_function_call(function_call)
+        did_mutate = self._did_mutate(function_call.name, result)
+        result_payload = result.get("result", {})
+        if (
+            result.get("ok")
+            and isinstance(result_payload, dict)
+            and result_payload.get("status") == "needs_clarification"
+        ):
+            log_event(
+                "INFO",
+                "tool.needs_clarification",
+                session_id=self.service.session.session_id,
+                tool=function_call.name,
+                missing_fields=result_payload.get("missing_fields", []),
+            )
+        elif result.get("ok"):
+            log_event(
+                "INFO",
+                "tool.completed",
+                session_id=self.service.session.session_id,
+                tool=function_call.name,
+                transaction_applied=did_mutate,
+            )
+
+        return (
+            types.Part.from_function_response(
+                name=function_call.name,
+                response=result,
+            ),
+            function_call.name,
+            did_mutate,
+        )
 
     def _did_mutate(
         self,
@@ -521,110 +621,35 @@ CATÁLOGO ACTUAL:
                     "Se alcanzó el máximo de ciclos de tools permitidos."
                 )
 
-            function_calls = response.function_calls
+            function_calls = list(response.function_calls)
 
-            if len(function_calls) != 1:
+            if len(function_calls) > 1:
                 log_event(
-                    "ERROR",
+                    "INFO",
                     "orchestrator.multiple_function_calls",
                     session_id=session_id,
                     function_call_count=len(function_calls),
                 )
+            self._validate_function_calls(function_calls, executed_calls)
+            function_response_parts = []
 
-                raise RuntimeError(
-                    "Esta versión del orquestador admite exactamente una "
-                    "function call por ciclo."
+            for function_call in function_calls:
+                (
+                    function_response,
+                    last_tool,
+                    did_mutate,
+                ) = self._execute_function_call_with_response(
+                    function_call,
+                    executed_calls,
                 )
-
-            function_call = function_calls[0]
-            arguments = dict(function_call.args or {})
-
-            call_signature = (
-                function_call.name,
-                json.dumps(
-                    arguments,
-                    sort_keys=True,
-                    ensure_ascii=False,
-                    default=str,
-                ),
-            )
-
-            if call_signature in executed_calls:
-                log_event(
-                    "ERROR",
-                    "orchestrator.duplicate_tool_call",
-                    session_id=session_id,
-                    tool=function_call.name,
-                    arguments=arguments,
-                )
-
-                raise RuntimeError(
-                    "Gemini intentó repetir exactamente la misma operación "
-                    "dentro del mismo turno. La ejecución fue detenida para "
-                    "evitar una mutación duplicada."
-                )
-
-            executed_calls.add(call_signature)
-
-            log_event(
-                "DEBUG",
-                "tool.requested",
-                session_id=session_id,
-                tool=function_call.name,
-                arguments=arguments,
-            )
-
-            result = self._execute_function_call(
-                function_call
-            )
-
-            did_mutate = self._did_mutate(
-                function_call.name,
-                result,
-            )
-
-            if did_mutate:
-                transaction_applied = True
-
-            result_payload = result.get("result", {})
-
-            if (
-                result.get("ok")
-                and isinstance(result_payload, dict)
-                and result_payload.get("status")
-                == "needs_clarification"
-            ):
-                log_event(
-                    "INFO",
-                    "tool.needs_clarification",
-                    session_id=session_id,
-                    tool=function_call.name,
-                    missing_fields=result_payload.get(
-                        "missing_fields",
-                        [],
-                    ),
-                )
-
-            elif result.get("ok"):
-                log_event(
-                    "INFO",
-                    "tool.completed",
-                    session_id=session_id,
-                    tool=function_call.name,
-                    transaction_applied=did_mutate,
-                )
-
-            last_tool = function_call.name
-
-            function_response = types.Part.from_function_response(
-                name=function_call.name,
-                response=result,
-            )
+                function_response_parts.append(function_response)
+                if did_mutate:
+                    transaction_applied = True
 
             tool_rounds += 1
 
             response = self._send_to_gemini(
-                function_response,
+                function_response_parts,
                 stage="GEMINI_AFTER_TOOL",
                 transaction_applied=transaction_applied,
                 last_tool=last_tool,

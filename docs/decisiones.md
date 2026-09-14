@@ -84,8 +84,9 @@ un efecto permite validar, observar y limitar la ejecución.
 pero dificulta ubicar ciertos controles específicos de esta prueba de concepto.
 
 **Consecuencia:** hay lista explícita, límite de ciclos y detección de repetición
-en un turno. Solo admitir una llamada por respuesta simplifica la implementación,
-pero puede fallar ante pedidos de varios productos. Las firmas tipadas ayudan
+en un turno. Varias llamadas distintas de una misma respuesta se ejecutan en el
+orden recibido y sus resultados se envían juntos al modelo; una llamada repetida
+se detiene antes de ejecutarse. Las firmas tipadas ayudan
 al SDK a describir las tools; Python no valida esos tipos en ejecución por sí solo.
 
 ## 05. HTTP para inicio y consulta, WebSocket para interacción

@@ -154,9 +154,10 @@ reconexión automática, conversación continua y las validaciones del punto 4.
 5. **JSON WebSocket sin validar estructura (por código).** Se captura JSON
    malformado, pero un JSON válido que sea lista/null o tenga `data` no objeto
    puede fallar al invocar `.get()`.
-6. **Pedidos con varias acciones (por código).** Más de una function call en una
-   respuesta produce error interno; el límite de cinco ciclos también afecta
-   pedidos largos. Incorporar casos de varios productos antes de darlo por cubierto.
+6. **Pedidos con varias acciones (verificado por código).** Varias function calls
+   distintas en una respuesta se ejecutan en orden y sus resultados vuelven juntos
+   a Gemini; una llamada idéntica repetida se rechaza. El límite de cinco ciclos
+   todavía afecta pedidos largos.
 7. **Micrófono y cierre (por código).** Confirmar/desconectar no llama a
    `disableMicrophone()`. Revisar liberación, permisos, errores y estados. La
    captura actual usa `createScriptProcessor` y un remuestreo por selección de
