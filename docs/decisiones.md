@@ -235,3 +235,14 @@ la conversación con interrupciones requiere una etapa adicional bien probada.
 **Decisión provisional:** mantener Gemini para la demo y medir antes de cambiarlo. La comparación debe usar audios equivalentes y registrar latencia total, calidad con ruido, costo por pedido, hardware disponible y funcionamiento sin internet.
 
 **Consecuencia:** si un motor local resulta más conveniente, se incorpora mediante un adaptador de transcripción. No debería ser necesario reescribir las reglas de menú, carrito, pagos o frontend.
+
+## 13. Diferencia práctica entre STT cloud y Edge
+
+**STT** describe la función: convertir audio en texto. **Edge** describe dónde se ejecuta esa función: cerca del micrófono, en el equipo del kiosco. Gemini Transcribe Live es un STT cloud; Whisper o Vosk ejecutándose en una PC local serían STT Edge.
+
+| Alternativa | Ventaja principal | Costo o límite |
+| --- | --- | --- |
+| Gemini Transcribe Live actual | Permite validar rápido con el hardware existente y delega mantenimiento del modelo al proveedor. | Depende de internet, tiene latencia variable y costo por uso. |
+| STT Edge | Puede responder sin internet, reducir la latencia de red y mantener el audio local. | Requiere hardware, instalación, actualizaciones y pruebas de calidad con ruido. |
+
+Edge no mejora automáticamente la transcripción. Es una alternativa operativa que solo conviene adoptar si las mediciones de latencia, ruido, costo, privacidad y disponibilidad justifican el hardware adicional.
