@@ -22,6 +22,7 @@ const systemStatus = document.getElementById("system-status");
 const micButton = document.getElementById("mic-button");
 const audioButton = document.getElementById("audio-button");
 const transcript = document.getElementById("voice-transcript");
+const confirmCartButton = document.getElementById("confirm-cart-button");
 const paymentPanel = document.getElementById("payment-panel");
 const paymentContent = document.getElementById("payment-content");
 
@@ -138,6 +139,7 @@ function appendMessage(
  * @param {Object} cart Líneas, total y estado del pedido. */
 function renderCart(cart) {
     cartItems.innerHTML = "";
+    confirmCartButton.hidden = cart.state !== "ACTIVE" || cart.items.length === 0;
 
     sessionState.textContent =
         cart.state;
@@ -339,7 +341,7 @@ function renderPayment(cart) {
         paymentTimer = setTimeout(() => completePayment(), 5000);
     } else if (method === "CARD") {
         paymentContent.innerHTML = `
-            <label for="card-number">Número de tarjeta (demo)</label>
+            <label for="card-number">Ingresá el número de tu tarjeta (demo)</label>
             <input id="card-number" class="card-input" inputmode="numeric"
                 autocomplete="off" placeholder="Escribí cualquier número">
             <button type="button" class="payment-action" id="card-confirm">Continuar</button>
@@ -355,12 +357,12 @@ function renderPayment(cart) {
         document.getElementById("payment-back").addEventListener("click", returnToOrder);
     } else {
         paymentContent.innerHTML = `
+            <p>Pago en caja seleccionado.</p>
             <p>Tu número de pedido es <strong>${cart.order_number}</strong>.</p>
             <p>Acercate a caja, indicá ese número y realizá el pago.</p>
-            <button type="button" class="payment-action" id="cash-confirm">CONFIRMAR</button>
             <button type="button" class="payment-action" id="payment-back">ATRÁS</button>`;
-        document.getElementById("cash-confirm").addEventListener("click", completePayment);
         document.getElementById("payment-back").addEventListener("click", returnToOrder);
+        completePayment();
     }
 }
 
@@ -390,6 +392,21 @@ async function removeCartItem(lineId) {
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "No se pudo eliminar el producto.");
         applyCart(data.cart);
+        appendMessage("Sistema", "Producto eliminado del carrito.", "assistant");
+    } catch (error) {
+        appendMessage("Sistema", error.message, "error");
+    }
+}
+
+/** Confirma el carrito sin enviar una intención al modelo.
+ * @returns {Promise<void>} Abre directamente la selección de pago. */
+async function startPaymentFromCart() {
+    try {
+        const response = await fetch(`/api/sessions/${sessionId}/payment/start`, { method: "POST" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "No se pudo confirmar el carrito.");
+        applyCart(data.cart);
+        appendMessage("Sistema", "Carrito confirmado. Elegí cómo pagar.", "assistant");
     } catch (error) {
         appendMessage("Sistema", error.message, "error");
     }
@@ -589,6 +606,7 @@ for (const button of document.querySelectorAll("[data-payment-method]")) {
         sendMessage(`Quiero pagar con ${labels[method]}.`);
     });
 }
+confirmCartButton.addEventListener("click", startPaymentFromCart);
 
 /**
  * Envía texto solo cuando no hay un turno hablado o escrito pendiente.

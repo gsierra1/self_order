@@ -43,7 +43,8 @@ body {
     border: 1px solid #dedfe2;
     border-radius: 18px;
 
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
 
     /*
      * Importante para permitir que los paneles internos
@@ -413,18 +414,19 @@ h2 {
     background: white;
 }
 
-.payment-panel { margin: 18px 24px 24px; padding: 16px; border: 1px solid #e4e6eb; border-radius: 14px; background: #fafbfc; }
+.payment-panel { flex-shrink: 0; margin: 18px 24px 24px; padding: 16px; border: 1px solid #e4e6eb; border-radius: 14px; background: #fafbfc; }
 .payment-panel h3 { margin: 0 0 12px; }
 .payment-options { display: flex; gap: 8px; flex-wrap: wrap; }
 .payment-options button, .payment-action { border: 0; border-radius: 9px; padding: 10px 12px; cursor: pointer; background: #242833; color: white; }
 .payment-options button:disabled, .payment-action:disabled { opacity: .55; cursor: wait; }
 .payment-content { margin-top: 14px; }
-.fake-qr { width: 150px; height: 150px; margin: 12px auto; display: grid; grid-template-columns: repeat(15, 1fr); gap: 2px; background: white; padding: 8px; border: 1px solid #222; }
+.fake-qr { width: min(70vw, 260px); aspect-ratio: 1; height: auto; margin: 12px auto; display: grid; grid-template-columns: repeat(15, 1fr); gap: 2px; background: white; padding: 8px; border: 1px solid #222; box-sizing: border-box; }
 .fake-qr span { background: #111; }
 .fake-qr span:nth-child(3n) { background: white; }
 .card-input { width: 100%; box-sizing: border-box; margin: 8px 0; padding: 10px; border: 1px solid #ccd1da; border-radius: 8px; }
 .payment-success { margin: 0; color: #176b3a; font-weight: 600; }
 .remove-item-button { margin-left: auto; border: 0; background: transparent; color: #9b2c2c; cursor: pointer; font-size: 1.1rem; }
+#confirm-cart-button { width: 100%; margin-top: 14px; }
 
 
 .total-row {

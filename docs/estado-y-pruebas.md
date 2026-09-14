@@ -214,6 +214,10 @@ finaliza en `CONFIRMED`. El QR es inválido a propósito, la tarjeta no se enví
 ni se almacena, el botón atrás conserva la edición y cada línea activa tiene un
 control de eliminación. La pantalla final cuenta cinco segundos e inicia otra
 sesión. Falta realizar la prueba manual de los tres recorridos desde el navegador.
+Las consultas de precios deben responderse desde el catálogo sin crear líneas
+temporales. El botón del carrito inicia el pago directamente; el botón atrás
+permite volver a editar, y los métodos QR, tarjeta y caja terminan con la misma
+cuenta regresiva antes de abrir otra sesión.
 
 ## Matriz mínima de demostración pendiente
 

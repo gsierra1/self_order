@@ -137,12 +137,14 @@ class OrderConversationOrchestrator:
 
         for product in self.service.menu.products.values():
             catalog_lines.append(
-                f"- {product.name}: product_id={product.id}"
+                f"- {product.name}: product_id={product.id}, "
+                f"precio base ARS {product.base_price}"
             )
 
             for group in product.modifier_groups:
                 option_ids = ", ".join(
-                    option.id for option in group.options
+                    f"{option.id} (+ARS {option.price_delta})"
+                    for option in group.options
                 )
 
                 required_text = (
@@ -169,6 +171,8 @@ REGLAS TRANSACCIONALES:
 - No modifiques directamente ningún dato del pedido.
 - Las tools y OrderService son la autoridad sobre el estado transaccional.
 - Para agregar productos utilizá add_item.
+- Si el usuario pregunta precios, menú u opciones, respondé con el catálogo y
+  nunca utilices add_item solo para calcular o mostrar un precio.
 - Para consultar el carrito utilizá get_cart.
 - Para cambiar tamaño o bebida utilizá change_modifier.
 - Para sustituir un producto utilizá replace_item.
@@ -176,6 +180,8 @@ REGLAS TRANSACCIONALES:
 - Para finalizar el pedido utilizá confirm_order.
 - confirm_order solo prepara el pago y devuelve las opciones; no cierres la
   sesión ni anuncies el pago confirmado todavía.
+- Para CASH decí siempre "En caja", nunca "efectivo". Para CARD indicá que la
+  persona debe ingresar el número de su tarjeta; no menciones terminales.
 - Cuando el pedido esté pendiente de pago, utilizá select_payment_method
   con QR, CARD o CASH según lo que el usuario elija.
 - Si el usuario quiere cambiar el método o volver a modificar el pedido,
@@ -241,6 +247,12 @@ CATÁLOGO ACTUAL:
         )
         text = re.sub(r"\bUSD\b", "pesos argentinos", text, flags=re.IGNORECASE)
         text = re.sub(r"\bdólares?\b", "pesos argentinos", text, flags=re.IGNORECASE)
+        text = re.sub(r"\befectivo\b", "en caja", text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"(?i)acercate a la terminal(?: o lectora)? para completar el pago de",
+            "ingresá el número de tu tarjeta para completar el pago de",
+            text,
+        )
         return text
 
     def _execute_function_call(self, function_call) -> dict:

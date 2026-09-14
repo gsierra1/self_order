@@ -116,6 +116,9 @@ sin datos de pago ni destino real; la tarjeta tampoco se envía ni se almacena.
 Mientras el pago está pendiente, `return_to_order` permite volver al carrito y
 eliminar líneas sigue pasando por `OrderService`. Tras finalizar, la interfaz
 muestra el número de pedido, cuenta cinco segundos y crea otra sesión.
+La confirmación también puede iniciarse desde el botón del carrito sin pasar por
+Gemini; las consultas de precios usan la información del catálogo y no mutan el
+pedido.
 
 ## Modelo de datos y precios
 

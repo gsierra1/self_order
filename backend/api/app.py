@@ -260,6 +260,32 @@ def get_cart(
     )
 
 
+@app.post("/api/sessions/{session_id}/payment/start")
+def start_payment(session_id: str) -> dict:
+    """Prepara el pago desde el botón de confirmación del carrito.
+
+    Args:
+        session_id: Identificador técnico de la sesión.
+
+    Returns:
+        Carrito en espera de método de pago y número generado.
+
+    Raises:
+        HTTPException: Si el carrito está vacío o hay otro turno en curso.
+    """
+    runtime = get_runtime(session_id)
+    if not runtime.turn_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Hay un turno en curso.")
+    try:
+        try:
+            result = runtime.service.prepare_payment()
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        runtime.turn_lock.release()
+    return {"ok": True, **result, "cart": serialize_cart(runtime.service)}
+
+
 @app.post("/api/sessions/{session_id}/payment/complete")
 def complete_payment(session_id: str) -> dict:
     """Completa el pago de demostración y devuelve el número de pedido.
