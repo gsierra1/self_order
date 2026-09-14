@@ -69,14 +69,17 @@ Los experimentos anteriores siguen usando `gemini-3.1-flash-live-preview`.
 Se comprobó conexión y transcripción real con el nuevo modelo el 14/09/2026.
 La disponibilidad futura depende del proveedor y de la cuenta.
 
-Para consultar los modelos visibles para la API key configurada, ejecutar:
+Para consultar todos los modelos visibles para la API key configurada, tanto los
+de chat como los de transcripción, ejecutar:
 
 ```powershell
 python -m backend.ai.list_models
 ```
 
 El comando requiere red y credenciales, y solo muestra nombres y acciones del
-proveedor. La lista puede cambiar según la cuenta y la fecha.
+proveedor. Las acciones permiten elegir: `generateContent` corresponde al chat y
+`bidiGenerateContent` a transcripción/conversación en vivo. La lista puede
+cambiar según la cuenta y la fecha; no es fija dentro del proyecto.
 
 ## Scripts manuales existentes
 

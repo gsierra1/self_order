@@ -90,7 +90,9 @@ El chat usa `GEMINI_CHAT_MODEL`, cuyo valor predeterminado es
 el código. Las credenciales quedan en backend.
 Para consultar los modelos habilitados para la cuenta local, ejecutar
 `python -m backend.ai.list_models` con el entorno virtual activo. La salida es
-informativa: la disponibilidad y los nombres pueden cambiar por cuenta o fecha.
+informativa y muestra todos los modelos junto con sus acciones: `generateContent`
+para el chat y `bidiGenerateContent` para transcripción en vivo. La disponibilidad
+y los nombres pueden cambiar por cuenta o fecha, por lo que no son valores fijos.
 Los scripts Live anteriores se conservan como experimentos independientes.
 
 Se eligió transcribir y reutilizar el orquestador para mantener un solo historial
