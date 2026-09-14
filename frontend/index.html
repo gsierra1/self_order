@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SIA Self Order</title>
+
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <main class="app-container">
+
+        <section class="conversation-panel">
+            <header class="panel-header">
+                <div>
+                    <p class="eyebrow">SIA SELF ORDER</p>
+                    <h1>Asistente de pedidos</h1>
+                </div>
+
+                <div id="system-status" class="status status-ready">
+                    Listo
+                </div>
+            </header>
+
+            <div id="conversation" class="conversation">
+                <div class="message assistant-message">
+                    <span class="message-author">
+                        Asistente
+                    </span>
+
+                    <p>
+                        Hola. Podés escribir tu pedido para comenzar.
+                    </p>
+                </div>
+            </div>
+
+            <form id="message-form" class="message-form">
+                <button id="mic-button" class="control-button" type="button" title="Activar o desactivar micrófono">
+                    🎤 Mic OFF
+                </button>
+                <input id="message-input" type="text" autocomplete="off"
+                    placeholder="Ej.: Quiero un Big Mac grande con Coca">
+
+                <button id="send-button" type="submit">
+                    Enviar
+                </button>
+                <button id="audio-button" class="control-button" type="button"
+                    title="Activar o desactivar la voz del asistente">
+                    🔊 Voz ON
+                </button>
+            </form>
+        </section>
+
+
+        <aside class="cart-panel">
+            <header class="cart-header">
+                <div>
+                    <p class="eyebrow">TU PEDIDO</p>
+                    <h2>Carrito</h2>
+                </div>
+
+                <span id="session-state" class="session-state">
+                    ACTIVE
+                </span>
+            </header>
+
+            <div id="cart-items" class="cart-items">
+                <p class="empty-cart">
+                    Tu carrito está vacío.
+                </p>
+            </div>
+
+            <footer class="cart-footer">
+                <div class="total-row">
+                    <span>Total</span>
+
+                    <strong id="cart-total">
+                        $0
+                    </strong>
+                </div>
+            </footer>
+        </aside>
+
+    </main>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

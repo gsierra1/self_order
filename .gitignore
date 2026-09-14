@@ -1,2 +1,6 @@
 .venv/ 
 .env
+logs/*.log
+logs/*.log.*
+logs/*.jsonl
+logs/*.jsonl.*

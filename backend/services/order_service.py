@@ -1,12 +1,160 @@
+from backend.domain.cart import Cart
 from backend.domain.cart_item import CartItem
 from backend.domain.menu import Menu
-from backend.domain.session import Session
-
+from backend.domain.session import Session, SessionState
+from backend.logging.event_logger import log_event
+from collections.abc import Callable
 
 class OrderService:
-    def __init__(self, menu: Menu, session: Session):
+    """
+    Gestiona las operaciones transaccionales asociadas a un pedido.
+
+    El servicio mantiene la lógica de validación y modificación del carrito.
+    Gemini y las interfaces externas pueden solicitar operaciones, pero este
+    servicio constituye la autoridad sobre el estado real del pedido.
+    """
+
+    def __init__(
+        self,
+        menu: Menu,
+        session: Session,
+        event_callback: Callable[[str, dict], None] | None = None,
+    ) -> None:
+        """
+        Inicializa el servicio transaccional de pedidos.
+
+        Args:
+            menu: Menú utilizado para validar productos y configuraciones.
+            session: Sesión cuyo carrito será administrado.
+            event_callback: Función opcional utilizada para publicar cambios de
+                estado hacia otros componentes del sistema.
+        """
         self.menu = menu
         self.session = session
+        self.event_callback = event_callback
+
+    def _get_cart_snapshot(self) -> dict:
+        """
+        Construye una representación estructurada del carrito actual.
+
+        El snapshot se utiliza exclusivamente para observabilidad y permite
+        reconstruir cómo quedó el pedido después de una operación exitosa.
+
+        Returns:
+            Diccionario con los productos actuales, el total y el estado de
+            la sesión.
+        """
+        cart = self.session.cart
+
+        return {
+            "items": [
+                {
+                    "line_id": item.line_id,
+                    "product_id": item.product_id,
+                    "product_name": item.product_name,
+                    "quantity": item.quantity,
+                    "selected_modifiers": (
+                        item.selected_modifiers.copy()
+                    ),
+                    "unit_price": item.unit_price,
+                }
+                for item in cart.items
+            ],
+            "total": cart.total,
+            "session_state": self.session.state.value,
+        }
+    
+    def _emit_event(
+        self,
+        event_type: str,
+        data: dict,
+    ) -> None:
+        """
+        Publica un evento hacia un componente externo, si existe un callback.
+
+        Un fallo del mecanismo de publicación no revierte ni interrumpe una
+        operación transaccional que ya fue validada correctamente.
+
+        Args:
+            event_type: Tipo semántico del evento.
+            data: Información estructurada asociada al evento.
+        """
+        if self.event_callback is None:
+            return
+
+        try:
+            self.event_callback(
+                event_type,
+                data,
+            )
+
+        except Exception as exc:
+            log_event(
+                "ERROR",
+                "event.publish_error",
+                exception=exc,
+                session_id=self.session.session_id,
+                event_type=event_type,
+                exception_type=type(exc).__name__,
+                exception_message=str(exc),
+            )
+
+    def _log_cart_updated(
+        self,
+        action: str,
+        *,
+        line_id: int | None = None,
+    ) -> None:
+        """
+        Registra y publica una modificación exitosa del carrito.
+
+        Args:
+            action: Operación que produjo el cambio, por ejemplo "add_item",
+                "remove_item" o "change_modifier".
+            line_id: Identificador de la línea afectada, si corresponde.
+        """
+        snapshot = self._get_cart_snapshot()
+
+        log_event(
+            "INFO",
+            "cart.updated",
+            session_id=self.session.session_id,
+            action=action,
+            line_id=line_id,
+            cart=snapshot,
+        )
+
+        self._emit_event(
+            "cart.updated",
+            {
+                "action": action,
+                "line_id": line_id,
+                "cart": {
+                    "items": snapshot["items"],
+                    "total": snapshot["total"],
+                    "state": snapshot["session_state"],
+                },
+            },
+        )
+
+    def _ensure_active(self) -> None:
+        """
+        Verifica que la sesión todavía admita modificaciones.
+
+        Raises:
+            ValueError: Si el pedido ya fue confirmado.
+        """
+        if self.session.state != SessionState.ACTIVE:
+            log_event(
+                "WARN",
+                "session.modification_blocked",
+                session_id=self.session.session_id,
+                session_state=self.session.state.value,
+            )
+
+            raise ValueError(
+                "The order has already been confirmed and cannot be modified"
+            )
 
     def add_item(
         self,
@@ -14,21 +162,66 @@ class OrderService:
         quantity: int,
         selected_modifiers: dict[str, str],
     ) -> CartItem:
+        """
+        Agrega un producto validado al carrito de la sesión actual.
 
-        product = self.menu.get_product(product_id)
+        Busca el producto en el menú, verifica su disponibilidad, valida los
+        modificadores seleccionados, calcula el precio unitario correspondiente
+        y crea un nuevo CartItem con un line_id único dentro del carrito.
+
+        El carrito solo se modifica después de que todas las validaciones hayan
+        finalizado correctamente.
+
+        Args:
+            product_id: Identificador interno del producto dentro del menú.
+            quantity: Cantidad de unidades idénticas que se desean agregar.
+            selected_modifiers: Modificadores seleccionados para el producto.
+                Las claves representan grupos de modificadores y los valores,
+                las opciones elegidas. Por ejemplo:
+                {"size": "LARGE", "drink": "COCA"}.
+
+        Returns:
+            El CartItem creado y agregado al carrito.
+
+        Raises:
+            ValueError: Si el producto no existe en el menú.
+            ValueError: Si el producto no está disponible.
+            ValueError: Si falta un modificador obligatorio.
+            ValueError: Si alguna opción seleccionada no es válida para su grupo.
+            ValueError: Si la cantidad indicada no es mayor que cero.
+        """
+        self._ensure_active()
+
+        product = self.menu.get_product(
+            product_id
+        )
 
         if product is None:
-            raise ValueError(f"Product not found: {product_id}")
+            raise ValueError(
+                f"Product not found: {product_id}"
+            )
 
         if not product.available:
-            raise ValueError(f"Product unavailable: {product_id}")
+            raise ValueError(
+                f"Product unavailable: {product_id}"
+            )
+
+        if quantity <= 0:
+            raise ValueError(
+                "Quantity must be greater than zero"
+            )
 
         unit_price = product.base_price
 
         for group in product.modifier_groups:
-            selected_option_id = selected_modifiers.get(group.id)
+            selected_option_id = selected_modifiers.get(
+                group.id
+            )
 
-            if group.required and selected_option_id is None:
+            if (
+                group.required
+                and selected_option_id is None
+            ):
                 raise ValueError(
                     f"Required modifier missing: {group.id}"
                 )
@@ -51,14 +244,17 @@ class OrderService:
                     f"for modifier '{group.id}'"
                 )
 
-            unit_price += selected_option.price_delta
-
-        if quantity <= 0:
-            raise ValueError("Quantity must be greater than zero")
+            unit_price += (
+                selected_option.price_delta
+            )
 
         next_line_id = (
             max(
-                (item.line_id for item in self.session.cart.items),
+                (
+                    item.line_id
+                    for item
+                    in self.session.cart.items
+                ),
                 default=0,
             )
             + 1
@@ -69,28 +265,41 @@ class OrderService:
             product_id=product.id,
             product_name=product.name,
             quantity=quantity,
-            selected_modifiers=selected_modifiers.copy(),
+            selected_modifiers=(
+                selected_modifiers.copy()
+            ),
             unit_price=unit_price,
         )
 
-        self.session.cart.items.append(cart_item)
+        self.session.cart.items.append(
+            cart_item
+        )
 
-        return 
-    
-    def remove_item(self, line_id: int) -> CartItem:
+        self._log_cart_updated(
+            "add_item",
+            line_id=cart_item.line_id,
+        )
+
+        return cart_item
+
+    def remove_item(
+        self,
+        line_id: int,
+    ) -> CartItem:
         """
         Elimina un CartItem del carrito de la sesión actual.
 
         Args:
-            line_id: Identificador único de la línea del carrito que se desea
-                eliminar.
+            line_id: Identificador único de la línea que se desea eliminar.
 
         Returns:
-            El CartItem que fue eliminado del carrito.
+            El CartItem eliminado.
 
         Raises:
-            ValueError: Si no existe ningún CartItem con el line_id indicado.
+            ValueError: Si no existe un CartItem con el line_id indicado.
         """
+        self._ensure_active()
+
         cart_item = next(
             (
                 item
@@ -101,30 +310,46 @@ class OrderService:
         )
 
         if cart_item is None:
-            raise ValueError(f"Cart item not found: {line_id}")
+            raise ValueError(
+                f"Cart item not found: {line_id}"
+            )
 
-        self.session.cart.items.remove(cart_item)
+        self.session.cart.items.remove(
+            cart_item
+        )
+
+        self._log_cart_updated(
+            "remove_item",
+            line_id=cart_item.line_id,
+        )
 
         return cart_item
 
-    def change_quantity(self, line_id: int, quantity: int) -> CartItem:
+    def change_quantity(
+        self,
+        line_id: int,
+        quantity: int,
+    ) -> CartItem:
         """
-        Modifica la cantidad de un CartItem del carrito actual.
+        Modifica la cantidad de un CartItem.
 
         Args:
-            line_id: Identificador único de la línea del carrito cuya cantidad
-                se desea modificar.
-            quantity: Nueva cantidad de unidades para ese CartItem.
+            line_id: Identificador único de la línea que se desea modificar.
+            quantity: Nueva cantidad de unidades.
 
         Returns:
-            El CartItem actualizado con la nueva cantidad.
+            El CartItem actualizado.
 
         Raises:
-            ValueError: Si la cantidad no es mayor que cero o si no existe
-                ningún CartItem con el line_id indicado.
+            ValueError: Si la cantidad no es mayor que cero.
+            ValueError: Si no existe el CartItem indicado.
         """
+        self._ensure_active()
+
         if quantity <= 0:
-            raise ValueError("Quantity must be greater than zero")
+            raise ValueError(
+                "Quantity must be greater than zero"
+            )
 
         cart_item = next(
             (
@@ -136,37 +361,41 @@ class OrderService:
         )
 
         if cart_item is None:
-            raise ValueError(f"Cart item not found: {line_id}")
+            raise ValueError(
+                f"Cart item not found: {line_id}"
+            )
 
         cart_item.quantity = quantity
+
+        self._log_cart_updated(
+            "change_quantity",
+            line_id=cart_item.line_id,
+        )
 
         return cart_item
 
     def change_modifier(
-    self,
-    line_id: int,
-    modifier_group_id: str,
-    option_id: str,
-) -> CartItem:
+        self,
+        line_id: int,
+        modifier_group_id: str,
+        option_id: str,
+    ) -> CartItem:
         """
-        Modifica un modificador de un CartItem y recalcula su precio unitario.
+        Modifica un modificador y recalcula el precio unitario.
 
         Args:
-            line_id: Identificador único de la línea del carrito que se desea
-                modificar.
-            modifier_group_id: Identificador del grupo de modificadores a cambiar,
-                por ejemplo "size" o "drink".
-            option_id: Identificador de la nueva opción seleccionada dentro del
-                grupo, por ejemplo "LARGE" o "SPRITE".
+            line_id: Identificador único de la línea que se desea modificar.
+            modifier_group_id: Grupo de modificadores, por ejemplo "size".
+            option_id: Nueva opción, por ejemplo "LARGE" o "SPRITE".
 
         Returns:
-            El CartItem actualizado con el nuevo modificador y precio unitario.
+            El CartItem actualizado.
 
         Raises:
-            ValueError: Si no existe el CartItem, el producto asociado no existe
-                en el menú, el grupo de modificadores no existe o la opción
-                seleccionada no es válida.
+            ValueError: Si la línea, producto, grupo u opción no son válidos.
         """
+        self._ensure_active()
+
         cart_item = next(
             (
                 item
@@ -177,13 +406,18 @@ class OrderService:
         )
 
         if cart_item is None:
-            raise ValueError(f"Cart item not found: {line_id}")
+            raise ValueError(
+                f"Cart item not found: {line_id}"
+            )
 
-        product = self.menu.get_product(cart_item.product_id)
+        product = self.menu.get_product(
+            cart_item.product_id
+        )
 
         if product is None:
             raise ValueError(
-                f"Product not found in menu: {cart_item.product_id}"
+                f"Product not found in menu: "
+                f"{cart_item.product_id}"
             )
 
         modifier_group = next(
@@ -197,7 +431,8 @@ class OrderService:
 
         if modifier_group is None:
             raise ValueError(
-                f"Modifier group not found: {modifier_group_id}"
+                f"Modifier group not found: "
+                f"{modifier_group_id}"
             )
 
         selected_option = next(
@@ -215,13 +450,20 @@ class OrderService:
                 f"for modifier '{modifier_group_id}'"
             )
 
-        new_modifiers = cart_item.selected_modifiers.copy()
-        new_modifiers[modifier_group_id] = option_id
+        new_modifiers = (
+            cart_item.selected_modifiers.copy()
+        )
+
+        new_modifiers[
+            modifier_group_id
+        ] = option_id
 
         new_unit_price = product.base_price
 
         for group in product.modifier_groups:
-            selected_id = new_modifiers.get(group.id)
+            selected_id = new_modifiers.get(
+                group.id
+            )
 
             if selected_id is None:
                 continue
@@ -243,40 +485,46 @@ class OrderService:
 
             new_unit_price += option.price_delta
 
-        cart_item.selected_modifiers = new_modifiers
-        cart_item.unit_price = new_unit_price
+        cart_item.selected_modifiers = (
+            new_modifiers
+        )
+
+        cart_item.unit_price = (
+            new_unit_price
+        )
+
+        self._log_cart_updated(
+            "change_modifier",
+            line_id=cart_item.line_id,
+        )
 
         return cart_item
 
     def replace_item(
-    self,
-    line_id: int,
-    new_product_id: str,
-    selected_modifiers: dict[str, str],
-) -> CartItem:
+        self,
+        line_id: int,
+        new_product_id: str,
+        selected_modifiers: dict[str, str],
+    ) -> CartItem:
         """
-        Reemplaza el producto base de un CartItem por otro producto validado.
+        Reemplaza el producto base de un CartItem por otro producto.
 
-        La operación conserva el line_id y la cantidad del CartItem original.
-        Todas las validaciones del nuevo producto se realizan antes de modificar
-        el carrito, de forma que el CartItem original permanezca intacto si el
-        reemplazo no es válido.
+        Todas las validaciones se realizan antes de modificar la línea
+        existente para preservar la atomicidad de la operación.
 
         Args:
-            line_id: Identificador único de la línea del carrito que se desea
-                reemplazar.
-            new_product_id: Identificador interno del nuevo producto en el menú.
-            selected_modifiers: Modificadores seleccionados para el nuevo
-                producto, por ejemplo {"size": "LARGE", "drink": "SPRITE"}.
+            line_id: Línea del carrito que se desea reemplazar.
+            new_product_id: Identificador interno del nuevo producto.
+            selected_modifiers: Configuración del nuevo producto.
 
         Returns:
-            El CartItem actualizado con el nuevo producto, modificadores y precio.
+            El CartItem actualizado.
 
         Raises:
-            ValueError: Si no existe el CartItem, el nuevo producto no existe o
-                no está disponible, falta un modificador obligatorio o alguna
-                opción seleccionada no es válida.
+            ValueError: Si la línea, producto o configuración no son válidos.
         """
+        self._ensure_active()
+
         cart_item = next(
             (
                 item
@@ -287,24 +535,40 @@ class OrderService:
         )
 
         if cart_item is None:
-            raise ValueError(f"Cart item not found: {line_id}")
+            raise ValueError(
+                f"Cart item not found: {line_id}"
+            )
 
-        new_product = self.menu.get_product(new_product_id)
+        new_product = self.menu.get_product(
+            new_product_id
+        )
 
         if new_product is None:
-            raise ValueError(f"Product not found: {new_product_id}")
+            raise ValueError(
+                f"Product not found: {new_product_id}"
+            )
 
         if not new_product.available:
-            raise ValueError(f"Product unavailable: {new_product_id}")
+            raise ValueError(
+                f"Product unavailable: {new_product_id}"
+            )
 
-        new_unit_price = new_product.base_price
+        new_unit_price = (
+            new_product.base_price
+        )
 
         for group in new_product.modifier_groups:
-            selected_option_id = selected_modifiers.get(group.id)
+            selected_option_id = (
+                selected_modifiers.get(group.id)
+            )
 
-            if group.required and selected_option_id is None:
+            if (
+                group.required
+                and selected_option_id is None
+            ):
                 raise ValueError(
-                    f"Required modifier missing: {group.id}"
+                    f"Required modifier missing: "
+                    f"{group.id}"
                 )
 
             if selected_option_id is None:
@@ -314,77 +578,140 @@ class OrderService:
                 (
                     option
                     for option in group.options
-                    if option.id == selected_option_id
+                    if option.id
+                    == selected_option_id
                 ),
                 None,
             )
 
             if selected_option is None:
                 raise ValueError(
-                    f"Invalid option '{selected_option_id}' "
+                    f"Invalid option "
+                    f"'{selected_option_id}' "
                     f"for modifier '{group.id}'"
                 )
 
-            new_unit_price += selected_option.price_delta
+            new_unit_price += (
+                selected_option.price_delta
+            )
 
         # Todas las validaciones terminaron correctamente.
-        # Recién ahora se modifica el CartItem original.
-        cart_item.product_id = new_product.id
-        cart_item.product_name = new_product.name
-        cart_item.selected_modifiers = selected_modifiers.copy()
-        cart_item.unit_price = new_unit_price
+        # Recién ahora se modifica la línea original.
+
+        cart_item.product_id = (
+            new_product.id
+        )
+
+        cart_item.product_name = (
+            new_product.name
+        )
+
+        cart_item.selected_modifiers = (
+            selected_modifiers.copy()
+        )
+
+        cart_item.unit_price = (
+            new_unit_price
+        )
+
+        self._log_cart_updated(
+            "replace_item",
+            line_id=cart_item.line_id,
+        )
 
         return cart_item
 
     def clear_cart(self) -> list[CartItem]:
         """
-        Elimina todos los CartItem del carrito de la sesión actual.
+        Elimina todos los CartItem del carrito actual.
 
         Returns:
-            Lista con los CartItem que fueron eliminados del carrito.
-            Si el carrito ya estaba vacío, devuelve una lista vacía.
+            Lista con los CartItem eliminados. Si el carrito ya estaba vacío,
+            devuelve una lista vacía.
         """
-        removed_items = self.session.cart.items.copy()
+        self._ensure_active()
+
+        removed_items = (
+            self.session.cart.items.copy()
+        )
 
         self.session.cart.items.clear()
 
+        self._log_cart_updated(
+            "clear_cart"
+        )
+
         return removed_items
 
-    def get_cart(self):
+    def get_cart(self) -> Cart:
         """
         Devuelve el carrito actual de la sesión.
 
+        Esta operación permanece permitida incluso después de confirmar el
+        pedido porque no modifica el estado transaccional.
+
         Returns:
-            El Cart asociado a la sesión actual, con todos sus CartItem
-            y el total calculado a partir de ellos.
+            Cart asociado a la sesión actual.
         """
-        return self.session
-        
+        return self.session.cart
+
     def confirm_order(self) -> dict:
         """
-        Confirma localmente el pedido de la sesión actual.
+        Confirma el pedido correspondiente a la sesión actual.
 
-        Esta implementación corresponde a la prueba de concepto. Valida que el
-        carrito contenga al menos un producto y devuelve un resultado estructurado
-        que posteriormente podrá ser utilizado por el frontend.
+        Verifica que la sesión esté activa y que el carrito contenga al menos
+        un producto. Después de una confirmación exitosa, la sesión pasa a
+        CONFIRMED y deja de admitir modificaciones.
 
-        En una implementación productiva, esta operación deberá enviar el pedido
-        validado al sistema DEX/POS correspondiente.
+        En esta prueba de concepto la confirmación es local. En producción,
+        DEX/POS deberá aceptar definitivamente el pedido antes de cambiar el
+        estado local a CONFIRMED.
 
         Returns:
-            Diccionario con el estado de confirmación, el identificador de la
-            sesión y el total del pedido.
+            Diccionario con estado, identificador de sesión y total confirmado.
 
         Raises:
+            ValueError: Si la sesión ya fue confirmada.
             ValueError: Si el carrito está vacío.
         """
+        self._ensure_active()
+
         cart = self.session.cart
 
         if not cart.items:
-            raise ValueError("Cannot confirm an empty cart")
+            raise ValueError(
+                "Cannot confirm an empty cart"
+            )
+
+        self.session.state = (
+            SessionState.CONFIRMED
+        )
+
+        snapshot = self._get_cart_snapshot()
+
+        log_event(
+            "INFO",
+            "session.confirmed",
+            session_id=self.session.session_id,
+            total=cart.total,
+            cart=snapshot,
+        )
+
+        self._emit_event(
+            "order.confirmed",
+            {
+                "cart": {
+                    "items": snapshot["items"],
+                    "total": snapshot["total"],
+                    "state": snapshot["session_state"],
+                },
+            },
+        )
 
         return {
             "status": "confirmed",
-            "session_id": self.session.session_id,
+            "session_id": (
+                self.session.session_id
+            ),
             "total": cart.total,
         }

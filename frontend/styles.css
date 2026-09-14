@@ -1,0 +1,492 @@
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    min-height: 100vh;
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    background: #f3f4f6;
+    color: #15171a;
+}
+
+
+/* =========================================================
+   CONTENEDOR GENERAL
+   ========================================================= */
+
+.app-container {
+    width: min(1400px, calc(100% - 40px));
+    height: calc(100vh - 40px);
+    margin: 20px auto;
+
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1.4fr) minmax(340px, 0.8fr);
+
+    background: white;
+
+    border: 1px solid #dedfe2;
+    border-radius: 18px;
+
+    overflow: hidden;
+
+    /*
+     * Importante para permitir que los paneles internos
+     * puedan contraerse y manejar su propio scroll.
+     */
+    min-height: 0;
+}
+
+
+/* =========================================================
+   PANEL DE CONVERSACIÓN
+   ========================================================= */
+
+.conversation-panel {
+    min-width: 0;
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    border-right: 1px solid #dedfe2;
+}
+
+
+.panel-header,
+.cart-header {
+    flex-shrink: 0;
+
+    min-height: 100px;
+    padding: 24px 28px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    border-bottom: 1px solid #ececef;
+}
+
+
+.eyebrow {
+    margin: 0 0 5px;
+
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+
+    color: #74777d;
+}
+
+
+h1,
+h2 {
+    margin: 0;
+}
+
+
+h1 {
+    font-size: 25px;
+}
+
+
+h2 {
+    font-size: 22px;
+}
+
+
+/* =========================================================
+   ESTADOS
+   ========================================================= */
+
+.status {
+    padding: 8px 13px;
+
+    border-radius: 999px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+
+.status-ready {
+    background: #e9f7ef;
+    color: #176b3a;
+}
+
+
+.status-processing {
+    background: #fff4d8;
+    color: #7a5410;
+}
+
+
+.status-error {
+    background: #fdeaea;
+    color: #a12424;
+}
+
+
+/* =========================================================
+   CONVERSACIÓN
+   ========================================================= */
+
+.conversation {
+    /*
+     * Esto es clave:
+     * permite que el área central ocupe el espacio disponible
+     * y tenga scroll independientemente del header y del input.
+     */
+    flex: 1 1 auto;
+    min-height: 0;
+
+    padding: 28px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    scroll-behavior: smooth;
+}
+
+
+.message {
+    width: fit-content;
+    max-width: 78%;
+
+    margin-bottom: 18px;
+    padding: 14px 16px;
+
+    border-radius: 14px;
+
+    line-height: 1.5;
+
+    overflow-wrap: anywhere;
+}
+
+
+.message p {
+    margin: 5px 0 0;
+}
+
+
+.message-author {
+    font-size: 12px;
+    font-weight: 700;
+
+    opacity: 0.65;
+}
+
+
+.user-message {
+    margin-left: auto;
+
+    background: #22252a;
+    color: white;
+}
+
+
+.assistant-message {
+    margin-right: auto;
+
+    background: #f0f1f3;
+    color: #15171a;
+}
+
+
+.error-message {
+    margin-right: auto;
+
+    background: #fff0f0;
+    color: #891f1f;
+
+    border: 1px solid #f1caca;
+}
+
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+
+.message-form {
+    flex-shrink: 0;
+
+    padding: 20px 24px;
+
+    display: flex;
+    gap: 12px;
+
+    border-top: 1px solid #ececef;
+
+    background: white;
+}
+
+
+.message-form input {
+    flex: 1;
+    min-width: 0;
+
+    padding: 14px 16px;
+
+    font-size: 16px;
+
+    border: 1px solid #cacdd2;
+    border-radius: 12px;
+
+    outline: none;
+}
+
+
+.message-form input:focus {
+    border-color: #555a62;
+}
+
+
+.message-form button {
+    flex-shrink: 0;
+
+    padding: 0 22px;
+
+    border: 0;
+    border-radius: 12px;
+
+    background: #22252a;
+    color: white;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+
+.message-form button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+
+/* =========================================================
+   PANEL DEL CARRITO
+   ========================================================= */
+
+.cart-panel {
+    min-width: 0;
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    background: #fafafa;
+}
+
+
+.session-state {
+    font-size: 12px;
+    font-weight: 700;
+
+    color: #73767c;
+}
+
+
+/* =========================================================
+   ITEMS DEL CARRITO
+   ========================================================= */
+
+.cart-items {
+    /*
+     * Igual que conversation:
+     * ocupa el espacio disponible y tiene scroll propio.
+     */
+    flex: 1 1 auto;
+    min-height: 0;
+
+    padding: 24px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    scroll-behavior: smooth;
+}
+
+
+.empty-cart {
+    margin: 30px 0;
+
+    text-align: center;
+
+    color: #898c92;
+}
+
+
+.cart-item {
+    display: block;
+
+    width: 100%;
+
+    padding: 18px 0;
+
+    color: #15171a;
+
+    border-bottom: 1px solid #dedfe2;
+}
+
+
+.cart-item:first-child {
+    padding-top: 0;
+}
+
+
+.cart-item:last-child {
+    border-bottom: 0;
+}
+
+
+.cart-item-title {
+    display: block;
+
+    margin: 0 0 8px;
+
+    font-size: 17px;
+    font-weight: 700;
+
+    color: #15171a;
+}
+
+
+.cart-item-details {
+    display: block;
+
+    margin: 0;
+
+    line-height: 1.6;
+
+    font-size: 14px;
+
+    color: #656970;
+}
+
+
+.cart-item-price {
+    display: block;
+
+    margin-top: 10px;
+
+    font-size: 15px;
+    font-weight: 700;
+
+    color: #15171a;
+}
+
+
+/* =========================================================
+   TOTAL
+   ========================================================= */
+
+.cart-footer {
+    flex-shrink: 0;
+
+    padding: 22px 26px;
+
+    border-top: 1px solid #dedfe2;
+
+    background: white;
+}
+
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    font-size: 18px;
+}
+
+
+.total-row strong {
+    font-size: 25px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 850px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .app-container {
+        width: calc(100% - 20px);
+        height: auto;
+        min-height: calc(100vh - 20px);
+
+        margin: 10px auto;
+
+        grid-template-columns: 1fr;
+
+        overflow: visible;
+    }
+
+    .conversation-panel {
+        height: 65vh;
+        min-height: 500px;
+
+        border-right: 0;
+        border-bottom: 1px solid #dedfe2;
+    }
+
+    .cart-panel {
+        height: 45vh;
+        min-height: 350px;
+    }
+}
+
+.control-button {
+    flex-shrink: 0;
+
+    padding: 0 14px;
+
+    border: 1px solid #cacdd2;
+    border-radius: 12px;
+
+    background: white;
+    color: #33363b;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.control-button:hover {
+    background: #f3f4f6;
+}
+
+.control-button.active {
+    background: #22252a;
+    color: white;
+    border-color: #22252a;
+}
