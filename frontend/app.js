@@ -360,9 +360,20 @@ function renderPayment(cart) {
             <p>Pago en caja seleccionado.</p>
             <p>Tu número de pedido es <strong>${cart.order_number}</strong>.</p>
             <p>Acercate a caja, indicá ese número y realizá el pago.</p>
+            <p id="cash-countdown">Esta sesión finalizará en 5.</p>
             <button type="button" class="payment-action" id="payment-back">ATRÁS</button>`;
         document.getElementById("payment-back").addEventListener("click", returnToOrder);
-        completePayment();
+        let remaining = 5;
+        paymentTimer = setInterval(() => {
+            remaining -= 1;
+            const element = document.getElementById("cash-countdown");
+            if (remaining <= 0) {
+                clearInterval(paymentTimer);
+                completePayment({ resetImmediately: true });
+            } else if (element) {
+                element.textContent = `Esta sesión finalizará en ${remaining}.`;
+            }
+        }, 1000);
     }
 }
 
@@ -414,12 +425,16 @@ async function startPaymentFromCart() {
 
 /** Completa el pago demo y muestra el número para retirar en caja.
  * @returns {Promise<void>} Finaliza el pedido o muestra el error recibido. */
-async function completePayment() {
+async function completePayment(options = {}) {
     clearTimeout(paymentTimer);
     try {
         const response = await fetch(`/api/sessions/${sessionId}/payment/complete`, { method: "POST" });
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "No se pudo completar el pago.");
+        if (options.resetImmediately) {
+            await startNewSession();
+            return;
+        }
         sessionClosed = true;
         voice.dispose();
         paymentPanel.hidden = false;
