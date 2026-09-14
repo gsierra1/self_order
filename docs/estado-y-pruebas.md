@@ -211,8 +211,9 @@ calidad entre alternativas.
 El flujo de pago demo quedó implementado: `PAYMENT_PENDING` genera un número de
 pedido en backend, permite elegir QR, tarjeta o caja por texto, voz o botones y
 finaliza en `CONFIRMED`. El QR es inválido a propósito, la tarjeta no se envía
-ni se almacena y el botón final inicia otra sesión. Falta realizar la prueba
-manual de los tres recorridos desde el navegador.
+ni se almacena, el botón atrás conserva la edición y cada línea activa tiene un
+control de eliminación. La pantalla final cuenta cinco segundos e inicia otra
+sesión. Falta realizar la prueba manual de los tres recorridos desde el navegador.
 
 ## Matriz mínima de demostración pendiente
 

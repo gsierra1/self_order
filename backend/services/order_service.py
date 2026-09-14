@@ -797,6 +797,29 @@ class OrderService:
             "order_number": self.session.order_number,
         }
 
+    def return_to_order(self) -> dict:
+        """Devuelve una sesión pendiente de pago a la edición del carrito.
+
+        Returns:
+            Estado activo con el carrito conservado.
+
+        Raises:
+            ValueError: Si la sesión no está esperando un método de pago.
+        """
+        if self.session.state != SessionState.PAYMENT_PENDING:
+            raise ValueError("The order is not waiting for payment")
+        self.session.state = SessionState.ACTIVE
+        self.session.order_number = None
+        self.session.payment_method = None
+        snapshot = self._get_cart_snapshot()
+        log_event(
+            "INFO",
+            "payment.cancelled",
+            session_id=self.session.session_id,
+        )
+        self._emit_event("payment.cancelled", {"cart": snapshot})
+        return {"status": "order_editing", "cart": snapshot}
+
     def complete_payment(self) -> dict:
         """Finaliza el pago de demostración y cierra la sesión.
 

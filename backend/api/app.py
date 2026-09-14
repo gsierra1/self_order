@@ -282,6 +282,49 @@ def complete_payment(session_id: str) -> dict:
     return {"ok": True, **result, "cart": serialize_cart(runtime.service)}
 
 
+@app.post("/api/sessions/{session_id}/payment/back")
+def return_to_order(session_id: str) -> dict:
+    """Devuelve un pedido pendiente de pago a su carrito editable.
+
+    Args:
+        session_id: Identificador técnico de la sesión.
+
+    Returns:
+        Carrito activo conservado.
+
+    Raises:
+        HTTPException: Si la sesión no está pendiente de pago.
+    """
+    runtime = get_runtime(session_id)
+    try:
+        runtime.service.return_to_order()
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True, "cart": serialize_cart(runtime.service)}
+
+
+@app.delete("/api/sessions/{session_id}/cart/items/{line_id}")
+def delete_cart_item(session_id: str, line_id: int) -> dict:
+    """Elimina una línea del carrito desde un control explícito del frontend.
+
+    Args:
+        session_id: Identificador técnico de la sesión.
+        line_id: Línea interna que se desea eliminar.
+
+    Returns:
+        Carrito actualizado por OrderService.
+
+    Raises:
+        HTTPException: Si la línea no existe o la sesión está cerrada.
+    """
+    runtime = get_runtime(session_id)
+    try:
+        runtime.service.remove_item(line_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True, "cart": serialize_cart(runtime.service)}
+
+
 @app.post(
     "/api/sessions/{session_id}/messages"
 )

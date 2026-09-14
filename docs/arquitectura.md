@@ -113,6 +113,9 @@ genera el número de pedido en backend. `select_payment_method` acepta `QR`,
 `CARD` o `CASH`; el frontend completa la demo mediante un endpoint y recién
 entonces la sesión pasa a `CONFIRMED`. El QR es una imagen inválida de demo,
 sin datos de pago ni destino real; la tarjeta tampoco se envía ni se almacena.
+Mientras el pago está pendiente, `return_to_order` permite volver al carrito y
+eliminar líneas sigue pasando por `OrderService`. Tras finalizar, la interfaz
+muestra el número de pedido, cuenta cinco segundos y crea otra sesión.
 
 ## Modelo de datos y precios
 

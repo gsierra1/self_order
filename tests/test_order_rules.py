@@ -152,3 +152,17 @@ class OrderRulesTests(unittest.TestCase):
         self.assertEqual(self.service.session.state.value, "CONFIRMED")
         with self.assertRaises(ValueError):
             self.service.add_item("COMBO_BIG_MAC", 1, self.options)
+
+    def test_payment_back_restores_editable_order(self) -> None:
+        """La vuelta desde pago conserva el carrito y permite modificarlo."""
+        self.service.add_item("COMBO_BIG_MAC", 1, self.options)
+        self.service.prepare_payment()
+        self.service.select_payment_method("CARD")
+
+        result = self.service.return_to_order()
+
+        self.assertEqual(result["status"], "order_editing")
+        self.assertEqual(self.service.session.state.value, "ACTIVE")
+        self.assertIsNone(self.service.session.order_number)
+        self.service.remove_item(1)
+        self.assertFalse(self.service.get_cart().items)

@@ -373,3 +373,27 @@ def create_select_payment_method_tool(service: OrderService):
         return service.select_payment_method(method)
 
     return select_payment_method
+
+
+def create_return_to_order_tool(service: OrderService):
+    """Crea una función para volver del pago a la edición del pedido.
+
+    Args:
+        service: Servicio de pedidos asociado a la sesión actual.
+
+    Returns:
+        Función preparada para ser utilizada como tool de Gemini.
+    """
+
+    def return_to_order() -> dict:
+        """Cancela la selección de pago y conserva el carrito editable.
+
+        Returns:
+            Estado estructurado del pedido editable.
+
+        Raises:
+            ValueError: Si no hay un pago pendiente.
+        """
+        return service.return_to_order()
+
+    return return_to_order

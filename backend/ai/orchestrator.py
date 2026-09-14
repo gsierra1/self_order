@@ -16,6 +16,7 @@ from backend.ai.tools import (
     create_get_cart_tool,
     create_remove_item_tool,
     create_replace_item_tool,
+    create_return_to_order_tool,
     create_select_payment_method_tool,
 )
 from backend.logging.event_logger import log_event
@@ -42,6 +43,7 @@ class OrderConversationOrchestrator:
         "remove_item",
         "confirm_order",
         "select_payment_method",
+        "return_to_order",
     }
 
     def __init__(
@@ -108,6 +110,7 @@ class OrderConversationOrchestrator:
         remove_item_tool = create_remove_item_tool(self.service)
         confirm_order_tool = create_confirm_order_tool(self.service)
         select_payment_method_tool = create_select_payment_method_tool(self.service)
+        return_to_order_tool = create_return_to_order_tool(self.service)
 
         return {
             "add_item": add_item_tool,
@@ -117,6 +120,7 @@ class OrderConversationOrchestrator:
             "remove_item": remove_item_tool,
             "confirm_order": confirm_order_tool,
             "select_payment_method": select_payment_method_tool,
+            "return_to_order": return_to_order_tool,
         }
 
     def _build_system_instruction(self) -> str:
@@ -174,6 +178,8 @@ REGLAS TRANSACCIONALES:
   sesión ni anuncies el pago confirmado todavía.
 - Cuando el pedido esté pendiente de pago, utilizá select_payment_method
   con QR, CARD o CASH según lo que el usuario elija.
+- Si el usuario quiere cambiar el método o volver a modificar el pedido,
+  utilizá return_to_order cuando corresponda.
 - Si el usuario pide varias operaciones independientes en una misma frase,
   podés emitir varias llamadas distintas; se ejecutarán en el orden recibido.
 - Nunca emitas dos veces la misma operación con los mismos argumentos.

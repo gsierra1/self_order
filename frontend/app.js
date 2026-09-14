@@ -9,6 +9,7 @@ let voiceTimer = null;
 let voiceBackendReady = false;
 let voicePrepared = false;
 let paymentTimer = null;
+let countdownTimer = null;
 
 const conversation = document.getElementById("conversation");
 const messageForm = document.getElementById("message-form");
@@ -236,6 +237,16 @@ function renderCart(cart) {
             price
         );
 
+        if (cart.state === "ACTIVE") {
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "remove-item-button";
+            removeButton.textContent = "🗑";
+            removeButton.title = "Eliminar este producto";
+            removeButton.addEventListener("click", () => removeCartItem(item.line_id));
+            itemElement.appendChild(removeButton);
+        }
+
         cartItems.appendChild(
             itemElement
         );
@@ -300,6 +311,7 @@ function failVoice(error) {
  * @returns {void} Actualiza el panel de pago y sus controles. */
 function renderPayment(cart) {
     clearTimeout(paymentTimer);
+    clearInterval(countdownTimer);
     paymentPanel.hidden = cart.state !== "PAYMENT_PENDING";
     if (paymentPanel.hidden) {
         paymentContent.innerHTML = "";
@@ -307,27 +319,31 @@ function renderPayment(cart) {
     }
     const method = cart.payment_method;
     if (!method) {
-        paymentContent.innerHTML = "<p>Elegí una opción para continuar.</p>";
+        paymentContent.innerHTML = "<p>Elegí una opción para continuar.</p><button type=\"button\" class=\"payment-action\" id=\"payment-back\">ATRÁS</button>";
+        document.getElementById("payment-back").addEventListener("click", returnToOrder);
         return;
     }
     if (method === "QR") {
         paymentContent.innerHTML = `
             <p>Escaneá este QR de demostración. No contiene un pago real.</p>
             <div class="fake-qr" aria-label="QR inválido de demostración"></div>
-            <p>Procesando pago...</p>`;
+            <p>Procesando pago...</p>
+            <button type="button" class="payment-action" id="payment-back">ATRÁS</button>`;
         const qr = paymentContent.querySelector(".fake-qr");
         for (let index = 0; index < 225; index += 1) {
             const cell = document.createElement("span");
             cell.style.opacity = ((index * 17 + 3) % 5) ? "1" : "0";
             qr.appendChild(cell);
         }
+        document.getElementById("payment-back").addEventListener("click", returnToOrder);
         paymentTimer = setTimeout(() => completePayment(), 5000);
     } else if (method === "CARD") {
         paymentContent.innerHTML = `
             <label for="card-number">Número de tarjeta (demo)</label>
             <input id="card-number" class="card-input" inputmode="numeric"
                 autocomplete="off" placeholder="Escribí cualquier número">
-            <button type="button" class="payment-action" id="card-confirm">Continuar</button>`;
+            <button type="button" class="payment-action" id="card-confirm">Continuar</button>
+            <button type="button" class="payment-action" id="payment-back">ATRÁS</button>`;
         document.getElementById("card-confirm").addEventListener("click", () => {
             const value = document.getElementById("card-number").value.trim();
             if (!value) {
@@ -336,12 +352,46 @@ function renderPayment(cart) {
             }
             completePayment();
         });
+        document.getElementById("payment-back").addEventListener("click", returnToOrder);
     } else {
         paymentContent.innerHTML = `
             <p>Tu número de pedido es <strong>${cart.order_number}</strong>.</p>
             <p>Acercate a caja, indicá ese número y realizá el pago.</p>
-            <button type="button" class="payment-action" id="cash-confirm">CONFIRMAR</button>`;
+            <button type="button" class="payment-action" id="cash-confirm">CONFIRMAR</button>
+            <button type="button" class="payment-action" id="payment-back">ATRÁS</button>`;
         document.getElementById("cash-confirm").addEventListener("click", completePayment);
+        document.getElementById("payment-back").addEventListener("click", returnToOrder);
+    }
+}
+
+/** Vuelve al carrito y permite corregirlo antes de elegir otro método.
+ * @returns {Promise<void>} Actualiza la pantalla con el carrito editable. */
+async function returnToOrder() {
+    clearTimeout(paymentTimer);
+    try {
+        const response = await fetch(`/api/sessions/${sessionId}/payment/back`, { method: "POST" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "No se pudo volver al pedido.");
+        applyCart(data.cart);
+        phase = "ready";
+        setStatus("Listo");
+        updateControls();
+    } catch (error) {
+        appendMessage("Sistema", error.message, "error");
+    }
+}
+
+/** Elimina una línea mediante el endpoint respaldado por OrderService.
+ * @param {number} lineId Identificador de la línea a eliminar.
+ * @returns {Promise<void>} Actualiza el carrito o informa el error. */
+async function removeCartItem(lineId) {
+    try {
+        const response = await fetch(`/api/sessions/${sessionId}/cart/items/${lineId}`, { method: "DELETE" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "No se pudo eliminar el producto.");
+        applyCart(data.cart);
+    } catch (error) {
+        appendMessage("Sistema", error.message, "error");
     }
 }
 
@@ -360,11 +410,21 @@ async function completePayment() {
             <p class="payment-success">Pago confirmado.</p>
             <p>Tu número de pedido es <strong>${data.order_number}</strong>.</p>
             <p>Acercate a caja para retirarlo.</p>
-            <button type="button" class="payment-action" id="new-order">CONFIRMAR</button>`;
-        document.getElementById("new-order").addEventListener("click", startNewSession);
+            <p id="session-countdown">Esta sesión finalizará en 5.</p>`;
         sessionState.textContent = "CONFIRMED";
         setStatus("Pago confirmado");
         updateControls();
+        let remaining = 5;
+        countdownTimer = setInterval(() => {
+            remaining -= 1;
+            const element = document.getElementById("session-countdown");
+            if (remaining <= 0) {
+                clearInterval(countdownTimer);
+                startNewSession();
+            } else if (element) {
+                element.textContent = `Esta sesión finalizará en ${remaining}.`;
+            }
+        }, 1000);
     } catch (error) {
         appendMessage("Sistema", error.message, "error");
     }
@@ -511,6 +571,7 @@ async function createSession() {
  * @returns {Promise<void>} Crea y conecta una nueva sesión. */
 async function startNewSession() {
     clearTimeout(paymentTimer);
+    clearInterval(countdownTimer);
     voice.dispose();
     window.speechSynthesis?.cancel();
     socket?.close();

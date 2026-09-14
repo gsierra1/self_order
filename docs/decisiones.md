@@ -103,7 +103,8 @@ la interfaz empiece un nuevo pedido sin recargar la página.
 
 **Límites:** el QR es deliberadamente inválido y el campo de tarjeta es solo de
 demo; una integración real requiere un proveedor que tokenice los datos y
-confirme el pago.
+confirme el pago. La vuelta atrás cancela el pago pendiente y genera otro número
+cuando el pedido vuelva a confirmarse.
 
 ## 05. HTTP para inicio y consulta, WebSocket para interacción
 
