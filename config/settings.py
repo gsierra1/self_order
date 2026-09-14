@@ -13,6 +13,16 @@ def get_transcription_model() -> str:
     return os.getenv("GEMINI_TRANSCRIPTION_MODEL", "gemini-3.5-transcribe-live")
 
 
+def get_chat_model() -> str:
+    """Obtiene el modelo de Gemini que interpreta y redacta los pedidos.
+
+    Returns:
+        Nombre del modelo configurado para la conversación y las tools.
+    """
+    load_dotenv()
+    return os.getenv("GEMINI_CHAT_MODEL", "gemini-3.5-flash-lite")
+
+
 def get_gemini_api_key() -> str:
     """
     Obtiene la API key de Gemini desde las variables de entorno.

@@ -28,6 +28,13 @@ objetos devueltos son mutables, de modo que aún hay límites de encapsulación.
 **Para explicar:** «La IA entiende la intención; el backend decide si el pedido
 es válido y cuánto cuesta».
 
+El modelo de conversación ahora se configura con `GEMINI_CHAT_MODEL`. El valor
+actual sigue siendo `gemini-3.5-flash-lite`, que Google clasifica como su modelo
+3.5 más rápido y económico; no se cambia automáticamente porque los logs muestran
+que la latencia también puede venir de la red, cuota o la segunda llamada después
+de una tool. La configuración permite comparar modelos con el mismo flujo y
+mediciones antes de tomar una decisión.
+
 ## 02. UUID para sesión y número local para línea
 
 **Estado:** implementado mediante `uuid4()` y `max(line_id) + 1` respectivamente.
@@ -105,7 +112,7 @@ todavía asumen tamaño/bebida y dos opciones por grupo. Ampliar el menú requie
 revisar esas capas. El prompt incluye nombres e IDs, pero no precios ni el flag
 de disponibilidad; no existe una tool específica de consulta de catálogo/precios.
 
-Los precios enteros evitan aritmética flotante en este catálogo de pesos completos.
+Los precios enteros evitan aritmética flotante en este catálogo de pesos argentinos completos.
 Antes de integrar un POS habrá que fijar moneda, unidad monetaria y redondeo.
 
 ## 07. Sesiones en memoria y confirmación local

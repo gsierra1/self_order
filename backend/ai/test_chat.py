@@ -3,6 +3,7 @@ from backend.ai.orchestrator import OrderConversationOrchestrator
 from backend.domain.menu import load_menu
 from backend.domain.session import Session, SessionState
 from backend.services.order_service import OrderService
+from config.settings import get_chat_model
 
 
 def print_cart(service: OrderService) -> None:
@@ -96,7 +97,7 @@ def main() -> None:
 
     assistant = OrderConversationOrchestrator(
         service=service,
-        model="gemini-3.5-flash-lite",
+        model=get_chat_model(),
     )
 
     print("Asistente de pedidos iniciado.")

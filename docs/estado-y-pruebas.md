@@ -22,7 +22,7 @@ Evidencia nueva:
   exclusión de turnos, cierre del proveedor y recuperación de conexión. Proveedor
   simulado y logging deshabilitado para no mezclar evidencia.
 - Edge headless: una prueba aprobada de micrófono sintético → AudioWorklet → WebSocket → transcripción
-  simulada → alta mediante servicio real → total $12.500 → confirmación escrita.
+  simulada → alta mediante servicio real → total ARS 12.500 → confirmación escrita.
   Se comprobó solicitud de síntesis y apagado, sin reproducir audio real.
 - Pendiente de evaluación humana: micrófono/parlantes físicos, comprensión con
   ruido, timbre, latencias, silencios automáticos e interrupciones.
@@ -47,6 +47,14 @@ bytecode en `git ls-files`, reglas verificadas con `git check-ignore` y presenci
 de los archivos locales después de retirarlos del índice. No cambia el bot.
 
 ## Capacidades actuales
+
+La corrida de la autora del 14/09/2026 mostró demoras variables en Gemini: una
+interpretación tardó aproximadamente 76 segundos y una respuesta posterior a una
+tool aproximadamente 41 segundos; otras llamadas tardaron entre 1 y 33 segundos.
+El log anterior no medía por separado captura, transcripción y orquestación, por
+lo que se agregaron eventos `voice.live_ready`, `voice.audio_finished`,
+`voice.transcription_finished` y `conversation.completed`. Esto permite separar
+demora de red/proveedor, finalización del audio y segunda llamada del chat.
 
 La guía de ejecución y las reglas de seguimiento ahora incluyen activar el
 entorno con `.\.venv\Scripts\Activate.ps1` en cada terminal PowerShell nueva.
@@ -102,10 +110,10 @@ Resultados:
 - Producto inexistente, modificadores faltantes u opción inválida: `ValueError`
   y carrito vacío.
 - Tool de alta incompleta: `needs_clarification`, sin alta.
-- Dos Big Mac grandes: total $25.000.
+- Dos Big Mac grandes: total ARS 25.000.
 - Reemplazo inválido: conserva todos los campos originales.
 - Reemplazo válido por Cuarto de Libra mediano: conserva ID/cantidad y total
-  $23.000; cambiar tamaño produce $27.000 y cambiar cantidad a uno, $13.500.
+  ARS 23.000; cambiar tamaño produce ARS 27.000 y cambiar cantidad a uno, ARS 13.500.
 - Confirmar bloquea la eliminación posterior.
 - `TestClient`: `/api/health`, `/`, JS estático, creación de sesión, mensaje HTTP,
   validación de texto vacío y rechazo HTTP 409 tras confirmación.

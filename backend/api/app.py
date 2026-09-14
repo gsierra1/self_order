@@ -17,6 +17,7 @@ from backend.domain.menu import load_menu
 from backend.domain.session import Session, SessionState
 from backend.logging.event_logger import log_event
 from backend.services.order_service import OrderService
+from config.settings import get_chat_model
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -208,7 +209,7 @@ def create_session() -> dict:
 
     assistant = OrderConversationOrchestrator(
         service=service,
-        model="gemini-3.5-flash-lite",
+        model=get_chat_model(),
     )
 
     runtime = SessionRuntime(

@@ -111,7 +111,7 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator("#message-input")).to_be_disabled()
                         page.locator("#mic-button").click()
                         expect(page.locator(".cart-item")).to_have_count(1)
-                        expect(page.locator("#cart-total")).to_contain_text("12.500")
+                        expect(page.locator("#cart-total")).to_have_text("ARS 12.500")
                         expect(page.locator("#message-input")).to_be_enabled()
                         self.assertEqual(len(page.evaluate("window.spokenTexts")), 1)
                         page.locator("#audio-button").click()

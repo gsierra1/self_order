@@ -6,6 +6,8 @@ let socket = null;
 let phase = "connecting";
 let assistantAudioEnabled = true;
 let voiceTimer = null;
+let voiceBackendReady = false;
+let voicePrepared = false;
 
 const conversation = document.getElementById("conversation");
 const messageForm = document.getElementById("message-form");
@@ -25,14 +27,11 @@ const voice = new VoiceInput(sendAudio, failVoice);
  * @param {number} value Importe entero.
  * @returns {string} Importe para pantalla. */
 function formatCurrency(value) {
-    return new Intl.NumberFormat(
-        "es-AR",
-        {
-            style: "currency",
-            currency: "ARS",
-            maximumFractionDigits: 0,
-        }
-    ).format(value);
+    const formattedValue = new Intl.NumberFormat("es-AR", {
+        style: "decimal",
+        maximumFractionDigits: 0,
+    }).format(value);
+    return `ARS ${formattedValue}`;
 }
 
 
@@ -248,7 +247,9 @@ function updateControls() {
     messageInput.disabled = !ready;
     sendButton.disabled = !ready;
     micButton.disabled = sessionClosed || !["ready", "recording"].includes(phase);
-    micButton.textContent = phase === "recording" ? "Enviar audio" : "🎤 Hablar";
+    micButton.textContent = phase === "recording"
+        ? "Enviar audio"
+        : phase === "preparing" ? "Conectando..." : "🎤 Hablar";
     micButton.classList.toggle("active", phase === "recording");
     audioButton.textContent = assistantAudioEnabled ? "🔊 Voz ON" : "🔇 Voz OFF";
 }
@@ -280,6 +281,8 @@ function sendAudio(buffer) {
  */
 function failVoice(error) {
     clearTimeout(voiceTimer);
+    voiceBackendReady = false;
+    voicePrepared = false;
     voice.dispose();
     try { sendEvent("audio.cancel"); } catch (_) { /* La conexión ya está cerrada. */ }
     transcript.textContent = "Audio cancelado; el pedido no fue enviado.";
@@ -287,6 +290,20 @@ function failVoice(error) {
     phase = socket?.readyState === WebSocket.OPEN ? "ready" : "disconnected";
     setStatus("No se pudo enviar el audio", "error");
     updateControls();
+}
+
+/** Inicia la captura solo cuando backend y navegador están preparados.
+ * @returns {void} No devuelve valor.
+ */
+function maybeStartRecording() {
+    if (phase !== "preparing" || !voiceBackendReady || !voicePrepared) return;
+    clearTimeout(voiceTimer);
+    voice.start();
+    phase = "recording";
+    transcript.textContent = "Escuchando… tocá Enviar audio cuando termines.";
+    setStatus("Escuchando", "processing");
+    updateControls();
+    voiceTimer = setTimeout(() => failVoice(new Error("El turno de voz superó los 55 segundos.")), 55000);
 }
 
 /**
@@ -305,14 +322,18 @@ async function toggleMicrophone() {
     }
     if (phase !== "ready" || sessionClosed) return;
     phase = "preparing";
+    voiceBackendReady = false;
+    voicePrepared = false;
     updateControls();
     window.speechSynthesis?.cancel();
-    setStatus("Preparando micrófono...", "processing");
-    transcript.textContent = "Preparando la escucha...";
+    setStatus("Preparando micrófono y conexión...", "processing");
+    transcript.textContent = "No hables hasta que aparezca «Escuchando».";
     try {
-        await voice.prepare();
         sendEvent("audio.start");
         voiceTimer = setTimeout(() => failVoice(new Error("La conexión de voz tardó demasiado.")), 20000);
+        await voice.prepare();
+        voicePrepared = true;
+        maybeStartRecording();
     } catch (error) { failVoice(error); }
 }
 
@@ -350,12 +371,8 @@ function onServerMessage(event) {
         phase = "ready";
         if (!sessionClosed) setStatus("Listo");
     } else if (type === "voice.ready" && phase === "preparing") {
-        clearTimeout(voiceTimer);
-        voice.start();
-        phase = "recording";
-        transcript.textContent = "Escuchando… tocá Enviar audio cuando termines.";
-        setStatus("Escuchando", "processing");
-        voiceTimer = setTimeout(toggleMicrophone, 55000);
+        voiceBackendReady = true;
+        maybeStartRecording();
     } else if (type === "voice.transcript") {
         transcript.textContent = data.final ? "Audio enviado." : `Escuchando (provisional): ${data.text}`;
         if (data.final) appendMessage("Vos (voz)", data.text, "user");

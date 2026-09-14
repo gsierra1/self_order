@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import time
 from contextlib import suppress
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -40,6 +41,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
         Args:
             text: Mensaje escrito o transcripción definitiva del usuario.
         """
+        started_at = time.perf_counter()
         worker = asyncio.create_task(asyncio.to_thread(runtime.assistant.send_message, text))
         try:
             response = await asyncio.shield(worker)
@@ -48,6 +50,13 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 "cart": snapshot(runtime.service),
                 "session_closed": runtime.service.session.state == SessionState.CONFIRMED,
             })
+            log_event(
+                "INFO",
+                "conversation.completed",
+                session_id=session_id,
+                input_length=len(text),
+                duration_ms=round((time.perf_counter() - started_at) * 1000),
+            )
         except asyncio.CancelledError:
             # Cancelar una coroutine no detiene el thread ni deshace una tool.
             with suppress(Exception):
@@ -93,6 +102,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 })
                 return
             await publish("voice.transcript", {"text": text, "final": True})
+            log_event("INFO", "voice.turn_transcribed", session_id=session_id, transcript_length=len(text))
             audio.processing_order = True
         await execute(text)
 
@@ -170,7 +180,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     raise ValueError("El mensaje debe contener texto.")
                 if not runtime.turn_lock.acquire(blocking=False):
                     raise ValueError("Hay un turno en curso. Esperá su respuesta.")
-                transcriber = LiveTranscriber() if event_type == "audio.start" else None
+                transcriber = LiveTranscriber(session_id=session_id) if event_type == "audio.start" else None
                 turn_task = asyncio.create_task(process_turn(
                     text.strip() if text is not None else None, transcriber,
                 ))

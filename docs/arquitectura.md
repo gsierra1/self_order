@@ -2,6 +2,10 @@
 
 Actualizada con [voz por turnos](voz.md) el 14/09/2026.
 
+La captura y la conexión Live se preparan en paralelo. El frontend no habilita
+el envío hasta recibir `voice.ready` y completar la preparación local, evitando
+perder las primeras palabras por empezar a hablar durante el handshake.
+
 ## Visión general
 
 Es una aplicación Python modular con FastAPI, un frontend de HTML/CSS/JavaScript
@@ -105,8 +109,9 @@ no es una garantía general contra duplicados entre mensajes o reconexiones.
 
 ## Modelo de datos y precios
 
-El menú contiene Combo Big Mac ($10.500 base) y Combo Cuarto de Libra ($11.500
-base). Ambos requieren `size` (`MEDIUM` o `LARGE`, este último suma $2.000) y
+El menú contiene Combo Big Mac (ARS 10.500 base) y Combo Cuarto de Libra (ARS 11.500
+base). Ambos requieren `size` (internamente `MEDIUM` o `LARGE`, que se muestran como
+Mediano o Grande; este último suma ARS 2.000) y
 `drink` (`COCA` o `SPRITE`, sin adicional). Ambos figuran disponibles.
 
 ```text
@@ -115,7 +120,7 @@ total de línea = precio unitario × cantidad
 total del carrito = suma de totales de línea
 ```
 
-Hoy los enteros representan pesos completos, según catálogo y renderizado.
+Hoy los enteros representan pesos argentinos completos, según catálogo y renderizado.
 No hay convención de centavos ni soporte explícito de múltiples monedas.
 Una línea puede tener varias unidades solo si comparten configuración; dos
 combos con bebidas diferentes deben representarse en líneas distintas.

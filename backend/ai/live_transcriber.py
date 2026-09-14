@@ -1,20 +1,27 @@
 """Adaptador de audio PCM a texto; no tiene acceso al carrito ni a tools."""
 
 import asyncio
+import time
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 
 from google.genai import types
 
 from backend.ai.gemini_client import create_gemini_client
+from backend.logging.event_logger import log_event
 from config.settings import get_transcription_model
 
 
 class LiveTranscriber:
     """Transcribe un único turno explícito y limita audio, espera y recursos."""
 
-    def __init__(self) -> None:
-        """Inicializa la cola acotada y el estado de un turno de hasta 60 segundos."""
+    def __init__(self, session_id: str | None = None) -> None:
+        """Inicializa la cola acotada y el estado de un turno de hasta 60 segundos.
+
+        Args:
+            session_id: Identificador de sesión para correlacionar eventos de voz.
+        """
+        self.session_id = session_id
         self.chunks: asyncio.Queue[bytes | None] = asyncio.Queue(maxsize=128)
         self.ended = False
         self.byte_count = 0
@@ -70,6 +77,7 @@ class LiveTranscriber:
             Exception: Si el proveedor o la publicación de eventos fallan.
         """
         client = create_gemini_client()
+        started_at = time.perf_counter()
         receiver = None
         final_parts: list[str] = []
         end_sent = asyncio.Event()
@@ -88,6 +96,8 @@ class LiveTranscriber:
                     model=get_transcription_model(), config=config,
                 ) as session:
                     await session.send_realtime_input(activity_start=types.ActivityStart())
+                    log_event("INFO", "voice.live_ready", session_id=self.session_id,
+                              model=get_transcription_model())
 
                     async def receive() -> str:
                         """Publica hipótesis y acumula segmentos definitivos hasta cerrar el turno.
@@ -136,10 +146,26 @@ class LiveTranscriber:
                             data=chunk, mime_type="audio/pcm;rate=16000",
                         ))
                     end_sent.set()
+                    audio_finished_at = time.perf_counter()
+                    log_event(
+                        "INFO",
+                        "voice.audio_finished",
+                        session_id=self.session_id,
+                        audio_bytes=self.byte_count,
+                        audio_duration_ms=round((audio_finished_at - started_at) * 1000),
+                    )
                     await session.send_realtime_input(activity_end=types.ActivityEnd())
                     text = await asyncio.wait_for(receiver, timeout=20)
                     if not text:
                         raise ValueError("No se reconoció voz. Podés volver a hablar o escribir.")
+                    log_event(
+                        "INFO",
+                        "voice.transcription_finished",
+                        session_id=self.session_id,
+                        transcript_length=len(text),
+                        transcription_duration_ms=round((time.perf_counter() - audio_finished_at) * 1000),
+                        total_duration_ms=round((time.perf_counter() - started_at) * 1000),
+                    )
                     return text
         finally:
             if receiver is not None:

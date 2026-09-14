@@ -85,7 +85,9 @@ cancela la lectura, manteniendo el texto disponible.
 
 `GEMINI_TRANSCRIPTION_MODEL` tiene valor predeterminado
 `gemini-3.5-transcribe-live`; no hace falta editar `.env` para utilizarlo.
-El chat sigue usando `gemini-3.5-flash-lite`. Las credenciales quedan en backend.
+El chat usa `GEMINI_CHAT_MODEL`, cuyo valor predeterminado es
+`gemini-3.5-flash-lite`; ambos modelos se pueden cambiar en `.env` sin modificar
+el código. Las credenciales quedan en backend.
 Los scripts Live anteriores se conservan como experimentos independientes.
 
 Se eligió transcribir y reutilizar el orquestador para mantener un solo historial
@@ -112,10 +114,15 @@ y localhost o HTTPS. Si falla activar el entorno, consultar [seguimiento](seguim
 1. Tocar **Hablar**, permitir micrófono y esperar **Escuchando**.
 2. Decir «Quiero un Big Mac» y tocar **Enviar audio**. Debe preguntar tamaño y bebida;
    mostrar la hipótesis no debe agregar una línea.
-3. Hablar otra vez: «Grande con Coca», y enviar. Debe aparecer una unidad por $12.500.
+3. Hablar otra vez: «Grande con Coca», y enviar. Debe aparecer una unidad por ARS 12.500.
 4. Pedir una pizza: debe informar que no está disponible, sin agregarla.
 5. Apagar **Voz ON** y continuar escribiendo en la misma sesión.
 6. Confirmar el pedido. Deben bloquearse micrófono y escritura.
+
+Mientras aparece «Preparando micrófono y conexión...» el botón queda bloqueado:
+ese estado evita hablar antes de que la captura esté conectada. Solo hay que
+comenzar cuando aparezca «Escuchando». La preparación del micrófono y de Gemini
+se inicia en paralelo para no sumar sus esperas.
 
 Estas pruebas manuales consumen cuota. El timbre, ruido y tu micrófono físico
 deben evaluarse en tu equipo: las pruebas automáticas no sustituyen esa evaluación.

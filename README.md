@@ -56,12 +56,13 @@ adicional. `http://127.0.0.1:8000/docs` muestra los endpoints HTTP.
 `/api/health` verifica la API, no el acceso a Gemini.
 
 Ejemplo escrito: «Quiero un Big Mac grande con Coca». El total esperado para
-una unidad es $12.500. Una solicitud incompleta debe generar preguntas antes de
+una unidad es ARS 12.500. Una solicitud incompleta debe generar preguntas antes de
 agregar. Para una nueva sesión, recargar la página; reiniciar el backend pierde
 todas las sesiones. Usar un solo worker mientras el estado permanezca en memoria.
 
 El chat usa `gemini-3.5-flash-lite`; la transcripción usa
 `gemini-3.5-transcribe-live`, configurable con `GEMINI_TRANSCRIPTION_MODEL`.
+El modelo del chat también es configurable con `GEMINI_CHAT_MODEL`.
 Los experimentos anteriores siguen usando `gemini-3.1-flash-live-preview`.
 Se comprobó conexión y transcripción real con el nuevo modelo el 14/09/2026.
 La disponibilidad futura depende del proveedor y de la cuenta.

@@ -5,6 +5,7 @@ from dataclasses import asdict
 from unittest.mock import patch
 
 from backend.ai.tools import create_add_item_tool
+from backend.ai.orchestrator import OrderConversationOrchestrator
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
 from backend.services.order_service import OrderService
@@ -56,3 +57,14 @@ class OrderRulesTests(unittest.TestCase):
         self.service.confirm_order()
         with self.assertRaises(ValueError):
             self.service.remove_item(1)
+
+    def test_user_text_hides_internal_modifier_ids_and_dollars(self) -> None:
+        """La salida pública usa nombres y moneda argentinos, nunca códigos internos."""
+        text = OrderConversationOrchestrator._sanitize_user_text(
+            "Elegiste Medium ($12.500) en lugar de LARGE; no es USD."
+        )
+        self.assertEqual(
+            text,
+            "Elegiste Mediano (12.500 pesos argentinos) en lugar de Grande; "
+            "no es pesos argentinos.",
+        )

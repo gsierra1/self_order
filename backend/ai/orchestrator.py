@@ -1,4 +1,5 @@
 import json
+import re
 
 from google.genai import errors, types
 
@@ -183,13 +184,47 @@ REGLAS SOBRE INFORMACIÓN FALTANTE:
 FORMATO DE RESPUESTA:
 
 - Expresate en español.
-- Para montos en pesos argentinos utilizá punto como separador de miles.
-  Ejemplo: $12.500.
+- Para montos utilizá punto como separador de miles y decí explícitamente
+  "pesos argentinos". Ejemplo: 12.500 pesos argentinos. No uses "$", "USD"
+  ni "dólares", porque la respuesta también puede leerse en voz alta.
+- Usá solamente nombres en español para la persona: "Mediano" y "Grande".
+  MEDIUM y LARGE son identificadores internos y nunca deben aparecer en la
+  respuesta escrita o hablada. Lo mismo aplica a IDs de productos, grupos y
+  opciones.
 
 CATÁLOGO ACTUAL:
 
 {catalog}
-""".strip()
+        """.strip()
+
+    @staticmethod
+    def _sanitize_user_text(text: str) -> str:
+        """Elimina identificadores internos y símbolos ambiguos de la respuesta.
+
+        Args:
+            text: Texto final producido por Gemini.
+
+        Returns:
+            Texto preparado para mostrar y leer a la persona.
+        """
+        replacements = (
+            (r"\bMEDIUM\b", "Mediano"),
+            (r"\bMedium\b", "Mediano"),
+            (r"\bmedium\b", "mediano"),
+            (r"\bLARGE\b", "Grande"),
+            (r"\bLarge\b", "Grande"),
+            (r"\blarge\b", "grande"),
+        )
+        for pattern, replacement in replacements:
+            text = re.sub(pattern, replacement, text)
+        text = re.sub(
+            r"\$\s*([0-9][0-9.]*)",
+            r"\1 pesos argentinos",
+            text,
+        )
+        text = re.sub(r"\bUSD\b", "pesos argentinos", text, flags=re.IGNORECASE)
+        text = re.sub(r"\bdólares?\b", "pesos argentinos", text, flags=re.IGNORECASE)
+        return text
 
     def _execute_function_call(self, function_call) -> dict:
         """
@@ -595,7 +630,7 @@ CATÁLOGO ACTUAL:
                 last_tool=last_tool,
             )
 
-        final_text = response.text or ""
+        final_text = self._sanitize_user_text(response.text or "")
 
         log_event(
             "DEBUG",
