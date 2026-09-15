@@ -63,6 +63,10 @@ para una unidad es ARS 9.500. «Quiero una Burger Clásica» debe pedir la bebid
 antes de agregar. Para una nueva sesión, recargar la página; reiniciar el backend pierde
 todas las sesiones. Usar un solo worker mientras el estado permanezca en memoria.
 
+«Hamburguesa simple» es un alias de Burger Clásica. El carrito desglosa precio
+base, bebida incluida y cada extra con su adicional; el total siempre se calcula
+en backend.
+
 El chat usa `gemini-3.5-flash-lite`; la transcripción usa
 `gemini-3.5-transcribe-live`, configurable con `GEMINI_TRANSCRIPTION_MODEL`.
 El modelo del chat también es configurable con `GEMINI_CHAT_MODEL`.

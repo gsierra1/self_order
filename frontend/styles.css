@@ -376,7 +376,8 @@ h2 {
 
 
 .cart-item-details {
-    display: block;
+    display: grid;
+    gap: 4px;
 
     margin: 0;
 
@@ -386,6 +387,8 @@ h2 {
 
     color: #656970;
 }
+
+.cart-item-detail { display: block; }
 
 
 .cart-item-price {

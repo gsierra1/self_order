@@ -245,6 +245,16 @@ carrito. La suite local comprobó bebida faltante, acumulación y retiro de extr
 rechazo de grupos desconocidos, reemplazo atómico, pagos y voz simulada. Falta la
 prueba manual con Gemini y micrófono real de los recorridos nuevos.
 
+La corrida manual del 15/09/2026 confirmó alta de Burger Clásica con agua y
+tomate, retiro de tomate, altas consecutivas de queso y tomate, cambio de bebida
+a Coca-Cola, consulta de precio, rechazo de empanada y pago QR. La primera frase
+«hamburguesa simple» fue interpretada como ambigua; se incorporó el alias
+explícito al catálogo. No hubo una mutación incorrecta. Se observaron demoras de
+Gemini de hasta aproximadamente 53 segundos en una operación con dos extras y
+de 22 segundos para rechazar un producto inexistente; son evidencia de latencia
+del proveedor que se debe seguir midiendo. El carrito ahora muestra precio base,
+bebida incluida y precio de cada extra.
+
 ### Actualización visual del frontend (14/09/2026)
 
 La interfaz adoptó la identidad visual de SIA Interactive: tipografía Inter, violeta de marca y una composición con gradientes suaves, tarjetas redondeadas y jerarquía visual orientada a la acción. El encabezado ahora invita a iniciar el pedido con “Hace tu pedido” y conserva los mismos controles y estados funcionales. La mejora es exclusivamente visual y debe verificarse en escritorio y en la vista responsive antes de incorporarla a una demo formal.

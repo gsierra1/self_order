@@ -116,8 +116,11 @@ class BrowserVoiceTests(unittest.TestCase):
                         page.locator("#mic-button").click()
                         expect(page.locator(".cart-item")).to_have_count(1)
                         expect(page.locator("#cart-total")).to_have_text("ARS 9.500")
-                        expect(page.locator(".cart-item-details")).to_have_text(
-                            "Bebida: Coca-Cola · Extra de queso: Queso"
+                        details = page.locator(".cart-item-details")
+                        expect(details).to_contain_text("Precio base: ARS 8.500")
+                        expect(details).to_contain_text("Bebida: Coca-Cola · Incluida")
+                        expect(details).to_contain_text(
+                            "Extra de queso: Queso · + ARS 1.000"
                         )
                         expect(page.locator("#message-input")).to_be_enabled()
                         self.assertEqual(len(page.evaluate("window.spokenTexts")), 1)

@@ -101,6 +101,9 @@ def serialize_cart(
                 "product_id": item.product_id,
                 "product_name": item.product_name,
                 "quantity": item.quantity,
+                "base_price": (
+                    service.menu.get_product(item.product_id).base_price
+                ),
                 "selected_modifiers": (
                     item.selected_modifiers
                 ),

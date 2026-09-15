@@ -24,7 +24,7 @@ class Menu:
         self,
         product_id: str,
         selected_modifiers: dict[str, str],
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, str | int]]:
         """Traduce los modificadores internos a textos aptos para la interfaz.
 
         Args:
@@ -62,6 +62,7 @@ class Menu:
                     {
                         "group_name": group.name,
                         "option_name": option.name,
+                        "price_delta": option.price_delta,
                     }
                 )
 
@@ -116,6 +117,7 @@ def load_menu(path: str | Path) -> Menu:
             base_price=product_data["base_price"],
             available=product_data["available"],
             modifier_groups=modifier_groups,
+            aliases=product_data.get("aliases", []),
         )
 
         products[product.id] = product

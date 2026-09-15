@@ -6,6 +6,7 @@
       "category": "hamburguesas",
       "base_price": 8500,
       "available": true,
+      "aliases": ["hamburguesa simple", "simple", "hamburguesa clásica", "clásica"],
       "modifier_groups": [
         {
           "id": "drink",
@@ -57,6 +58,7 @@
       "category": "hamburguesas",
       "base_price": 10500,
       "available": true,
+      "aliases": ["hamburguesa doble", "doble"],
       "modifier_groups": [
         {
           "id": "drink",

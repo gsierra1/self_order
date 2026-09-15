@@ -97,6 +97,30 @@ class OrderRulesTests(unittest.TestCase):
         self.assertEqual(updated.unit_price, 9500)
         self.assertNotIn("extra_tomato", updated.selected_modifiers)
 
+    def test_catalog_exposes_aliases_and_visible_price_details(self) -> None:
+        """Mantiene aliases conversacionales y precios para el carrito visible."""
+        product = self.service.menu.get_product("BURGER_CLASICA")
+        self.assertIn("hamburguesa simple", product.aliases)
+        details = self.service.menu.get_modifier_details(
+            "BURGER_CLASICA",
+            {"drink": "COCA", "extra_cheese": "ADD_CHEESE"},
+        )
+        self.assertEqual(
+            details,
+            [
+                {
+                    "group_name": "Bebida",
+                    "option_name": "Coca-Cola",
+                    "price_delta": 0,
+                },
+                {
+                    "group_name": "Extra de queso",
+                    "option_name": "Queso",
+                    "price_delta": 1000,
+                },
+            ],
+        )
+
     def test_unknown_modifier_group_does_not_add(self) -> None:
         """Rechaza grupos no definidos antes de alterar el carrito."""
         with self.assertRaises(ValueError):

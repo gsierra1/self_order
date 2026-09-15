@@ -54,6 +54,9 @@ class OrderService:
                     "product_id": item.product_id,
                     "product_name": item.product_name,
                     "quantity": item.quantity,
+                    "base_price": (
+                        self.menu.get_product(item.product_id).base_price
+                    ),
                     "selected_modifiers": (
                         item.selected_modifiers.copy()
                     ),

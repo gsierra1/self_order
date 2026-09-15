@@ -191,11 +191,21 @@ function renderCart(cart) {
         details.className =
             "cart-item-details";
 
-        const detailParts = (item.selected_modifier_details || [])
-            .map((detail) => `${detail.group_name}: ${detail.option_name}`);
+        const baseDetail = document.createElement("span");
+        baseDetail.className = "cart-item-detail";
+        baseDetail.textContent = `Precio base: ${formatCurrency(item.base_price)}`;
+        details.appendChild(baseDetail);
 
-        details.textContent =
-            detailParts.join(" · ");
+        for (const detail of item.selected_modifier_details || []) {
+            const modifierDetail = document.createElement("span");
+            modifierDetail.className = "cart-item-detail";
+            const priceText = detail.price_delta === 0
+                ? "Incluida"
+                : `+ ${formatCurrency(detail.price_delta)}`;
+            modifierDetail.textContent =
+                `${detail.group_name}: ${detail.option_name} · ${priceText}`;
+            details.appendChild(modifierDetail);
+        }
 
         const price =
             document.createElement("div");

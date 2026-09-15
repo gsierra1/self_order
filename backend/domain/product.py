@@ -24,3 +24,4 @@ class Product:
     base_price: int
     available: bool
     modifier_groups: list[ModifierGroup] = field(default_factory=list)
+    aliases: list[str] = field(default_factory=list)

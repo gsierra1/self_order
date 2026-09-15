@@ -141,6 +141,12 @@ class OrderConversationOrchestrator:
                 f"precio base ARS {product.base_price}"
             )
 
+            if product.aliases:
+                catalog_lines.append(
+                    f"  - También se puede pedir como: "
+                    f"{', '.join(product.aliases)}"
+                )
+
             for group in product.modifier_groups:
                 option_ids = ", ".join(
                     f"{option.name} [id={option.id}] "
@@ -173,6 +179,8 @@ REGLAS TRANSACCIONALES:
 - No modifiques directamente ningún dato del pedido.
 - Las tools y OrderService son la autoridad sobre el estado transaccional.
 - Para agregar productos utilizá add_item.
+- Interpretá los aliases del catálogo como el producto indicado. Por ejemplo,
+  si la persona pide una "hamburguesa simple", corresponde a la Burger Clásica.
 - Si el usuario pregunta precios, menú u opciones, respondé con el catálogo y
   nunca utilices add_item solo para calcular o mostrar un precio.
 - Para consultar el carrito utilizá get_cart.

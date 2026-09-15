@@ -128,7 +128,9 @@ base). Ambas requieren una bebida —Coca-Cola, Sprite o agua— sin adicional.
 Tomate, lechuga, jamón y queso son extras opcionales; cada uno suma ARS 1.000.
 El catálogo declara el nombre visible, la obligatoriedad y las opciones de cada
 grupo. El backend usa los identificadores técnicos solo para validar y entrega
-los nombres visibles al frontend.
+los nombres visibles, el precio base y el adicional de cada opción al frontend.
+Los aliases del producto también forman parte del catálogo conversacional: por
+ejemplo, «hamburguesa simple» identifica a Burger Clásica.
 
 ```text
 precio unitario = precio base + suma de adicionales elegidos

@@ -148,6 +148,11 @@ reglas entre Gemini, backend y frontend.
 necesita varias elecciones dentro del mismo grupo, habrá que extender el contrato
 de modificadores y repetir sus pruebas.
 
+**Ajuste posterior:** se agregaron aliases conversacionales al catálogo. El
+orquestador los entrega a Gemini como equivalencias explícitas —por ejemplo,
+«hamburguesa simple» para Burger Clásica— sin convertirlos en precios o reglas
+duplicadas en código.
+
 Los precios enteros evitan aritmética flotante en este catálogo de pesos argentinos completos.
 Antes de integrar un POS habrá que fijar moneda, unidad monetaria y redondeo.
 
