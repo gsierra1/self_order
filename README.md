@@ -1,12 +1,12 @@
 # Self Order Voice
 
-Prueba de concepto de autoservicio conversacional: Gemini interpreta pedidos y
+Prueba de un autoservicio conversacional: Gemini interpreta pedidos ya sean mediante voz o texto y
 un backend Python valida productos, modificadores y precios. El dashboard muestra
 la conversación y el carrito actualizado por WebSocket.
 
-**Estado:** texto y voz por turnos implementados. Tocá **Hablar**, esperá la
+Tocá **Hablar**, luego de que el indicador de **Estado** esté en "Listo" esperá la
 escucha y tocá **Enviar audio** al terminar; el texto definitivo usa el mismo
-orquestador del chat. La respuesta puede leerse con la voz del navegador.
+orquestador del chat. La respuesta puede leerse con la voz del navegador si el mismo está habilitado.
 La confirmación y el pago son demostraciones locales, sin integración POS ni
 procesamiento real de tarjetas. El QR mostrado es deliberadamente inválido.
 
@@ -23,14 +23,18 @@ Las reglas de docstrings Google y actualización documental están en
 
 ## Ejecutar en Windows / PowerShell
 
-Desde la raíz del repositorio, con Python instalado (entorno revisado: 3.12.1):
+Desde la raíz del repositorio, con Python instalado (entorno revisado: 3.12.1) crea un entorno virtual de Python dentro de la carpeta .venv. Si ya existe `.venv`, reutilizarlo.
 
 ```powershell
 python -m venv .venv
+```
+En la carpeta .venv instalá ahi las dependencias del proyecto sin mezclarlas con el Python global de tu computadora.
+
+```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Si ya existe `.venv`, reutilizarlo. Crear `.env` a partir de `.env.example`
+ Crear `.env` a partir de `.env.example`
 solo si todavía no existe y configurar una API key de Gemini:
 
 ```dotenv
@@ -58,19 +62,13 @@ Abrir `http://127.0.0.1:8000/`. FastAPI sirve también el frontend, sin un servi
 adicional. `http://127.0.0.1:8000/docs` muestra los endpoints HTTP.
 `/api/health` verifica la API, no el acceso a Gemini.
 
-Ejemplo escrito: «Quiero una Burger Clásica con Coca y queso». El total esperado
-para una unidad es ARS 9.500. «Quiero una Burger Clásica» debe pedir la bebida
-antes de agregar. Para una nueva sesión, recargar la página; reiniciar el backend pierde
-todas las sesiones. Usar un solo worker mientras el estado permanezca en memoria.
-
-«Hamburguesa simple» es un alias de Burger Clásica. El carrito desglosa precio
-base, bebida incluida y cada extra con su adicional; el total siempre se calcula
-en backend.
-
 La configuración recomendada para la cuenta revisada el 15/09/2026 usa
 `gemini-3.7-flash` para chat y `gemini-3.5-transcribe-live` para transcripción.
 Los nombres se configuran mediante `GEMINI_CHAT_MODEL` y
 `GEMINI_TRANSCRIPTION_MODEL` en `.env`.
+
+Si se configura un nombre inexistente o incompatible, el chat o la voz muestran
+el nombre concreto del modelo y la etapa que falló, sin modificar el carrito.
 
 Un modelo de chat necesita la acción `generateContent`. Para voz,
 `bidiGenerateContent` es necesario, pero no suficiente: el modelo también debe
@@ -80,16 +78,6 @@ estar documentado para **Live Transcription**, aceptar
 de modelos solo confirma la primera condición; las demás se validan con la
 documentación oficial y una prueba de audio real. La disponibilidad futura depende
 del proveedor y de la cuenta.
-
-Si se configura un nombre inexistente o incompatible, el chat o la voz muestran
-el nombre concreto del modelo y la etapa que falló, sin modificar el carrito.
-Por ejemplo, `gemini-3.6-flash-lite` y `gemini-3.6-transcribe-live` no estaban
-disponibles para esta cuenta en la consulta del 15/09/2026.
-
-Que un modelo aparezca con `bidiGenerateContent` no prueba que sea compatible
-con este flujo de transcripción final. `gemini-3.5-live-translate-preview` abrió
-Live pero agotó la espera sin entregar texto; conservar
-`gemini-3.5-transcribe-live` para voz hasta realizar una evaluación específica.
 
 Para consultar todos los modelos visibles para la API key configurada, tanto los
 de chat como los de transcripción, ejecutar:
