@@ -289,3 +289,41 @@ la conversación con interrupciones requiere una etapa adicional bien probada.
 | STT Edge | Puede responder sin internet, reducir la latencia de red y mantener el audio local. | Requiere hardware, instalación, actualizaciones y pruebas de calidad con ruido. |
 
 Edge no mejora automáticamente la transcripción. Es una alternativa operativa que solo conviene adoptar si las mediciones de latencia, ruido, costo, privacidad y disponibilidad justifican el hardware adicional.
+
+## 14. Disponibilidad de IA para una operación de kiosco
+
+**Estado:** pendiente para un piloto; no forma parte de la garantía de la demo.
+
+**Contexto comprobado:** los logs locales registraron dos respuestas `503
+MODEL_OVERLOADED` de `gemini-3.6-flash`. Ese código indica que el proveedor no
+tuvo capacidad disponible temporalmente. Es distinto de un `429`, que indica que
+la aplicación excedió una cuota de solicitudes, tokens o gasto configurada.
+
+**Decisión propuesta:** para un piloto, usar un plan pago adecuado al volumen,
+medir errores y latencias por proveedor/modelo, y conservar una ruta de
+continuidad cuando falle la IA: escritura y selección táctil deben permitir
+completar el pedido. Los reintentos de fallas temporales deben estar asociados a
+un identificador de operación y nunca repetir una mutación del carrito sin poder
+demostrar que la anterior no se aplicó.
+
+**Sobre pagar:** un plan pago de Gemini aumenta límites de uso y habilita más
+capacidad que el nivel gratuito, pero no convierte un proveedor compartido en
+infalible ni elimina por sí mismo los `503`. Para una necesidad de capacidad
+previsible, evaluar Vertex AI y su Provisioned Throughput solo después de medir
+el tráfico y confirmar que el modelo elegido lo admite.
+
+**Alternativas:** Gemini no es el único proveedor. STT puede implementarse con
+Gemini, Google Cloud Speech-to-Text, Deepgram, Azure Speech, OpenAI o un motor
+local; el LLM de interpretación puede ser Gemini, OpenAI, Anthropic o un modelo
+local. No son reemplazos de configuración: cada proveedor tiene protocolos,
+herramientas y formatos propios.
+
+**Consecuencia de arquitectura:** antes de un piloto se debe definir un contrato
+`SpeechToText` para voz y otro de interpretación estructurada para el LLM. Cada
+adaptador traduce su proveedor a esos contratos; `OrderService` permanece como
+autoridad de menú, precios y estado. Esto permite usar un proveedor alternativo
+o hacer failover sin reescribir las reglas del pedido.
+
+**Fuentes de consulta:** [cuotas de Gemini](https://ai.google.dev/gemini-api/docs/rate-limits),
+[facturación de Gemini](https://ai.google.dev/gemini-api/docs/billing) y
+[capacidad aprovisionada en Vertex AI](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/resources/throughput-quota).

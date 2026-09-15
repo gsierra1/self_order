@@ -239,7 +239,15 @@ Conviene conservar la separación `domain`/`services`/`ai`/`api`, porque permite
 
 ### Qué incorporar cuando el proyecto pase a piloto
 
-La siguiente etapa técnica debería definir adaptadores explícitos para `SpeechToText`, POS, KDS, pagos y ticket, medir la latencia por etapa y probar el frontend con el micrófono elegido. Después habría que agregar almacenamiento durable e idempotencia de pedidos, disponibilidad proveniente del POS y un flujo de pago certificado. El número de tarjeta no debe capturarse en el navegador en una integración real: debe utilizarse un pinpad o tokenización del proveedor.
+La siguiente etapa técnica debería definir adaptadores explícitos para
+`SpeechToText`, interpretación LLM, POS, KDS, pagos y ticket, medir la latencia
+por etapa y probar el frontend con el micrófono elegido. Los adaptadores de voz e
+interpretación permitirían comparar proveedores o seleccionar uno alternativo
+sin cambiar `OrderService`. Después habría que agregar almacenamiento durable e
+idempotencia de pedidos, métricas de cuota y disponibilidad del proveedor,
+continuidad por pantalla/escritura y un flujo de pago certificado. El número de
+tarjeta no debe capturarse en el navegador en una integración real: debe utilizarse
+un pinpad o tokenización del proveedor.
 
 El proyecto no debe incorporar hardware Edge, una PWA, un POS real o una pasarela real solo para parecerse a la guía. Cada integración debe entrar cuando exista un entorno de prueba y un contrato verificable.
 

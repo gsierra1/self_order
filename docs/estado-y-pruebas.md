@@ -253,6 +253,23 @@ documentado para Live Transcription, aceptar la configuración de texto y
 transcripción de entrada, y emitir una transcripción final después de terminar
 el turno. El listado de modelos no informa por sí solo esas últimas condiciones.
 
+### Disponibilidad del proveedor y preparación para producción (15/09/2026)
+
+Los `503 MODEL_OVERLOADED` observados pertenecen a la capacidad temporal del
+proveedor; no prueban que todos los modelos fallen ni que la frase de usuario sea
+demasiado larga. `gemini-3.7-flash` respondió una consulta real posterior. Un
+`429` sería distinto: señalaría que se excedió una cuota de solicitudes, tokens
+o gasto. El plan pago aumenta las cuotas disponibles, pero no garantiza eliminar
+un `503` de un servicio compartido.
+
+Para un kiosco real queda pendiente medir pedidos por minuto, tokens, latencia,
+porcentaje de errores y costo por local. Con esos datos se decide entre un plan
+pago con cuotas adecuadas, capacidad reservada en Vertex AI para un modelo
+compatible, o una combinación de proveedores. También se requiere una ruta de
+continuidad por pantalla/escritura, reintentos idempotentes y adaptadores de STT
+y LLM que permitan cambiar proveedor sin alterar `OrderService`. No se probó ni
+se implementó todavía failover automático o capacidad reservada.
+
 ### Desglose y eliminación de extras en el carrito (15/09/2026)
 
 El carrito separa ahora los modificadores obligatorios del precio base y los
