@@ -36,7 +36,7 @@ solo si todavía no existe y configurar una API key de Gemini:
 ```dotenv
 GEMINI_API_KEY=tu_api_key
 GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live
-GEMINI_CHAT_MODEL=gemini-3.6-flash
+GEMINI_CHAT_MODEL=gemini-3.7-flash
 ```
 
 Las credenciales locales no deben versionarse. El SDK carga la clave desde el
@@ -68,7 +68,7 @@ base, bebida incluida y cada extra con su adicional; el total siempre se calcula
 en backend.
 
 La configuración recomendada para la cuenta revisada el 15/09/2026 usa
-`gemini-3.6-flash` para chat y `gemini-3.5-transcribe-live` para transcripción.
+`gemini-3.7-flash` para chat y `gemini-3.5-transcribe-live` para transcripción.
 Los nombres se configuran mediante `GEMINI_CHAT_MODEL` y
 `GEMINI_TRANSCRIPTION_MODEL`. Un modelo de chat necesita la acción
 `generateContent`; para voz se necesita `bidiGenerateContent`. La disponibilidad
@@ -78,6 +78,11 @@ Si se configura un nombre inexistente o incompatible, el chat o la voz muestran
 el nombre concreto del modelo y la etapa que falló, sin modificar el carrito.
 Por ejemplo, `gemini-3.6-flash-lite` y `gemini-3.6-transcribe-live` no estaban
 disponibles para esta cuenta en la consulta del 15/09/2026.
+
+Que un modelo aparezca con `bidiGenerateContent` no prueba que sea compatible
+con este flujo de transcripción final. `gemini-3.5-live-translate-preview` abrió
+Live pero agotó la espera sin entregar texto; conservar
+`gemini-3.5-transcribe-live` para voz hasta realizar una evaluación específica.
 
 Para consultar todos los modelos visibles para la API key configurada, tanto los
 de chat como los de transcripción, ejecutar:

@@ -85,7 +85,7 @@ cancela la lectura, manteniendo el texto disponible.
 
 `GEMINI_TRANSCRIPTION_MODEL` usa `gemini-3.5-transcribe-live` en la
 configuración recomendada. El chat usa `GEMINI_CHAT_MODEL`, recomendado como
-`gemini-3.6-flash` para la cuenta consultada el 15/09/2026. Ambos se pueden
+`gemini-3.7-flash` para la cuenta consultada el 15/09/2026. Ambos se pueden
 cambiar en `.env` sin modificar el código. Las credenciales quedan en backend.
 Para consultar los modelos habilitados para la cuenta local, ejecutar
 `python -m backend.ai.list_models` con el entorno virtual activo. La salida es
@@ -96,6 +96,11 @@ Si el modelo configurado no existe o no admite Live, el error visible nombra el
 modelo y recomienda este comando; el detalle original queda únicamente en los
 logs locales. Los scripts Live anteriores se conservan como experimentos
 independientes.
+
+Un modelo con `bidiGenerateContent` requiere además comprobar que entregue la
+transcripción de entrada usada por este adaptador. En la prueba del 15/09/2026,
+`gemini-3.5-live-translate-preview` abrió la conexión pero agotó la espera sin
+texto final; no debe sustituir a `gemini-3.5-transcribe-live` sin otra prueba.
 
 Se eligió transcribir y reutilizar el orquestador para mantener un solo historial
 de pedidos para ambos canales. Un agente Live con tools es una alternativa futura,

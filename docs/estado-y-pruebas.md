@@ -233,9 +233,19 @@ mejor rendimiento.
 La consulta posterior del mismo día también mostró como alternativas de chat
 `gemini-3.7-flash`, `gemini-3.8-flash` y `gemini-3.5-flash`; para Live mostró
 `gemini-3.8-live`, `gemini-3.1-flash-live-preview` y
-`gemini-3.5-live-translate-preview`. Se dejaron comentadas en `.env.example`.
-La acción `generateContent` o `bidiGenerateContent` confirma la capacidad que
-declara el proveedor, pero no sustituye una evaluación real del flujo de pedido.
+`gemini-3.5-live-translate-preview`. La acción `generateContent` o
+`bidiGenerateContent` confirma la capacidad que declara el proveedor, pero no
+sustituye una evaluación real del flujo de pedido.
+
+La corrida posterior comprobó que `gemini-3.6-flash` devolvió `503
+MODEL_OVERLOADED` en dos solicitudes de chat. Una consulta real de precio con
+`gemini-3.7-flash` respondió correctamente y mantuvo el carrito vacío. Para voz,
+`gemini-3.5-live-translate-preview` abrió Live pero, después de audios de 14,4 y
+17,8 segundos, no entregó transcripción final dentro de los 20 segundos de
+espera. Se volvió a configurar `gemini-3.5-transcribe-live`, que sí tiene
+transcripciones reales registradas. Por ahora es el único modelo recomendado
+para STT; los demás modelos Live quedan como candidatos para evaluación, no como
+alternativas intercambiables.
 
 ### Desglose y eliminación de extras en el carrito (15/09/2026)
 
