@@ -35,6 +35,12 @@ def _build_modifier_group(group_data: dict) -> ModifierGroup:
 
 @dataclass
 class Menu:
+    """Mantiene los productos del catalogo indexados por identificador tecnico.
+
+    Attributes:
+        products: Productos disponibles en el catalogo, indexados por su ID.
+    """
+
     products: dict[str, Product]
 
     def get_product(self, product_id: str) -> Product | None:

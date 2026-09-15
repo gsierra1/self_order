@@ -176,9 +176,10 @@ conversacion continua y las validaciones del punto 4.
   incorporan a las capacidades prometidas.
 - `line_id` puede reutilizarse tras una eliminación (reproducido).
 - Deduplicar una tool dentro del turno no evita duplicados al repetir mensajes.
-- `Cart.total` conserva deuda previa de documentación. `Menu.get_product` y
-  `load_menu` se documentaron al generalizar el catálogo; el frontend documenta
-  sus funciones modificadas.
+- La deuda previa de documentación de `Cart.total` se resolvió junto con la
+  descripción Google de los modelos de dominio `Cart`, `CartItem`, `Menu`,
+  `Product`, `ModifierGroup` y `ModifierOption`. El frontend documenta sus
+  funciones modificadas con JSDoc.
 - La deuda de bytecode versionado se resolvió en la limpieza del 14/09/2026:
   `.gitignore` excluye cachés y el índice ya no contiene los cinco `.pyc` originales.
 
