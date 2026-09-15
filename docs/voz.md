@@ -102,6 +102,14 @@ transcripción de entrada usada por este adaptador. En la prueba del 15/09/2026,
 `gemini-3.5-live-translate-preview` abrió la conexión pero agotó la espera sin
 texto final; no debe sustituir a `gemini-3.5-transcribe-live` sin otra prueba.
 
+Para este `LiveTranscriber`, un candidato necesita cuatro condiciones: aparecer
+con `bidiGenerateContent` en la cuenta, estar documentado como **Live
+Transcription**, aceptar `response_modalities=["TEXT"]` e
+`input_audio_transcription`, y emitir `server_content.input_transcription` final
+después de `activity_end`. El listado local solo demuestra la primera condición;
+la documentación del proveedor y una prueba con audio real validan las restantes.
+Google documenta explícitamente ese contrato para `gemini-3.5-transcribe-live`.
+
 Se eligió transcribir y reutilizar el orquestador para mantener un solo historial
 de pedidos para ambos canales. Un agente Live con tools es una alternativa futura,
 pero requiere adaptar conversación, interrupciones y ejecución de operaciones.

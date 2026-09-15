@@ -247,6 +247,12 @@ transcripciones reales registradas. Por ahora es el único modelo recomendado
 para STT; los demás modelos Live quedan como candidatos para evaluación, no como
 alternativas intercambiables.
 
+El criterio de selección de STT se precisó en `.env.example`: `bidiGenerateContent`
+es necesario para la conexión Live, pero el candidato también debe estar
+documentado para Live Transcription, aceptar la configuración de texto y
+transcripción de entrada, y emitir una transcripción final después de terminar
+el turno. El listado de modelos no informa por sí solo esas últimas condiciones.
+
 ### Desglose y eliminación de extras en el carrito (15/09/2026)
 
 El carrito separa ahora los modificadores obligatorios del precio base y los
