@@ -185,39 +185,54 @@ function renderCart(cart) {
                 ? `${item.quantity} × ${item.product_name}`
                 : item.product_name;
 
-        const details =
-            document.createElement("p");
+        const details = document.createElement("div");
+        details.className = "cart-item-details";
+        const modifierDetails = item.selected_modifier_details || [];
+        const requiredDetails = modifierDetails.filter(detail => detail.required);
+        const optionalDetails = modifierDetails.filter(detail => !detail.required);
+        const configuration = document.createElement("div");
+        configuration.className = "cart-item-configuration";
+        const requiredText = requiredDetails
+            .map(detail => `${detail.group_name}: ${detail.option_name}`)
+            .join(" · ");
+        configuration.textContent = requiredText
+            ? `${requiredText} | Precio base: ${formatCurrency(item.base_price)}`
+            : `Precio base: ${formatCurrency(item.base_price)}`;
+        details.appendChild(configuration);
 
-        details.className =
-            "cart-item-details";
+        if (optionalDetails.length > 0) {
+            const extrasTitle = document.createElement("h4");
+            extrasTitle.className = "cart-extras-title";
+            extrasTitle.textContent = "Extras";
+            details.appendChild(extrasTitle);
 
-        const baseDetail = document.createElement("span");
-        baseDetail.className = "cart-item-detail";
-        baseDetail.textContent = `Precio base: ${formatCurrency(item.base_price)}`;
-        details.appendChild(baseDetail);
-
-        for (const detail of item.selected_modifier_details || []) {
-            const modifierDetail = document.createElement("span");
-            modifierDetail.className = "cart-item-detail";
-            const priceText = detail.price_delta === 0
-                ? "Incluida"
-                : `+ ${formatCurrency(detail.price_delta)}`;
-            modifierDetail.textContent =
-                `${detail.group_name}: ${detail.option_name} · ${priceText}`;
-            details.appendChild(modifierDetail);
+            for (const detail of optionalDetails) {
+                const extraRow = createExtraRow(
+                    item.line_id,
+                    detail,
+                    cart.state === "ACTIVE",
+                );
+                details.appendChild(extraRow);
+            }
         }
 
-        const price =
-            document.createElement("div");
+        const priceRow = document.createElement("div");
+        priceRow.className = "cart-item-total";
+        const price = document.createElement("div");
+        price.className = "cart-item-price";
+        price.textContent = formatCurrency(item.unit_price * item.quantity);
+        priceRow.appendChild(price);
 
-        price.className =
-            "cart-item-price";
-
-        price.textContent =
-            formatCurrency(
-                item.unit_price
-                * item.quantity
-            );
+        if (cart.state === "ACTIVE") {
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "remove-item-button";
+            removeButton.textContent = "🗑";
+            removeButton.title = "Eliminar este producto";
+            removeButton.setAttribute("aria-label", "Eliminar este producto");
+            removeButton.addEventListener("click", () => removeCartItem(item.line_id));
+            priceRow.appendChild(removeButton);
+        }
 
         itemElement.appendChild(
             title
@@ -227,19 +242,7 @@ function renderCart(cart) {
             details
         );
 
-        itemElement.appendChild(
-            price
-        );
-
-        if (cart.state === "ACTIVE") {
-            const removeButton = document.createElement("button");
-            removeButton.type = "button";
-            removeButton.className = "remove-item-button";
-            removeButton.textContent = "🗑";
-            removeButton.title = "Eliminar este producto";
-            removeButton.addEventListener("click", () => removeCartItem(item.line_id));
-            itemElement.appendChild(removeButton);
-        }
+        itemElement.appendChild(priceRow);
 
         cartItems.appendChild(
             itemElement
@@ -298,6 +301,37 @@ function failVoice(error) {
     phase = socket?.readyState === WebSocket.OPEN ? "ready" : "disconnected";
     setStatus("No se pudo enviar el audio", "error");
     updateControls();
+}
+
+
+/** Construye una fila de extra con su control de eliminación cuando está habilitado.
+ * @param {number} lineId Identificador de la línea que contiene el extra.
+ * @param {Object} detail Detalle visible y técnico del modificador opcional.
+ * @param {boolean} editable Indica si el pedido permite cambios.
+ * @returns {HTMLDivElement} Fila lista para insertarse en el carrito.
+ * @effects El botón solicita al backend quitar exclusivamente ese extra. */
+function createExtraRow(lineId, detail, editable) {
+    const extraRow = document.createElement("div");
+    extraRow.className = "cart-extra";
+    const extraText = document.createElement("span");
+    extraText.textContent = `${detail.option_name} · + ${formatCurrency(detail.price_delta)}`;
+    extraRow.appendChild(extraText);
+
+    if (editable) {
+        const removeExtraButton = document.createElement("button");
+        removeExtraButton.type = "button";
+        removeExtraButton.className = "remove-extra-button";
+        removeExtraButton.textContent = "🗑";
+        removeExtraButton.title = `Quitar ${detail.option_name}`;
+        removeExtraButton.setAttribute("aria-label", `Quitar ${detail.option_name}`);
+        removeExtraButton.addEventListener(
+            "click",
+            () => removeCartModifier(lineId, detail.group_id, detail.option_name),
+        );
+        extraRow.appendChild(removeExtraButton);
+    }
+
+    return extraRow;
 }
 
 /** Muestra el selector y el estado del pago de demostración.
@@ -399,6 +433,27 @@ async function removeCartItem(lineId) {
         if (!response.ok) throw new Error(data.detail || "No se pudo eliminar el producto.");
         applyCart(data.cart);
         appendMessage("Sistema", `Eliminé ${itemName} del carrito.`, "assistant");
+    } catch (error) {
+        appendMessage("Sistema", error.message, "error");
+    }
+}
+
+/** Quita un extra opcional mediante la misma validación que usa la conversación.
+ * @param {number} lineId Identificador de la línea que contiene el extra.
+ * @param {string} modifierGroupId Grupo opcional que se desea quitar.
+ * @param {string} optionName Nombre visible usado para informar el resultado.
+ * @returns {Promise<void>} Actualiza el carrito o informa el error recibido.
+ * @effects Cambia el carrito validado por OrderService sin eliminar la línea. */
+async function removeCartModifier(lineId, modifierGroupId, optionName) {
+    try {
+        const response = await fetch(
+            `/api/sessions/${sessionId}/cart/items/${lineId}/modifiers/${modifierGroupId}`,
+            { method: "DELETE" },
+        );
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "No se pudo quitar el extra.");
+        applyCart(data.cart);
+        appendMessage("Sistema", `Eliminé ${optionName} del producto.`, "assistant");
     } catch (error) {
         appendMessage("Sistema", error.message, "error");
     }

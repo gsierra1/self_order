@@ -110,14 +110,18 @@ class OrderRulesTests(unittest.TestCase):
             details,
             [
                 {
+                    "group_id": "drink",
                     "group_name": "Bebida",
                     "option_name": "Coca-Cola",
                     "price_delta": 0,
+                    "required": True,
                 },
                 {
+                    "group_id": "extra_cheese",
                     "group_name": "Extra de queso",
                     "option_name": "Queso",
                     "price_delta": 1000,
+                    "required": False,
                 },
             ],
         )

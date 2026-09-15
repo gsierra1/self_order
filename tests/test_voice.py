@@ -191,6 +191,25 @@ class ConversationTests(unittest.TestCase):
         self.assertIn("gemini-3.6-transcribe-live", event["data"]["message"])
         self.assistant.send_message.assert_not_called()
 
+    def test_frontend_can_remove_an_optional_extra(self) -> None:
+        """El endpoint quita solo el extra y conserva la línea validada."""
+        item = self.runtime.service.add_item(
+            "BURGER_CLASICA",
+            1,
+            {"drink": "COCA", "extra_cheese": "ADD_CHEESE"},
+        )
+
+        response = self.client.delete(
+            "/api/sessions/"
+            f"{self.session.session_id}/cart/items/{item.line_id}/"
+            "modifiers/extra_cheese"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        cart = response.json()["cart"]
+        self.assertEqual(cart["total"], 8500)
+        self.assertEqual(cart["items"][0]["selected_modifiers"], {"drink": "COCA"})
+
     def test_cancel_immediately_releases_reservation(self) -> None:
         """Cancelar sin esperar voice.ready no deja la sesión bloqueada."""
         with self.client.websocket_connect(self.url) as ws:

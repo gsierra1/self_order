@@ -160,6 +160,8 @@ ni aceptación de un sistema externo.
 | `POST /api/sessions` | Devuelve `session_id`, `state`, `cart`. |
 | `GET /api/sessions/{id}/cart` | Snapshot `{items, total, state}`. |
 | `POST /api/sessions/{id}/messages` | Recibe `{message}`; devuelve texto, carrito, estado de cierre o error estructurado. El frontend actual usa WebSocket para el chat. |
+| `DELETE /api/sessions/{id}/cart/items/{line_id}` | Elimina una línea completa del carrito validado. |
+| `DELETE /api/sessions/{id}/cart/items/{line_id}/modifiers/{group_id}` | Quita un modificador opcional y recalcula la línea mediante `OrderService`. |
 | `/ws/sessions/{id}` | Recibe JSON de texto y bytes de audio; publica los eventos siguientes. |
 
 Ejemplo de entrada WebSocket:

@@ -168,6 +168,16 @@ orquestador los entrega a Gemini como equivalencias explícitas —por ejemplo,
 «hamburguesa simple» para Burger Clásica— sin convertirlos en precios o reglas
 duplicadas en código.
 
+**Ajuste de interfaz posterior:** el snapshot del carrito incluye el identificador
+del grupo y si una selección es obligatoria, junto con su nombre y precio
+visible. El frontend muestra los obligatorios junto al precio base y agrupa los
+opcionales como extras. El tachito de cada extra pide al backend quitar ese grupo
+opcional; el tachito junto al total de la línea elimina el producto completo.
+
+**Motivo:** el navegador necesita saber qué control corresponde a cada extra,
+pero no debe deducir si una selección es removible ni recalcular importes. La
+decisión mantiene voz, texto y botones sobre las mismas reglas de `OrderService`.
+
 Los precios enteros evitan aritmética flotante en este catálogo de pesos argentinos completos.
 Antes de integrar un POS habrá que fijar moneda, unidad monetaria y redondeo.
 

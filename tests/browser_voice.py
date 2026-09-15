@@ -117,11 +117,17 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator(".cart-item")).to_have_count(1)
                         expect(page.locator("#cart-total")).to_have_text("ARS 9.500")
                         details = page.locator(".cart-item-details")
-                        expect(details).to_contain_text("Precio base: ARS 8.500")
-                        expect(details).to_contain_text("Bebida: Coca-Cola · Incluida")
                         expect(details).to_contain_text(
-                            "Extra de queso: Queso · + ARS 1.000"
+                            "Bebida: Coca-Cola | Precio base: ARS 8.500"
                         )
+                        expect(details).to_contain_text("Extras")
+                        expect(details).to_contain_text("Queso · + ARS 1.000")
+                        expect(page.locator(".remove-extra-button")).to_have_count(1)
+                        page.locator(".remove-extra-button").click()
+                        expect(page.locator("#cart-total")).to_have_text("ARS 8.500")
+                        expect(page.locator(".cart-item-details")).not_to_contain_text("Queso")
+                        expect(page.locator(".remove-extra-button")).to_have_count(0)
+                        expect(page.locator(".cart-item-total .remove-item-button")).to_have_count(1)
                         expect(page.locator("#message-input")).to_be_enabled()
                         self.assertEqual(len(page.evaluate("window.spokenTexts")), 1)
                         page.locator("#audio-button").click()

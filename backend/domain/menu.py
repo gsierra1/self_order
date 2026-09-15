@@ -24,7 +24,7 @@ class Menu:
         self,
         product_id: str,
         selected_modifiers: dict[str, str],
-    ) -> list[dict[str, str | int]]:
+    ) -> list[dict[str, str | int | bool]]:
         """Traduce los modificadores internos a textos aptos para la interfaz.
 
         Args:
@@ -32,8 +32,9 @@ class Menu:
             selected_modifiers: Relación entre grupos y opciones validadas.
 
         Returns:
-            Lista ordenada con los nombres visibles de cada selección. Devuelve
-            una lista vacía si el producto ya no existe en el catálogo.
+            Lista ordenada con los nombres visibles, el grupo técnico y si la
+            selección es obligatoria. Devuelve una lista vacía si el producto
+            ya no existe en el catálogo.
         """
         product = self.get_product(product_id)
 
@@ -60,9 +61,11 @@ class Menu:
             if option is not None:
                 details.append(
                     {
+                        "group_id": group.id,
                         "group_name": group.name,
                         "option_name": option.name,
                         "price_delta": option.price_delta,
+                        "required": group.required,
                     }
                 )
 

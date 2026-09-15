@@ -237,6 +237,19 @@ La consulta posterior del mismo día también mostró como alternativas de chat
 La acción `generateContent` o `bidiGenerateContent` confirma la capacidad que
 declara el proveedor, pero no sustituye una evaluación real del flujo de pedido.
 
+### Desglose y eliminación de extras en el carrito (15/09/2026)
+
+El carrito separa ahora los modificadores obligatorios del precio base y los
+opcionales bajo el título «Extras». Cada extra opcional tiene un tachito propio;
+el control llama a un endpoint que delega la validación y el nuevo precio en
+`OrderService`. El tachito junto al importe de la línea elimina el producto
+completo. Las instrucciones escritas y de voz conservan las tools de cambio y
+eliminación ya existentes. La prueba automática cubre que quitar queso conserva
+la hamburguesa, la bebida y actualiza el total de ARS 9.500 a ARS 8.500.
+La prueba de navegador con Edge y proveedores simulados verificó el orden visual
+de configuración y extras, el tachito de queso, el nuevo total y el tachito de
+la línea completa. No utiliza Gemini ni un micrófono real.
+
 El flujo de pago demo quedó implementado: `PAYMENT_PENDING` genera un número de
 pedido en backend, permite elegir QR, tarjeta o caja por texto, voz o botones y
 finaliza en `CONFIRMED`. El QR es inválido a propósito, la tarjeta no se envía

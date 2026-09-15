@@ -375,6 +375,48 @@ def delete_cart_item(session_id: str, line_id: int) -> dict:
     return {"ok": True, "cart": serialize_cart(runtime.service)}
 
 
+@app.delete(
+    "/api/sessions/{session_id}/cart/items/{line_id}/modifiers/{modifier_group_id}"
+)
+def delete_cart_item_modifier(
+    session_id: str,
+    line_id: int,
+    modifier_group_id: str,
+) -> dict:
+    """Quita un modificador opcional desde un control explícito del frontend.
+
+    OrderService valida que la línea exista, que el grupo pertenezca al producto
+    y que no sea obligatorio antes de recalcular el importe de la línea.
+
+    Args:
+        session_id: Identificador técnico de la sesión.
+        line_id: Línea interna que contiene el modificador.
+        modifier_group_id: Grupo opcional que se desea quitar.
+
+    Returns:
+        Carrito actualizado por OrderService.
+
+    Raises:
+        HTTPException: Si la línea o el grupo no son válidos, el grupo es
+            obligatorio, la sesión está cerrada o hay otro turno en curso.
+    """
+    runtime = get_runtime(session_id)
+    if not runtime.turn_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Hay un turno en curso.")
+    try:
+        try:
+            runtime.service.change_modifier(
+                line_id,
+                modifier_group_id,
+                None,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        runtime.turn_lock.release()
+    return {"ok": True, "cart": serialize_cart(runtime.service)}
+
+
 @app.post(
     "/api/sessions/{session_id}/messages"
 )
