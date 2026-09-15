@@ -135,7 +135,7 @@ pero introduce espera y peticiones repetidas para saber si hubo cambios.
 threads permite usar el SDK síncrono. Faltan reconexión, sincronización del snapshot,
 control de envíos concurrentes y manejo completo de desconexión en la revisión
 inicial. En la etapa de voz se resolvieron limpieza, snapshot al conectar y
-serialización de envíos; sigue pendiente la reconexión automática del navegador.
+serialización de envíos; la reconexion automatica del navegador se incorpora en la etapa posterior.
 
 ## 06. Catálogo y precios locales estructurados
 
@@ -359,3 +359,21 @@ El JSON declara grupos compartidos y cada producto conserva solo sus referencias
 Asi, marcar Coca-Cola o tomate como agotado actualiza la disponibilidad de todas
 las hamburguesas que lo ofrecen. Esta normalizacion evita configuraciones
 contradictorias y mantiene una sola fuente local para stock de modificadores.
+
+## 16. Reconexion automatica sin reenvio de operaciones
+
+**Estado:** implementada para la demo con sesiones en memoria.
+
+**Contexto:** el WebSocket puede cerrarse por una perdida momentanea de red.
+Reenviar automaticamente el ultimo texto o audio seria inseguro porque el backend
+pudo haber aplicado una mutacion antes de perder la respuesta.
+
+**Decision:** reintentar la conexion con el mismo `session_id` y espera
+progresiva. Al volver, usar exclusivamente el snapshot `connection.ready` como
+fuente de verdad. Si habia audio local, se descarta. Un cierre intencional no
+reconecta; un 4404 inicia una sesion nueva porque el backend ya no conserva la
+anterior.
+
+**Consecuencias:** el carrito se recupera ante una desconexion breve sin duplicar
+items. El texto de respuesta que se perdio no se reconstruye y la persistencia
+tras reiniciar el proceso sigue pendiente.

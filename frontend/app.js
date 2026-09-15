@@ -10,6 +10,8 @@ let voiceBackendReady = false;
 let voicePrepared = false;
 let paymentTimer = null;
 let countdownTimer = null;
+let reconnectTimer = null;
+let reconnectAttempts = 0;
 
 const conversation = document.getElementById("conversation");
 const messageForm = document.getElementById("message-form");
@@ -252,7 +254,11 @@ function renderCart(cart) {
 
 
 
-/** Actualiza controles según conexión, turno en curso y cierre del pedido. */
+/**
+ * Actualiza controles segun conexion, turno en curso y cierre del pedido.
+ * @returns {void}
+ * @effects Habilita o bloquea escritura y microfono segun el estado actual.
+ */
 function updateControls() {
     const ready = phase === "ready" && !sessionClosed;
     messageInput.disabled = !ready;
@@ -260,9 +266,11 @@ function updateControls() {
     micButton.disabled = sessionClosed || !["ready", "recording"].includes(phase);
     micButton.textContent = phase === "recording"
         ? "Enviar audio"
-        : phase === "preparing" ? "Conectando..." : "🎤 Hablar";
+        : ["preparing", "reconnecting"].includes(phase)
+            ? "Conectando..."
+            : "\u{1F3A4} Hablar";
     micButton.classList.toggle("active", phase === "recording");
-    audioButton.textContent = assistantAudioEnabled ? "🔊 Voz ON" : "🔇 Voz OFF";
+    audioButton.textContent = assistantAudioEnabled ? "\u{1F50A} Voz ON" : "\u{1F507} Voz OFF";
 }
 
 /**
@@ -582,15 +590,19 @@ function applyCart(cart) {
 }
 
 /**
- * Maneja eventos de transcripción, carrito, respuestas y errores.
+ * Maneja eventos de transcripcion, carrito, respuestas y errores.
  * @param {MessageEvent} event Mensaje JSON del backend.
+ * @returns {void}
+ * @effects Sincroniza el carrito, el estado de controles y los mensajes visibles.
  */
 function onServerMessage(event) {
     const { type, data } = JSON.parse(event.data);
     if (data.cart) applyCart(data.cart);
     if (type === "connection.ready") {
+        const restored = phase === "reconnecting";
+        reconnectAttempts = 0;
         phase = "ready";
-        if (!sessionClosed) setStatus("Listo");
+        if (!sessionClosed) setStatus(restored ? "Conexi\u00f3n restablecida" : "Listo");
     } else if (type === "voice.ready" && phase === "preparing") {
         voiceBackendReady = true;
         maybeStartRecording();
@@ -613,27 +625,104 @@ function onServerMessage(event) {
     updateControls();
 }
 
-/** Abre el canal y restaura controles desde el snapshot inicial del backend. */
-function connectWebSocket() {
-    const protocol = location.protocol === "https:" ? "wss" : "ws";
-    socket = new WebSocket(`${protocol}://${location.host}/ws/sessions/${sessionId}`);
-    socket.addEventListener("message", onServerMessage);
-    socket.addEventListener("close", () => {
-        phase = "disconnected";
-        clearTimeout(voiceTimer);
-        voice.dispose();
-        window.speechSynthesis?.cancel();
-        setStatus("Sin conexión. Recargá para iniciar otra sesión.", "error");
-        updateControls();
-    });
-    socket.addEventListener("error", () => setStatus("Error de conexión", "error"));
+/**
+ * Cancela un reintento pendiente de conexion.
+ * @returns {void}
+ * @effects Evita que un socket anterior vuelva a conectarse despues de cerrar
+ * intencionalmente la sesion o abrir una nueva.
+ */
+function clearReconnectTimer() {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
 }
 
 /**
- * Crea la sesión de pedido y conecta el canal de conversación.
- * @returns {Promise<void>} Se resuelve después de solicitar la conexión.
+ * Cierra el socket sin programar una reconexion.
+ * @returns {void}
+ * @effects Desvincula los listeners del socket actual antes de cerrarlo.
  */
-async function createSession() {
+function closeSocketIntentionally() {
+    clearReconnectTimer();
+    const previousSocket = socket;
+    socket = null;
+    previousSocket?.close();
+}
+
+/**
+ * Programa un reintento progresivo para la misma sesion.
+ * @returns {void}
+ * @effects Mantiene la interfaz bloqueada hasta recibir `connection.ready`.
+ */
+function scheduleReconnect() {
+    if (sessionClosed || !sessionId || reconnectTimer) return;
+    const delay = Math.min(1000 * (2 ** reconnectAttempts), 15000);
+    reconnectAttempts += 1;
+    setStatus(`Reconectando en ${Math.ceil(delay / 1000)} segundos...`, "processing");
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connectWebSocket();
+    }, delay);
+}
+
+/**
+ * Trata el cierre inesperado de la conexion actual.
+ * @param {CloseEvent} event Informacion de cierre enviada por el navegador.
+ * @param {WebSocket} closedSocket Socket que genero el evento.
+ * @returns {void}
+ * @effects Cancela audio local, conserva el pedido y programa la reconexion o
+ * inicia una sesion nueva cuando el backend ya no conserva la anterior.
+ */
+function handleSocketClose(event, closedSocket) {
+    if (socket !== closedSocket) return;
+    socket = null;
+    clearTimeout(voiceTimer);
+    const voiceWasInProgress = ["preparing", "recording", "processing"].includes(phase);
+    voiceBackendReady = false;
+    voicePrepared = false;
+    voice.dispose();
+    window.speechSynthesis?.cancel();
+    if (voiceWasInProgress) {
+        transcript.textContent = "La conexi\u00f3n se interrumpi\u00f3; el audio no ser\u00e1 reenviado.";
+    }
+    if (event.code === 4404) {
+        appendMessage("Sistema", "La sesi\u00f3n anterior ya no est\u00e1 disponible. Inicio un pedido nuevo.", "error");
+        startNewSession();
+        return;
+    }
+    if (sessionClosed) return;
+    phase = "reconnecting";
+    updateControls();
+    scheduleReconnect();
+}
+
+/**
+ * Abre o recupera el canal de la sesion actual.
+ * @returns {void}
+ * @effects Reemplaza el socket anterior y espera el snapshot `connection.ready`
+ * antes de habilitar nuevamente las entradas de la persona.
+ */
+function connectWebSocket() {
+    if (!sessionId || socket?.readyState === WebSocket.OPEN || socket?.readyState === WebSocket.CONNECTING) return;
+    const protocol = location.protocol === "https:" ? "wss" : "ws";
+    const currentSocket = new WebSocket(`${protocol}://${location.host}/ws/sessions/${sessionId}`);
+    socket = currentSocket;
+    currentSocket.addEventListener("message", event => {
+        if (socket === currentSocket) onServerMessage(event);
+    });
+    currentSocket.addEventListener("close", event => handleSocketClose(event, currentSocket));
+    currentSocket.addEventListener("error", () => {
+        if (socket === currentSocket) setStatus("Reconectando...", "processing");
+    });
+}
+
+/**
+ * Crea la sesion de pedido y conecta el canal de conversacion.
+ * @returns {Promise<void>} Se resuelve despues de solicitar la conexion.
+ * @effects Reinicia los reintentos previos y prepara una sesion editable.
+ */
+function createSession() {
+    clearReconnectTimer();
+    reconnectAttempts = 0;
     updateControls();
     setStatus("Iniciando...", "processing");
     try {
@@ -649,14 +738,17 @@ async function createSession() {
     }
 }
 
-/** Cierra la interfaz anterior y comienza automáticamente otro pedido.
- * @returns {Promise<void>} Crea y conecta una nueva sesión. */
+/**
+ * Cierra la interfaz anterior y comienza automaticamente otro pedido.
+ * @returns {Promise<void>} Crea y conecta una nueva sesion.
+ * @effects Cancela el socket anterior sin reconectarlo y limpia la pantalla.
+ */
 async function startNewSession() {
     clearTimeout(paymentTimer);
     clearInterval(countdownTimer);
     voice.dispose();
     window.speechSynthesis?.cancel();
-    socket?.close();
+    closeSocketIntentionally();
     conversation.innerHTML = `<div class="message assistant-message"><span class="message-author">Asistente</span><p>Hola. Podés escribir tu pedido o tocar Hablar para comenzar.</p></div>`;
     sessionClosed = false;
     phase = "connecting";
@@ -694,5 +786,5 @@ messageForm.addEventListener("submit", event => {
 });
 micButton.addEventListener("click", toggleMicrophone);
 audioButton.addEventListener("click", toggleAssistantAudio);
-window.addEventListener("pagehide", () => { voice.dispose(); window.speechSynthesis?.cancel(); socket?.close(); });
+window.addEventListener("pagehide", () => { voice.dispose(); window.speechSynthesis?.cancel(); closeSocketIntentionally(); });
 createSession();

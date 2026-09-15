@@ -5,6 +5,7 @@ python -m unittest discover -s tests -p browser_voice.py -v.
 Requiere Edge instalado y las dependencias de requirements-dev.txt.
 """
 
+import asyncio
 import socket
 import threading
 import time
@@ -68,7 +69,7 @@ class BrowserAssistant:
         self.service.add_item(
             "BURGER_CLASICA",
             1,
-            {"drink": "COCA", "extra_cheese": "ADD_CHEESE"},
+            {"drink": "WATER", "extra_cheese": "ADD_CHEESE"},
         )
         return "Agregué tu hamburguesa. El total es 9.500 pesos argentinos."
 
@@ -108,6 +109,18 @@ class BrowserVoiceTests(unittest.TestCase):
                         """)
                         page.goto(f"http://127.0.0.1:{port}")
                         expect(page.locator("#mic-button")).to_be_enabled()
+                        session_id = next(iter(set(api.sessions) - previous))
+                        current_socket = api.websocket_manager.connections[session_id]
+                        close_future = asyncio.run_coroutine_threadsafe(
+                            current_socket.close(code=1012),
+                            api.websocket_manager.event_loop,
+                        )
+                        close_future.result(timeout=5)
+                        expected_status = "Conexi" + chr(243) + "n restablecida"
+                        expect(page.locator("#system-status")).to_have_text(
+                            expected_status,
+                            timeout=10000,
+                        )
                         page.locator("#mic-button").click()
                         expect(page.locator("#mic-button")).to_have_text("Enviar audio")
                         expect(page.locator("#voice-transcript")).to_contain_text("Quiero una Burger Clásica")
@@ -118,7 +131,7 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator("#cart-total")).to_have_text("ARS 9.500")
                         details = page.locator(".cart-item-details")
                         expect(details).to_contain_text(
-                            "Bebida: Coca-Cola | Precio base: ARS 8.500"
+                            "Bebida: Agua | Precio base: ARS 8.500"
                         )
                         expect(details).to_contain_text("Extras")
                         expect(details).to_contain_text("Queso · + ARS 1.000")

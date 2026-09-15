@@ -290,3 +290,18 @@ Los grupos compartidos se declaran una sola vez en `modifier_groups` de
 `config/menu.json`; cada producto los referencia con `modifier_group_ids`. Por
 ejemplo, ambas hamburguesas usan el mismo grupo `drink`. Cambiar la disponibilidad
 de Coca-Cola, tomate o cualquier extra afecta a todos los productos que lo usan.
+
+### Recuperacion automatica del WebSocket
+
+Ante un cierre inesperado, el frontend bloquea temporalmente escritura y voz,
+cancela la captura local y reintenta el mismo `session_id` con espera progresiva
+de uno, dos, cuatro y hasta quince segundos. No reenvia texto ni audio: una
+operacion podria haber llegado al backend aunque se haya perdido la respuesta.
+Al recibir `connection.ready`, reemplaza la vista con el snapshot del backend y
+vuelve a habilitar la interfaz.
+
+El cierre normal al crear otra sesion o abandonar la pagina no programa reintentos.
+Si el backend responde 4404 porque ya no conserva esa sesion, por ejemplo despues
+de reiniciarse, el frontend inicia una nueva de forma controlada. Las sesiones
+siguen en memoria, por lo que una reconexion no recupera pedidos tras reiniciar el
+proceso; esa garantia requiere persistencia.

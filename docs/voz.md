@@ -161,3 +161,16 @@ sintético, transcriptor/orquestador simulados y servicio real. Comprueba el wor
 la vista provisional, alta, total, confirmación y solicitud de síntesis. No escucha
 parlantes ni llama a Gemini. La suite local cubre reglas del pedido, cancelación,
 límites, desconexión, exclusión de turnos y marcadores de cierre del SDK.
+
+## Reconexion del navegador
+
+La perdida de WebSocket no reenvia un turno de voz ni un mensaje escrito. La
+interfaz descarta el audio local, muestra que esta reconectando y usa el mismo
+identificador de sesion. Al reconectar recibe `connection.ready` con el carrito
+real y continua desde ese estado. Esto evita duplicar mutaciones si el backend
+termino una operacion mientras el navegador estaba desconectado.
+
+La reconexion usa espera progresiva hasta quince segundos entre intentos. Si la
+sesion ya no existe en memoria, el backend cierra con 4404 y la interfaz comienza
+un pedido nuevo. La recuperacion despues de reiniciar el proceso requiere una
+base de datos y queda fuera de la demo actual.

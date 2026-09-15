@@ -133,7 +133,7 @@ configuración encontrada, no como disponibilidad verificada en la cuenta.
 Esta lista conserva el diagnóstico inicial. La etapa de voz resolvió los puntos
 1 (desconexión), 2 (integración básica), 3 (reserva por sesión/snapshot/envíos),
 5 (estructura JSON) y 7 (captura/cierre) de la sección siguiente. Siguen pendientes
-reconexión automática, conversación continua y las validaciones del punto 4.
+conversacion continua y las validaciones del punto 4.
 
 ### Antes o durante la integración de voz
 
@@ -377,3 +377,17 @@ Se detecto y corrigio una inconsistencia: el catalogo repetia bebidas y extras
 dentro de cada hamburguesa, por lo que Coca-Cola podia agotarse solo para una de
 ellas. Los grupos ahora son compartidos y la prueba automatica confirma que una
 Coca-Cola agotada se rechaza tambien al pedir Burger Doble.
+
+### Reconexion automatica del navegador (15/09/2026)
+
+El frontend reintenta el WebSocket de la misma sesion despues de un cierre
+inesperado. La espera aumenta de uno a quince segundos y los controles quedan
+bloqueados hasta recibir el snapshot `connection.ready`. No reenvia texto ni
+audio; si una captura estaba en curso, la descarta y conserva el carrito validado.
+Un 4404 abre una sesion nueva porque la anterior ya no existe en memoria.
+
+Se ejecuto la suite automatica completa: 32 pruebas de backend y una prueba de
+navegador con Edge. Esta ultima fuerza el cierre del socket desde el servidor y
+comprueba que la pagina muestra `Conexion restablecida` antes de continuar el
+recorrido de voz, carrito y confirmacion. No prueba una perdida real de internet
+ni recuperacion despues de reiniciar el proceso.
