@@ -12,6 +12,7 @@ from starlette.websockets import WebSocketDisconnect
 
 import backend.api.app as api
 from backend.ai.live_transcriber import LiveTranscriber
+from backend.ai.errors import AIProviderError
 from backend.domain.session import Session
 from backend.services.order_service import OrderService
 
@@ -161,6 +162,34 @@ class ConversationTests(unittest.TestCase):
                 ws.send_json({"type": "user.text", "data": {"message": "hola"}})
                 self.assertEqual(ws.receive_json()["type"], "assistant.text")
         self.assistant.send_message.assert_called_once_with("hola")
+
+    def test_missing_voice_model_explains_the_configured_name(self) -> None:
+        """Un modelo inexistente informa causa, etapa y nombre sin tocar el pedido."""
+        provider_error = AIProviderError(
+            provider="Gemini",
+            model="gemini-3.6-transcribe-live",
+            error_type="MODEL_NOT_FOUND",
+            stage="VOICE_TRANSCRIPTION",
+            retryable=False,
+            transaction_applied=False,
+            technical_message="not found",
+            user_message="El modelo configurado «gemini-3.6-transcribe-live» no está disponible.",
+            status_code=404,
+        )
+        with patch.object(
+            FakeTranscriber,
+            "transcribe",
+            new=AsyncMock(side_effect=provider_error),
+        ):
+            with self.client.websocket_connect(self.url) as ws:
+                ws.receive_json()
+                ws.send_json({"type": "audio.start"})
+                event = ws.receive_json()
+        self.assertEqual(event["type"], "voice.error")
+        self.assertEqual(event["data"]["type"], "MODEL_NOT_FOUND")
+        self.assertEqual(event["data"]["stage"], "VOICE_TRANSCRIPTION")
+        self.assertIn("gemini-3.6-transcribe-live", event["data"]["message"])
+        self.assistant.send_message.assert_not_called()
 
     def test_cancel_immediately_releases_reservation(self) -> None:
         """Cancelar sin esperar voice.ready no deja la sesión bloqueada."""

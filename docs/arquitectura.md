@@ -213,6 +213,12 @@ todo un pedido de varias operaciones se haya completado. El HTTP devuelve
 además el carrito actual; el WebSocket también incluye snapshot en la respuesta
 final y los errores de interpretación, además de publicar eventos de estado.
 
+Los fallos de Gemini durante voz pasan por la misma clasificación antes de
+emitir `voice.error`. Un 404 informa el nombre del modelo configurado y aclara
+si falló la transcripción en vivo; los detalles técnicos completos permanecen en
+los logs. Así la persona puede corregir la configuración sin interpretar un
+mensaje genérico de API y sin que el audio llegue a modificar el pedido.
+
 ## Comparación con la arquitectura objetivo del kiosco
 
 La guía de Adrián describe una arquitectura de producción para un kiosco físico. El repositorio actual implementa una prueba de concepto avanzada y cubre principalmente las capas de interfaz, reconocimiento, comprensión y reglas transaccionales. La diferencia es de etapa y de alcance; no implica que el diseño actual contradiga la guía.

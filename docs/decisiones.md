@@ -106,6 +106,21 @@ demo; una integración real requiere un proveedor que tokenice los datos y
 confirme el pago. La vuelta atrás cancela el pago pendiente y genera otro número
 cuando el pedido vuelva a confirmarse.
 
+**Refuerzo adoptado el 15/09/2026:** si Gemini solicita por error
+`confirm_order` cuando la sesión ya está en `PAYMENT_PENDING`, la tool devuelve
+el estado existente, el mismo número de pedido y las opciones disponibles. No
+vuelve a confirmar, no genera otro número y no marca una mutación. El modelo
+recibe la indicación de elegir un método o volver a editar.
+
+**Motivo:** la instrucción de sistema reduce esta llamada repetida, pero un LLM
+puede incumplirla. La protección se coloca junto a la operación transaccional
+para que el flujo conserve consistencia aun si la interpretación falla.
+
+**Consecuencia:** puede haber una ronda adicional de conversación antes de que
+Gemini elija el método correcto, pero ya no se publica una advertencia de
+validación ni se altera el pedido pendiente. Una mejora futura podría reconocer
+de forma determinista una elección inequívoca de pago antes de consultar al LLM.
+
 ## 05. HTTP para inicio y consulta, WebSocket para interacción
 
 **Estado:** implementado.

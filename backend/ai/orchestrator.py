@@ -475,6 +475,9 @@ CATÁLOGO ACTUAL:
         if tool_name == "add_item":
             return result.get("status") == "added"
 
+        if tool_name == "confirm_order":
+            return result.get("status") != "payment_pending"
+
         return True
 
     def _send_to_gemini(

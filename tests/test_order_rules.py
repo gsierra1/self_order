@@ -5,7 +5,8 @@ from dataclasses import asdict
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from backend.ai.tools import create_add_item_tool
+from backend.ai.tools import create_add_item_tool, create_confirm_order_tool
+from backend.ai.errors import classify_gemini_api_error
 from backend.ai.orchestrator import OrderConversationOrchestrator
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
@@ -212,6 +213,36 @@ class OrderRulesTests(unittest.TestCase):
         self.assertEqual(self.service.session.state.value, "CONFIRMED")
         with self.assertRaises(ValueError):
             self.service.add_item("BURGER_CLASICA", 1, self.options)
+
+    def test_repeated_payment_confirmation_preserves_pending_order(self) -> None:
+        """Una confirmación repetida no cambia ni duplica el pedido pendiente."""
+        self.service.add_item("BURGER_CLASICA", 1, self.options)
+        first = create_confirm_order_tool(self.service)()
+
+        repeated = create_confirm_order_tool(self.service)()
+
+        self.assertEqual(repeated["status"], "payment_pending")
+        self.assertEqual(repeated["order_number"], first["order_number"])
+        self.assertEqual(self.service.session.state.value, "PAYMENT_PENDING")
+
+    def test_missing_model_error_names_model_and_voice_operation(self) -> None:
+        """La clasificación de 404 explica qué modelo de voz debe corregirse."""
+        api_error = SimpleNamespace(
+            code=404,
+            status="NOT_FOUND",
+            message="Model not found",
+        )
+
+        result = classify_gemini_api_error(
+            api_error,
+            model="gemini-3.6-transcribe-live",
+            stage="VOICE_TRANSCRIPTION",
+            transaction_applied=False,
+        )
+
+        self.assertEqual(result.error_type, "MODEL_NOT_FOUND")
+        self.assertIn("gemini-3.6-transcribe-live", result.user_message)
+        self.assertIn("transcripción en vivo", result.user_message)
 
     def test_payment_back_restores_editable_order(self) -> None:
         """La vuelta desde pago conserva el carrito y permite modificarlo."""

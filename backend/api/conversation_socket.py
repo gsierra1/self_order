@@ -94,11 +94,34 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 text = await audio.transcribe(publish)
             except asyncio.CancelledError:
                 raise
+            except AIProviderError as exc:
+                log_event(
+                    "WARN",
+                    "voice.provider_error",
+                    session_id=session_id,
+                    **exc.to_dict(),
+                )
+                await publish("voice.error", {
+                    "message": exc.user_message,
+                    "type": exc.error_type,
+                    "source": "gemini",
+                    "status_code": exc.status_code,
+                    "retryable": exc.retryable,
+                    "stage": exc.stage,
+                })
+                return
             except Exception as exc:
                 log_event("WARN", "voice.error", session_id=session_id,
                           exception_type=type(exc).__name__)
+                message = (
+                    "La transcripción tardó demasiado en responder. El pedido "
+                    "no cambió; podés intentar nuevamente o escribir."
+                    if isinstance(exc, TimeoutError)
+                    else "No se pudo transcribir el audio. El pedido no cambió; "
+                    "podés escribir o volver a hablar."
+                )
                 await publish("voice.error", {
-                    "message": "No se pudo transcribir el audio. El pedido no cambió; podés escribir o volver a hablar.",
+                    "message": message,
                 })
                 return
             await publish("voice.transcript", {"text": text, "final": True})

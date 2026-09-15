@@ -1,6 +1,7 @@
 """Adaptadores entre las tools de Gemini y las reglas de OrderService."""
 
 from backend.services.order_service import OrderService
+from backend.domain.session import SessionState
 
 
 def _get_missing_required_groups(
@@ -283,6 +284,16 @@ def create_confirm_order_tool(service: OrderService):
         Raises:
             ValueError: Si el carrito está vacío o la sesión no es editable.
         """
+        if service.session.state == SessionState.PAYMENT_PENDING:
+            return {
+                "status": "payment_pending",
+                "order_number": service.session.order_number,
+                "payment_methods": ["QR", "CARD", "CASH"],
+                "message": (
+                    "El pedido ya espera la selección del método de pago. "
+                    "Usá select_payment_method o return_to_order."
+                ),
+            }
         return service.prepare_payment()
 
     return confirm_order

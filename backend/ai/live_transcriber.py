@@ -5,8 +5,13 @@ import time
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 
-from google.genai import types
+from google.genai import errors, types
 
+from backend.ai.errors import (
+    AIProviderError,
+    classify_gemini_api_error,
+    classify_gemini_transport_error,
+)
 from backend.ai.gemini_client import create_gemini_client
 from backend.logging.event_logger import log_event
 from config.settings import get_transcription_model
@@ -74,7 +79,8 @@ class LiveTranscriber:
         Raises:
             TimeoutError: Si falla la apertura o el turno no termina a tiempo.
             ValueError: Si no hay transcripción final o el proveedor cierra antes.
-            Exception: Si el proveedor o la publicación de eventos fallan.
+            AIProviderError: Si Gemini rechaza la solicitud o falla la red.
+            Exception: Si ocurre una falla interna o al publicar eventos.
         """
         client = create_gemini_client()
         started_at = time.perf_counter()
@@ -90,10 +96,11 @@ class LiveTranscriber:
                 automatic_activity_detection=types.AutomaticActivityDetection(disabled=True),
             ),
         )
+        model = get_transcription_model()
         try:
             async with asyncio.timeout(85):
                 async with client.aio.live.connect(
-                    model=get_transcription_model(), config=config,
+                    model=model, config=config,
                 ) as session:
                     await session.send_realtime_input(activity_start=types.ActivityStart())
                     log_event("INFO", "voice.live_ready", session_id=self.session_id,
@@ -167,6 +174,23 @@ class LiveTranscriber:
                         total_duration_ms=round((time.perf_counter() - started_at) * 1000),
                     )
                     return text
+        except errors.APIError as exc:
+            raise classify_gemini_api_error(
+                exc,
+                model=model,
+                stage="VOICE_TRANSCRIPTION",
+                transaction_applied=False,
+            ) from exc
+        except Exception as exc:
+            provider_error = classify_gemini_transport_error(
+                exc,
+                model=model,
+                stage="VOICE_TRANSCRIPTION",
+                transaction_applied=False,
+            )
+            if provider_error is not None:
+                raise provider_error from exc
+            raise
         finally:
             if receiver is not None:
                 receiver.cancel()

@@ -167,9 +167,15 @@ def classify_gemini_api_error(
     elif code == 404:
         error_type = "MODEL_NOT_FOUND"
         retryable = False
+        operation = (
+            "transcripción en vivo"
+            if stage == "VOICE_TRANSCRIPTION"
+            else "la operación solicitada"
+        )
         user_message = (
-            "Gemini no encontró el modelo configurado o ese modelo no "
-            "admite esta operación (404)."
+            f"El modelo configurado «{model}» no está disponible para "
+            f"{operation} en esta cuenta (404). Verificá el nombre del "
+            "modelo y sus capacidades con python -m backend.ai.list_models."
         )
 
     elif code == 401:

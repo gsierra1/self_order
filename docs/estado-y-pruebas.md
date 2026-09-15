@@ -211,6 +211,25 @@ distinguir modelos de chat (`generateContent`) y transcripción en vivo
 (`bidiGenerateContent`). Aún falta comparar de forma medida latencia, costo y
 calidad entre alternativas.
 
+### Robustez de pago y configuración de modelos (15/09/2026)
+
+La corrida anterior mostró que, al elegir QR, Gemini intentó una segunda vez
+`confirm_order` con el pedido ya en `PAYMENT_PENDING`. Se reforzó la tool para
+que esa llamada sea idempotente: devuelve el pago pendiente y el mismo número de
+pedido, sin una segunda confirmación ni una mutación. Gemini puede continuar con
+la selección de método o con la vuelta a edición.
+
+También se consultaron los modelos visibles para la API key local mediante
+`python -m backend.ai.list_models`. La cuenta mostró `gemini-3.6-flash` con
+`generateContent` para chat y `gemini-3.5-transcribe-live` con
+`bidiGenerateContent` para voz. No mostró `gemini-3.6-flash-lite` ni
+`gemini-3.6-transcribe-live`; por eso esas configuraciones produjeron error. La
+configuración local se corrigió sin versionar `.env`. Los errores 404 de voz
+ahora indican modelo y etapa al usuario y conservan el detalle técnico en logs.
+Falta una prueba manual nueva con Gemini para medir si el cambio de chat reduce
+la latencia o la saturación: que un nombre exista no garantiza capacidad ni
+mejor rendimiento.
+
 El flujo de pago demo quedó implementado: `PAYMENT_PENDING` genera un número de
 pedido en backend, permite elegir QR, tarjeta o caja por texto, voz o botones y
 finaliza en `CONFIRMED`. El QR es inválido a propósito, la tarjeta no se envía
