@@ -285,3 +285,8 @@ una linea. Si un grupo obligatorio queda sin opciones disponibles, las tools
 devuelven `unavailable_required_modifier` y no piden una seleccion imposible.
 Gemini recibe el estado del catalogo para explicarlo, pero la autoridad final
 sigue en el servicio.
+
+Los grupos compartidos se declaran una sola vez en `modifier_groups` de
+`config/menu.json`; cada producto los referencia con `modifier_group_ids`. Por
+ejemplo, ambas hamburguesas usan el mismo grupo `drink`. Cambiar la disponibilidad
+de Coca-Cola, tomate o cualquier extra afecta a todos los productos que lo usan.

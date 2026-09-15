@@ -5,6 +5,34 @@ from pathlib import Path
 from backend.domain.product import Product, ModifierGroup, ModifierOption
 
 
+def _build_modifier_group(group_data: dict) -> ModifierGroup:
+    """Construye un grupo de modificadores a partir de su configuracion.
+
+    Args:
+        group_data: Datos del grupo y de sus opciones dentro del catalogo JSON.
+
+    Returns:
+        Grupo de dominio con opciones y disponibilidad configuradas.
+
+    Raises:
+        KeyError: Si faltan atributos obligatorios del grupo o de sus opciones.
+    """
+    return ModifierGroup(
+        id=group_data["id"],
+        name=group_data["name"],
+        required=group_data["required"],
+        options=[
+            ModifierOption(
+                id=option_data["id"],
+                name=option_data["name"],
+                price_delta=option_data["price_delta"],
+                available=option_data.get("available", True),
+            )
+            for option_data in group_data.get("options", [])
+        ],
+    )
+
+
 @dataclass
 class Menu:
     products: dict[str, Product]
@@ -90,30 +118,22 @@ def load_menu(path: str | Path) -> Menu:
     with open(path, "r", encoding="utf-8") as file:
         data = json.load(file)
 
+    shared_groups = {
+        group_data["id"]: _build_modifier_group(group_data)
+        for group_data in data.get("modifier_groups", [])
+    }
     products = {}
 
     for product_data in data["products"]:
-        modifier_groups = []
+        group_ids = product_data.get("modifier_group_ids")
 
-        for group_data in product_data.get("modifier_groups", []):
-            options = [
-                ModifierOption(
-                    id=option_data["id"],
-                    name=option_data["name"],
-                    price_delta=option_data["price_delta"],
-                    available=option_data.get("available", True),
-                )
-                for option_data in group_data.get("options", [])
+        if group_ids is None:
+            modifier_groups = [
+                _build_modifier_group(group_data)
+                for group_data in product_data.get("modifier_groups", [])
             ]
-
-            modifier_groups.append(
-                ModifierGroup(
-                    id=group_data["id"],
-                    name=group_data["name"],
-                    required=group_data["required"],
-                    options=options,
-                )
-            )
+        else:
+            modifier_groups = [shared_groups[group_id] for group_id in group_ids]
 
         product = Product(
             id=product_data["id"],

@@ -361,7 +361,7 @@ de cambiar el carrito, tambien durante un reemplazo o un cambio de modificador.
 Las tools no piden una eleccion cuando un grupo obligatorio no conserva ninguna
 alternativa disponible.
 
-La suite automatica ejecuto 17 pruebas de reglas con `unittest`. Se verifico que
+La suite automatica ejecuto 32 pruebas con `unittest`. Se verifico que
 un extra agotado no agrega la linea, que una bebida obligatoria sin opciones
 disponibles devuelve `unavailable_required_modifier` sin mutar y que un reemplazo
 hacia un producto agotado conserva la linea original. La comprobacion usa un
@@ -372,3 +372,8 @@ Para una prueba manual, cambiar temporalmente `available` a `false` en
 `config/menu.json`, reiniciar la API y pedir ese producto por texto o voz. Se
 espera que el asistente informe la falta de disponibilidad y que el carrito no
 incorpore esa seleccion. Volver el valor a `true` al terminar la demostracion.
+
+Se detecto y corrigio una inconsistencia: el catalogo repetia bebidas y extras
+dentro de cada hamburguesa, por lo que Coca-Cola podia agotarse solo para una de
+ellas. Los grupos ahora son compartidos y la prueba automatica confirma que una
+Coca-Cola agotada se rechaza tambien al pedir Burger Doble.

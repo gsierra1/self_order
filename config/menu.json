@@ -1,4 +1,83 @@
 {
+  "modifier_groups": [
+    {
+      "id": "drink",
+      "name": "Bebida",
+      "required": true,
+      "options": [
+        {
+          "id": "COCA",
+          "name": "Coca-Cola",
+          "price_delta": 0,
+          "available": true
+        },
+        {
+          "id": "SPRITE",
+          "name": "Sprite",
+          "price_delta": 0,
+          "available": true
+        },
+        {
+          "id": "WATER",
+          "name": "Agua",
+          "price_delta": 0,
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "extra_tomato",
+      "name": "Extra de tomate",
+      "required": false,
+      "options": [
+        {
+          "id": "ADD_TOMATO",
+          "name": "Tomate",
+          "price_delta": 1000,
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "extra_lettuce",
+      "name": "Extra de lechuga",
+      "required": false,
+      "options": [
+        {
+          "id": "ADD_LETTUCE",
+          "name": "Lechuga",
+          "price_delta": 1000,
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "extra_ham",
+      "name": "Extra de jamón",
+      "required": false,
+      "options": [
+        {
+          "id": "ADD_HAM",
+          "name": "Jamón",
+          "price_delta": 1000,
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "extra_cheese",
+      "name": "Extra de queso",
+      "required": false,
+      "options": [
+        {
+          "id": "ADD_CHEESE",
+          "name": "Queso",
+          "price_delta": 1000,
+          "available": true
+        }
+      ]
+    }
+  ],
   "products": [
     {
       "id": "BURGER_CLASICA",
@@ -12,84 +91,12 @@
         "hamburguesa clásica",
         "clásica"
       ],
-      "modifier_groups": [
-        {
-          "id": "drink",
-          "name": "Bebida",
-          "required": true,
-          "options": [
-            {
-              "id": "COCA",
-              "name": "Coca-Cola",
-              "price_delta": 0,
-              "available": true
-            },
-            {
-              "id": "SPRITE",
-              "name": "Sprite",
-              "price_delta": 0,
-              "available": true
-            },
-            {
-              "id": "WATER",
-              "name": "Agua",
-              "price_delta": 0,
-              "available": true
-            }
-          ]
-        },
-        {
-          "id": "extra_tomato",
-          "name": "Extra de tomate",
-          "required": false,
-          "options": [
-            {
-              "id": "ADD_TOMATO",
-              "name": "Tomate",
-              "price_delta": 1000,
-              "available": true
-            }
-          ]
-        },
-        {
-          "id": "extra_lettuce",
-          "name": "Extra de lechuga",
-          "required": false,
-          "options": [
-            {
-              "id": "ADD_LETTUCE",
-              "name": "Lechuga",
-              "price_delta": 1000,
-              "available": true
-            }
-          ]
-        },
-        {
-          "id": "extra_ham",
-          "name": "Extra de jamón",
-          "required": false,
-          "options": [
-            {
-              "id": "ADD_HAM",
-              "name": "Jamón",
-              "price_delta": 1000,
-              "available": true
-            }
-          ]
-        },
-        {
-          "id": "extra_cheese",
-          "name": "Extra de queso",
-          "required": false,
-          "options": [
-            {
-              "id": "ADD_CHEESE",
-              "name": "Queso",
-              "price_delta": 1000,
-              "available": true
-            }
-          ]
-        }
+      "modifier_group_ids": [
+        "drink",
+        "extra_tomato",
+        "extra_lettuce",
+        "extra_ham",
+        "extra_cheese"
       ]
     },
     {
@@ -102,84 +109,12 @@
         "hamburguesa doble",
         "doble"
       ],
-      "modifier_groups": [
-        {
-          "id": "drink",
-          "name": "Bebida",
-          "required": true,
-          "options": [
-            {
-              "id": "COCA",
-              "name": "Coca-Cola",
-              "price_delta": 0,
-              "available": true
-            },
-            {
-              "id": "SPRITE",
-              "name": "Sprite",
-              "price_delta": 0,
-              "available": true
-            },
-            {
-              "id": "WATER",
-              "name": "Agua",
-              "price_delta": 0,
-              "available": true
-            }
-          ]
-        },
-        {
-          "id": "extra_tomato",
-          "name": "Extra de tomate",
-          "required": false,
-          "options": [
-            {
-              "id": "ADD_TOMATO",
-              "name": "Tomate",
-              "price_delta": 1000,
-              "available": true
-            }
-          ]
-        },
-        {
-          "id": "extra_lettuce",
-          "name": "Extra de lechuga",
-          "required": false,
-          "options": [
-            {
-              "id": "ADD_LETTUCE",
-              "name": "Lechuga",
-              "price_delta": 1000,
-              "available": true
-            }
-          ]
-        },
-        {
-          "id": "extra_ham",
-          "name": "Extra de jamón",
-          "required": false,
-          "options": [
-            {
-              "id": "ADD_HAM",
-              "name": "Jamón",
-              "price_delta": 1000,
-              "available": true
-            }
-          ]
-        },
-        {
-          "id": "extra_cheese",
-          "name": "Extra de queso",
-          "required": false,
-          "options": [
-            {
-              "id": "ADD_CHEESE",
-              "name": "Queso",
-              "price_delta": 1000,
-              "available": true
-            }
-          ]
-        }
+      "modifier_group_ids": [
+        "drink",
+        "extra_tomato",
+        "extra_lettuce",
+        "extra_ham",
+        "extra_cheese"
       ]
     }
   ]

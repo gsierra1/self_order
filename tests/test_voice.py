@@ -196,7 +196,7 @@ class ConversationTests(unittest.TestCase):
         item = self.runtime.service.add_item(
             "BURGER_CLASICA",
             1,
-            {"drink": "COCA", "extra_cheese": "ADD_CHEESE"},
+            {"drink": "WATER", "extra_cheese": "ADD_CHEESE"},
         )
 
         response = self.client.delete(
@@ -208,7 +208,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         cart = response.json()["cart"]
         self.assertEqual(cart["total"], 8500)
-        self.assertEqual(cart["items"][0]["selected_modifiers"], {"drink": "COCA"})
+        self.assertEqual(cart["items"][0]["selected_modifiers"], {"drink": "WATER"})
 
     def test_cancel_immediately_releases_reservation(self) -> None:
         """Cancelar sin esperar voice.ready no deja la sesión bloqueada."""
@@ -223,7 +223,7 @@ class ConversationTests(unittest.TestCase):
 
     def test_confirmed_order_rejects_voice(self) -> None:
         """Un pedido confirmado no permite iniciar una nueva transcripción."""
-        self.runtime.service.add_item("BURGER_CLASICA", 1, {"drink": "COCA"})
+        self.runtime.service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
         self.runtime.service.confirm_order()
         with self.client.websocket_connect(self.url) as ws:
             ws.receive_json()

@@ -353,3 +353,9 @@ en `config/menu.json` y se recarga la aplicacion. El carrito no se altera si una
 alta, cambio o reemplazo contiene una opcion agotada; un reemplazo conserva su
 linea original. La fuente sigue siendo manual y local: la integracion con stock
 real requiere un adaptador que actualice esa informacion.
+
+**Ajuste posterior:** bebidas y extras no se repiten dentro de cada hamburguesa.
+El JSON declara grupos compartidos y cada producto conserva solo sus referencias.
+Asi, marcar Coca-Cola o tomate como agotado actualiza la disponibilidad de todas
+las hamburguesas que lo ofrecen. Esta normalizacion evita configuraciones
+contradictorias y mantiene una sola fuente local para stock de modificadores.

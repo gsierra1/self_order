@@ -25,6 +25,8 @@ class OrderRulesTests(unittest.TestCase):
         self.log_patch = patch("backend.logging.event_logger.LOGGER.disabled", True)
         self.log_patch.start()
         self.service = OrderService(load_menu("config/menu.json"), Session())
+        classic_drink = self.service.menu.get_product("BURGER_CLASICA").modifier_groups[0]
+        classic_drink.options[0].available = True
         self.options = {"drink": "COCA"}
 
     def tearDown(self) -> None:
@@ -101,6 +103,21 @@ class OrderRulesTests(unittest.TestCase):
         )
         self.assertEqual(updated.unit_price, 9500)
         self.assertNotIn("extra_tomato", updated.selected_modifiers)
+
+    def test_shared_drink_availability_applies_to_both_burgers(self) -> None:
+        """Comparte el agotamiento de una bebida entre productos que la usan."""
+        classic_drink = (
+            self.service.menu.get_product("BURGER_CLASICA").modifier_groups[0]
+        )
+        double_drink = (
+            self.service.menu.get_product("BURGER_DOBLE").modifier_groups[0]
+        )
+        classic_drink.options[0].available = False
+
+        self.assertIs(classic_drink, double_drink)
+        with self.assertRaisesRegex(ValueError, "Coca-Cola"):
+            self.service.add_item("BURGER_DOBLE", 1, {"drink": "COCA"})
+        self.assertFalse(self.service.get_cart().items)
 
     def test_unavailable_option_does_not_add(self) -> None:
         """Rechaza un extra agotado y mantiene el carrito sin cambios."""
