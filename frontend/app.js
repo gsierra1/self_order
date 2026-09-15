@@ -720,7 +720,7 @@ function connectWebSocket() {
  * @returns {Promise<void>} Se resuelve despues de solicitar la conexion.
  * @effects Reinicia los reintentos previos y prepara una sesion editable.
  */
-function createSession() {
+async function createSession() {
     clearReconnectTimer();
     reconnectAttempts = 0;
     updateControls();
