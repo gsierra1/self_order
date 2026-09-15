@@ -28,7 +28,7 @@ su alcance. Conservar los pendientes hasta resolverlos con evidencia.
 
 La revisión inicial leyó todos los archivos fuente, configuración no secreta,
 scripts de pruebas, historial Git reciente y estadísticas de logs locales.
-No se inspeccionó el contenido de `.env` ni se escuchó `sample.pcm`.
+No se inspeccionó el contenido de `.env` ni se escucharon audios de usuarios.
 No se ejecutó una conversación real nueva contra Gemini durante esta revisión.
 
 Los motivos históricos que no están escritos en código o commits se presentan

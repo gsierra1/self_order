@@ -57,8 +57,6 @@ sí sola, evidencia de que un pedido se haya modificado.
 | `frontend/app.js` | `createSession`, `connectWebSocket`, `sendMessage`, `renderCart`; captura y conversión de audio, estados visuales. |
 | `frontend/styles.css` | Distribución de paneles, mensajes, carrito y adaptación a pantallas pequeñas. |
 | `backend/ai/test_chat.py` | Chat manual de terminal usando el mismo orquestador y servicio. |
-| `backend/ai/test_live.py` | Experimento Live: envía texto y muestra transcripción de salida. |
-| `backend/ai/test_live_audio.py` | Experimento Live: envía `sample.pcm` y muestra transcripciones de entrada/salida. |
 
 El dominio no importa Gemini, FastAPI ni el frontend. El servicio sí depende del
 logger y de un callback opcional; la separación es útil pero no constituye una

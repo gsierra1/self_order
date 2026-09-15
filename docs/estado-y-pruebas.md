@@ -13,8 +13,9 @@ al conectar y serialización de envíos. Ver [voz.md](voz.md) para límites y co
 
 Evidencia nueva:
 
-- Conexión real a `gemini-3.5-transcribe-live` y transcripción del archivo existente
-  `sample.pcm`, sin copiar su contenido a documentación ni logs.
+- Conexión real a `gemini-3.5-transcribe-live` y transcripción de un audio de
+  prueba, sin copiar su contenido a documentación ni logs. El archivo temporal
+  usado para ese experimento no se conserva en el repositorio.
 - Prueba real por WebSocket con ese audio: transcripciones provisionales/final,
   procesamiento por el orquestador real y respuesta `assistant.text`. El carrito
   de esa prueba quedó vacío; no demuestra un alta completa de voz con micrófono físico.
@@ -74,7 +75,7 @@ Es una actualización documental, sin cambios de comportamiento del bot.
 | Cambiar cantidad / vaciar carrito | Existe en servicio; no expuesto como tools. |
 | Carrito actualizado durante el procesamiento | Eventos WebSocket implementados y comprobados localmente. No equivale a interpretar audio parcial. |
 | Captura de micrófono y envío PCM | AudioWorklet verificado en Edge con micrófono sintético; falta evaluación del hardware físico. |
-| Experimentos Gemini Live | Hay scripts de conexión textual y envío de archivo PCM. No se ejecutaron ahora ni se verificó el contenido del audio. |
+| Experimentos Gemini Live | La evidencia histórica se conserva documentada; los scripts aislados y el audio de muestra se retiraron porque usaban un modelo anterior y no representan el flujo integrado. |
 | Pedir por voz desde el dashboard | Implementado por turnos explícitos, con vista provisional y mismo orquestador del chat. |
 | Escuchar al asistente | Implementado con speechSynthesis; solicitud y apagado probados, calidad audible pendiente de la autora. |
 | Persistencia, POS, pagos | No implementados. |

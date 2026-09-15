@@ -82,21 +82,20 @@ proveedor. Las acciones permiten elegir: `generateContent` corresponde al chat y
 `bidiGenerateContent` a transcripción/conversación en vivo. La lista puede
 cambiar según la cuenta y la fecha; no es fija dentro del proyecto.
 
-## Scripts manuales existentes
+## Diagnóstico manual disponible
 
 Requieren credenciales, red y acceso al modelo; pueden consumir cuota de Gemini.
 Ejecutar desde la raíz:
 
 ```powershell
 .\.venv\Scripts\python.exe -m backend.ai.test_chat
-.\.venv\Scripts\python.exe -m backend.ai.test_live
-.\.venv\Scripts\python.exe -m backend.ai.test_live_audio
 ```
 
-El primero permite conversar por terminal. Los otros prueban Live de forma
-aislada y muestran transcripciones. El último espera `sample.pcm` en PCM mono
-de 16 bits a 16 kHz; el formato esperado está en el script, no en una cabecera
-del archivo. Ninguno de los scripts Live modifica el carrito.
+El script permite conversar por terminal usando el mismo orquestador y las
+validaciones del dashboard. Requiere credenciales, red y acceso al modelo, por
+lo que puede consumir cuota de Gemini. Las pruebas de voz se mantienen como
+regresiones en `tests/`; no se conservan experimentos aislados con modelos Live
+anteriores ni archivos de audio de muestra.
 
 ## Diagnóstico
 
