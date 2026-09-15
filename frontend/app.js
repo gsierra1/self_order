@@ -136,7 +136,9 @@ function appendMessage(
 
 
 /** Muestra exclusivamente el snapshot validado del backend.
- * @param {Object} cart Líneas, total y estado del pedido. */
+ * @param {Object} cart Líneas, total, estado y modificadores visibles.
+ * @returns {void}
+ * @effects Reemplaza el contenido del carrito y actualiza sus controles. */
 function renderCart(cart) {
     cartItems.innerHTML = "";
     confirmCartButton.hidden = cart.state !== "ACTIVE" || cart.items.length === 0;
@@ -189,29 +191,8 @@ function renderCart(cart) {
         details.className =
             "cart-item-details";
 
-        const size =
-            item.selected_modifiers.size;
-
-        const drink =
-            item.selected_modifiers.drink;
-
-        const detailParts = [];
-
-        if (size) {
-            detailParts.push(
-                size === "LARGE"
-                    ? "Grande"
-                    : "Mediano"
-            );
-        }
-
-        if (drink) {
-            detailParts.push(
-                drink === "COCA"
-                    ? "Coca"
-                    : "Sprite"
-            );
-        }
+        const detailParts = (item.selected_modifier_details || [])
+            .map((detail) => `${detail.group_name}: ${detail.option_name}`);
 
         details.textContent =
             detailParts.join(" · ");

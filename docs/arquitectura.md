@@ -84,15 +84,18 @@ streaming de tokens de respuesta ni procesamiento parcial de pedidos hablados.
 
 ## Tools y reglas
 
-Las seis tools expuestas son `add_item`, `get_cart`, `change_modifier`,
-`replace_item`, `remove_item` y `confirm_order`. `change_quantity` y `clear_cart`
-existen en el servicio pero no tienen una tool expuesta: no debe anunciarse que
-el bot las ejecuta directamente por conversación.
+Las ocho tools expuestas son `add_item`, `get_cart`, `change_modifier`,
+`replace_item`, `remove_item`, `confirm_order`, `select_payment_method` y
+`return_to_order`. `change_quantity` y `clear_cart` existen en el servicio pero
+no tienen una tool expuesta: no debe anunciarse que el bot las ejecuta directamente
+por conversación.
 
-`add_item` devuelve `needs_clarification` si no recibe `size` o `drink`, sin
-modificar nada. Después el servicio verifica producto, disponibilidad, cantidad
-positiva, opciones y grupos obligatorios. La tool tiene esos dos grupos fijados
-en código; el dominio representa grupos más generales.
+`add_item` devuelve `needs_clarification` si no recibe cualquier grupo marcado
+como obligatorio por el catálogo, sin modificar nada. Después el servicio verifica
+producto, disponibilidad, cantidad positiva, grupos conocidos y opciones válidas.
+Las tools reciben un diccionario `selected_modifiers`, por lo que no dependen de
+nombres específicos como tamaño o bebida. Un grupo opcional puede quitarse con
+`change_modifier` sin afectar los grupos obligatorios.
 
 Los datos pendientes se conservan en el contexto conversacional del modelo;
 no existe una entidad `PendingOrder`. La regla de que el usuario haya indicado
@@ -120,10 +123,12 @@ pedido.
 
 ## Modelo de datos y precios
 
-El menú contiene Combo Big Mac (ARS 10.500 base) y Combo Cuarto de Libra (ARS 11.500
-base). Ambos requieren `size` (internamente `MEDIUM` o `LARGE`, que se muestran como
-Mediano o Grande; este último suma ARS 2.000) y
-`drink` (`COCA` o `SPRITE`, sin adicional). Ambos figuran disponibles.
+El menú contiene Burger Clásica (ARS 8.500 base) y Burger Doble (ARS 10.500
+base). Ambas requieren una bebida —Coca-Cola, Sprite o agua— sin adicional.
+Tomate, lechuga, jamón y queso son extras opcionales; cada uno suma ARS 1.000.
+El catálogo declara el nombre visible, la obligatoriedad y las opciones de cada
+grupo. El backend usa los identificadores técnicos solo para validar y entrega
+los nombres visibles al frontend.
 
 ```text
 precio unitario = precio base + suma de adicionales elegidos
@@ -134,7 +139,7 @@ total del carrito = suma de totales de línea
 Hoy los enteros representan pesos argentinos completos, según catálogo y renderizado.
 No hay convención de centavos ni soporte explícito de múltiples monedas.
 Una línea puede tener varias unidades solo si comparten configuración; dos
-combos con bebidas diferentes deben representarse en líneas distintas.
+hamburguesas con bebidas o extras diferentes deben representarse en líneas distintas.
 
 `line_id` usa `max(ids presentes) + 1`, por lo que puede reutilizar valores al
 eliminar líneas. `replace_item` conserva ID y cantidad, valida el destino y
@@ -158,7 +163,7 @@ ni aceptación de un sistema externo.
 Ejemplo de entrada WebSocket:
 
 ```json
-{"type":"user.text","data":{"message":"Quiero un Big Mac grande con Coca"}}
+{"type":"user.text","data":{"message":"Quiero una Burger Clásica con Coca y queso"}}
 ```
 
 | Evento de salida | Contenido principal de `data` |

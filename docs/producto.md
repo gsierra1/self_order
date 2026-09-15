@@ -25,9 +25,10 @@ video funciones, proveedores ni arquitectura que no se hayan podido verificar.
 - El asistente puede responder por texto y por voz; la voz puede desactivarse.
 - La confirmación debe representar el estado real del pedido.
 
-Ejemplo: «Quiero un Big Mac» requiere preguntar tamaño y bebida. Si la persona
-responde «grande con Coca», recién entonces se agrega el combo configurado y se
-actualiza el importe. «Quiero una pizza» no debe crear un producto inexistente.
+Ejemplo: «Quiero una Burger Clásica» requiere preguntar la bebida. Si la persona
+responde «con Coca y queso», recién entonces se agrega la hamburguesa configurada
+y se actualiza el importe. El queso es un extra opcional; no se agrega si la
+persona no lo indicó. «Quiero una pizza» no debe crear un producto inexistente.
 
 ## Qué significa mostrar el pedido mientras se habla
 
@@ -45,8 +46,8 @@ productos provisionales ni agrega líneas mientras se sigue hablando.
 
 ## Alcance actual y futuro
 
-La implementación actual es una prueba de concepto local. Hay dos combos de
-ejemplo, chat escrito y voz por turnos, estado en memoria y confirmación local. No existen pagos,
+La implementación actual es una prueba de concepto local. Hay dos hamburguesas
+de ejemplo, chat escrito y voz por turnos, estado en memoria y confirmación local. No existen pagos,
 envío a cocina, persistencia de pedidos ni integración real con un sistema de
 ventas. El código menciona DEX/POS como futuro destino; el contrato real con SIA
 todavía debe conocerse.

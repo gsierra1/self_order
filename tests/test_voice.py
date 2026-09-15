@@ -32,7 +32,7 @@ class FakeTranscriber(LiveTranscriber):
         await publish("voice.transcript", {"text": "hipótesis", "final": False})
         while await self.chunks.get() is not None:
             pass
-        return "Quiero un Big Mac grande con Coca"
+        return "Quiero una Burger Clásica con Coca"
 
 
 class ConversationTests(unittest.TestCase):
@@ -84,7 +84,7 @@ class ConversationTests(unittest.TestCase):
             final = ws.receive_json()
             self.assertTrue(final["data"]["final"])
             self.assertEqual(ws.receive_json()["type"], "assistant.text")
-        self.assistant.send_message.assert_called_once_with("Quiero un Big Mac grande con Coca")
+        self.assistant.send_message.assert_called_once_with("Quiero una Burger Clásica con Coca")
         self.assertFalse(self.runtime.turn_lock.locked())
         self.assertNotIn(self.session.session_id, api.websocket_manager.connections)
 
@@ -175,7 +175,7 @@ class ConversationTests(unittest.TestCase):
 
     def test_confirmed_order_rejects_voice(self) -> None:
         """Un pedido confirmado no permite iniciar una nueva transcripción."""
-        self.runtime.service.add_item("COMBO_BIG_MAC", 1, {"size": "MEDIUM", "drink": "COCA"})
+        self.runtime.service.add_item("BURGER_CLASICA", 1, {"drink": "COCA"})
         self.runtime.service.confirm_order()
         with self.client.websocket_connect(self.url) as ws:
             ws.receive_json()
@@ -213,7 +213,7 @@ class TranscriberTests(unittest.IsolatedAsyncioTestCase):
             ))
             await end.wait()
             yield types.LiveServerMessage(server_content=types.LiveServerContent(
-                input_transcription=types.Transcription(text="Big Mac"),
+                input_transcription=types.Transcription(text="Burger Clásica"),
             ))
             yield types.LiveServerMessage(server_content=types.LiveServerContent(generation_complete=True))
 
@@ -240,7 +240,7 @@ class TranscriberTests(unittest.IsolatedAsyncioTestCase):
         transcriber.finish()
         with patch("backend.ai.live_transcriber.create_gemini_client", return_value=client):
             result = await transcriber.transcribe(AsyncMock())
-        self.assertEqual(result, "Big Mac")
+        self.assertEqual(result, "Burger Clásica")
         self.assertIn("activity_start", sent[0])
         self.assertIn("activity_end", sent[-1])
         client.aio.aclose.assert_awaited_once()

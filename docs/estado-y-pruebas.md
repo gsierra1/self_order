@@ -164,19 +164,21 @@ reconexión automática, conversación continua y las validaciones del punto 4.
    captura actual usa `createScriptProcessor` y un remuestreo por selección de
    muestras; evaluar calidad y mecanismo de captura al implementar voz.
 
-### Antes de ampliar menú o presentar garantías más amplias
+### Antes de presentar garantías más amplias
 
-- Las tools y el renderizado asumen `size` y `drink`. La tool de alta pide esos
-  campos incluso antes de comprobar si el producto existe: puede pedir detalles
-  de un producto desconocido si el LLM intenta un alta incompleta.
+- Los grupos de modificadores ahora se leen desde el catálogo y el frontend
+  recibe sus nombres visibles. Falta una evaluación manual con Gemini para
+  comprobar que la interpretación conversacional use correctamente varios
+  extras opcionales en una misma frase.
 - El prompt no informa precios ni `available`, y no hay tool de consulta de menú.
   Hace falta cubrir «¿cuánto cuesta?» y productos indisponibles sin agregarlos.
 - `change_quantity` y `clear_cart` necesitan exposición conversacional si se
   incorporan a las capacidades prometidas.
 - `line_id` puede reutilizarse tras una eliminación (reproducido).
 - Deduplicar una tool dentro del turno no evita duplicados al repetir mensajes.
-- Faltan docstrings en `Cart.total`, `Menu.get_product` y `load_menu`; el frontend
-  también necesita documentación de funciones cuando se modifique.
+- `Cart.total` conserva deuda previa de documentación. `Menu.get_product` y
+  `load_menu` se documentaron al generalizar el catálogo; el frontend documenta
+  sus funciones modificadas.
 - La deuda de bytecode versionado se resolvió en la limpieza del 14/09/2026:
   `.gitignore` excluye cachés y el índice ya no contiene los cinco `.pyc` originales.
 
@@ -195,7 +197,7 @@ antes de usar conversaciones reales fuera de las pruebas locales.
 | 2. Diseño de voz | Decisión documentada entre transcripción/orquestación/síntesis y Live con tools; contrato de eventos, turnos y estado compartido. |
 | 3. Voz de extremo a extremo | Desde micrófono real, completar un pedido, preguntar modificadores, rechazar fuera de menú y actualizar carrito; texto sigue funcionando en la misma sesión. |
 | 4. Interacción continua | Transcripción provisional, silencios, interrupciones/correcciones, desconexión y cierre sin repetir altas; latencias medidas. |
-| 5. Menú y presentación visual | Grupos de modificadores generales y renderizado basado en catálogo, luego mejora estética. |
+| 5. Menú y presentación visual | Implementado: grupos generales, bebida obligatoria, extras opcionales y renderizado basado en catálogo. Falta prueba manual con Gemini. |
 | 6. Defensa | Demo repetible, diagramas actualizados y explicación de decisiones, evidencia y límites. |
 
 La prioridad funcional es voz. Las correcciones de transporte y pruebas de la
@@ -222,9 +224,9 @@ cuenta regresiva antes de abrir otra sesión.
 
 ## Matriz mínima de demostración pendiente
 
-Para texto y luego para voz: producto completo; producto sin tamaño/bebida;
+Para texto y luego para voz: producto completo; producto sin bebida;
 producto fuera de menú; producto indisponible; cambio de bebida; reemplazo
-válido e inválido; dos configuraciones del mismo producto; referencia ambigua;
+válido e inválido; alta con varios extras y retiro de un extra; dos configuraciones del mismo producto; referencia ambigua;
 varios productos en una frase; eliminar; confirmar vacío; confirmar con productos;
 intentar modificar confirmado; proveedor caído antes/después de mutar.
 
@@ -232,6 +234,16 @@ Para voz además: activar/desactivar, silencio, ruido, autocorrección («Coca, 
 Sprite»), interrupción del asistente, pasar a escritura, pérdida de conexión y
 apagado del micrófono al finalizar. Registrar entrada, carrito esperado,
 resultado observado, fecha/modelo y latencias; no evaluar solo si el bot habló.
+
+### Menú genérico de hamburguesas (15/09/2026)
+
+Se reemplazó el menú de ejemplo por Burger Clásica y Burger Doble. La bebida es
+obligatoria; tomate, lechuga, jamón y queso son extras independientes y opcionales
+de ARS 1.000 cada uno. `OrderService`, las tools y el frontend leen los grupos
+desde el catálogo, validan grupos desconocidos y muestran nombres visibles en el
+carrito. La suite local comprobó bebida faltante, acumulación y retiro de extras,
+rechazo de grupos desconocidos, reemplazo atómico, pagos y voz simulada. Falta la
+prueba manual con Gemini y micrófono real de los recorridos nuevos.
 
 ### Actualización visual del frontend (14/09/2026)
 

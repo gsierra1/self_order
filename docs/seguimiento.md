@@ -59,8 +59,8 @@ crear una nueva.
 
 Prueba manual escrita sugerida (usa Gemini y puede consumir cuota):
 
-1. Escribir «Quiero un Big Mac». Debe pedir tamaño y bebida y mantener vacío el carrito.
-2. Responder «Grande con Coca». Debe aparecer una unidad y un total de ARS 12.500.
+1. Escribir «Quiero una Burger Clásica». Debe pedir la bebida y mantener vacío el carrito.
+2. Responder «Con Coca y queso». Debe aparecer una unidad y un total de ARS 9.500.
 3. Escribir «Confirmo el pedido». Debe aparecer el estado confirmado y bloquearse la escritura.
 
 Esta es una guía de prueba para la autora, no evidencia de una prueba real nueva.

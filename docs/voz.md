@@ -117,9 +117,9 @@ Abrir `http://127.0.0.1:8000/` y recargar con `Ctrl+F5`. La captura requiere per
 y localhost o HTTPS. Si falla activar el entorno, consultar [seguimiento](seguimiento.md).
 
 1. Tocar **Hablar**, permitir micrófono y esperar **Escuchando**.
-2. Decir «Quiero un Big Mac» y tocar **Enviar audio**. Debe preguntar tamaño y bebida;
+2. Decir «Quiero una Burger Clásica» y tocar **Enviar audio**. Debe preguntar la bebida;
    mostrar la hipótesis no debe agregar una línea.
-3. Hablar otra vez: «Grande con Coca», y enviar. Debe aparecer una unidad por ARS 12.500.
+3. Hablar otra vez: «Con Coca y queso», y enviar. Debe aparecer una unidad por ARS 9.500.
 4. Pedir una pizza: debe informar que no está disponible, sin agregarla.
 5. Apagar **Voz ON** y continuar escribiendo en la misma sesión.
 6. Confirmar el pedido. Deben bloquearse micrófono y escritura.

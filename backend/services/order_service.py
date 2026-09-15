@@ -57,6 +57,12 @@ class OrderService:
                     "selected_modifiers": (
                         item.selected_modifiers.copy()
                     ),
+                    "selected_modifier_details": (
+                        self.menu.get_modifier_details(
+                            item.product_id,
+                            item.selected_modifiers,
+                        )
+                    ),
                     "unit_price": item.unit_price,
                 }
                 for item in cart.items
@@ -157,6 +163,63 @@ class OrderService:
                 "The order has already been confirmed and cannot be modified"
             )
 
+    def _calculate_unit_price(
+        self,
+        product,
+        selected_modifiers: dict[str, str],
+    ) -> int:
+        """Valida modificadores de un producto y calcula su precio unitario.
+
+        Args:
+            product: Producto del catálogo cuya configuración se valida.
+            selected_modifiers: Opciones elegidas, indexadas por identificador
+                de grupo de modificadores.
+
+        Returns:
+            Precio base más los adicionales de las opciones seleccionadas.
+
+        Raises:
+            ValueError: Si se recibe un grupo desconocido, falta un grupo
+                obligatorio o una opción no pertenece a su grupo.
+        """
+        group_ids = {group.id for group in product.modifier_groups}
+        unknown_groups = set(selected_modifiers) - group_ids
+
+        if unknown_groups:
+            raise ValueError(
+                f"Unknown modifier group: {sorted(unknown_groups)[0]}"
+            )
+
+        unit_price = product.base_price
+
+        for group in product.modifier_groups:
+            selected_option_id = selected_modifiers.get(group.id)
+
+            if group.required and selected_option_id is None:
+                raise ValueError(f"Required modifier missing: {group.id}")
+
+            if selected_option_id is None:
+                continue
+
+            selected_option = next(
+                (
+                    option
+                    for option in group.options
+                    if option.id == selected_option_id
+                ),
+                None,
+            )
+
+            if selected_option is None:
+                raise ValueError(
+                    f"Invalid option '{selected_option_id}' "
+                    f"for modifier '{group.id}'"
+                )
+
+            unit_price += selected_option.price_delta
+
+        return unit_price
+
     def add_item(
         self,
         product_id: str,
@@ -177,9 +240,9 @@ class OrderService:
             product_id: Identificador interno del producto dentro del menú.
             quantity: Cantidad de unidades idénticas que se desean agregar.
             selected_modifiers: Modificadores seleccionados para el producto.
-                Las claves representan grupos de modificadores y los valores,
-                las opciones elegidas. Por ejemplo:
-                {"size": "LARGE", "drink": "COCA"}.
+                Las claves representan grupos y los valores las opciones
+                elegidas. Los grupos y las opciones válidas se obtienen del
+                catálogo, por ejemplo ``{"drink": "COCA"}``.
 
         Returns:
             El CartItem creado y agregado al carrito.
@@ -212,42 +275,10 @@ class OrderService:
                 "Quantity must be greater than zero"
             )
 
-        unit_price = product.base_price
-
-        for group in product.modifier_groups:
-            selected_option_id = selected_modifiers.get(
-                group.id
-            )
-
-            if (
-                group.required
-                and selected_option_id is None
-            ):
-                raise ValueError(
-                    f"Required modifier missing: {group.id}"
-                )
-
-            if selected_option_id is None:
-                continue
-
-            selected_option = next(
-                (
-                    option
-                    for option in group.options
-                    if option.id == selected_option_id
-                ),
-                None,
-            )
-
-            if selected_option is None:
-                raise ValueError(
-                    f"Invalid option '{selected_option_id}' "
-                    f"for modifier '{group.id}'"
-                )
-
-            unit_price += (
-                selected_option.price_delta
-            )
+        unit_price = self._calculate_unit_price(
+            product,
+            selected_modifiers,
+        )
 
         next_line_id = (
             max(
@@ -379,21 +410,23 @@ class OrderService:
         self,
         line_id: int,
         modifier_group_id: str,
-        option_id: str,
+        option_id: str | None,
     ) -> CartItem:
         """
         Modifica un modificador y recalcula el precio unitario.
 
         Args:
             line_id: Identificador único de la línea que se desea modificar.
-            modifier_group_id: Grupo de modificadores, por ejemplo "size".
-            option_id: Nueva opción, por ejemplo "LARGE" o "SPRITE".
+            modifier_group_id: Grupo de modificadores definido por el menú.
+            option_id: Nueva opción del grupo. Si es ``None``, se elimina una
+                selección opcional existente.
 
         Returns:
             El CartItem actualizado.
 
         Raises:
-            ValueError: Si la línea, producto, grupo u opción no son válidos.
+            ValueError: Si la línea, producto, grupo u opción no son válidos,
+                o si se intenta quitar un modificador obligatorio.
         """
         self._ensure_active()
 
@@ -436,55 +469,20 @@ class OrderService:
                 f"{modifier_group_id}"
             )
 
-        selected_option = next(
-            (
-                option
-                for option in modifier_group.options
-                if option.id == option_id
-            ),
-            None,
-        )
-
-        if selected_option is None:
-            raise ValueError(
-                f"Invalid option '{option_id}' "
-                f"for modifier '{modifier_group_id}'"
-            )
-
         new_modifiers = (
             cart_item.selected_modifiers.copy()
         )
 
-        new_modifiers[
-            modifier_group_id
-        ] = option_id
-
-        new_unit_price = product.base_price
-
-        for group in product.modifier_groups:
-            selected_id = new_modifiers.get(
-                group.id
-            )
-
-            if selected_id is None:
-                continue
-
-            option = next(
-                (
-                    candidate
-                    for candidate in group.options
-                    if candidate.id == selected_id
-                ),
-                None,
-            )
-
-            if option is None:
+        if option_id is None:
+            if modifier_group.required:
                 raise ValueError(
-                    f"Invalid option '{selected_id}' "
-                    f"for modifier '{group.id}'"
+                    f"Required modifier cannot be removed: {modifier_group_id}"
                 )
+            new_modifiers.pop(modifier_group_id, None)
+        else:
+            new_modifiers[modifier_group_id] = option_id
 
-            new_unit_price += option.price_delta
+        new_unit_price = self._calculate_unit_price(product, new_modifiers)
 
         cart_item.selected_modifiers = (
             new_modifiers
@@ -554,47 +552,10 @@ class OrderService:
                 f"Product unavailable: {new_product_id}"
             )
 
-        new_unit_price = (
-            new_product.base_price
+        new_unit_price = self._calculate_unit_price(
+            new_product,
+            selected_modifiers,
         )
-
-        for group in new_product.modifier_groups:
-            selected_option_id = (
-                selected_modifiers.get(group.id)
-            )
-
-            if (
-                group.required
-                and selected_option_id is None
-            ):
-                raise ValueError(
-                    f"Required modifier missing: "
-                    f"{group.id}"
-                )
-
-            if selected_option_id is None:
-                continue
-
-            selected_option = next(
-                (
-                    option
-                    for option in group.options
-                    if option.id
-                    == selected_option_id
-                ),
-                None,
-            )
-
-            if selected_option is None:
-                raise ValueError(
-                    f"Invalid option "
-                    f"'{selected_option_id}' "
-                    f"for modifier '{group.id}'"
-                )
-
-            new_unit_price += (
-                selected_option.price_delta
-            )
 
         # Todas las validaciones terminaron correctamente.
         # Recién ahora se modifica la línea original.

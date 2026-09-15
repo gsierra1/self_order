@@ -20,7 +20,7 @@ class OrderRulesTests(unittest.TestCase):
         self.log_patch = patch("backend.logging.event_logger.LOGGER.disabled", True)
         self.log_patch.start()
         self.service = OrderService(load_menu("config/menu.json"), Session())
-        self.options = {"size": "LARGE", "drink": "COCA"}
+        self.options = {"drink": "COCA"}
 
     def tearDown(self) -> None:
         """Restaura el logging original después de cada prueba."""
@@ -28,47 +28,84 @@ class OrderRulesTests(unittest.TestCase):
 
     def test_missing_modifiers_do_not_add(self) -> None:
         """La tool informa qué falta y el carrito permanece vacío."""
-        result = create_add_item_tool(self.service)("COMBO_BIG_MAC", size="LARGE")
-        self.assertEqual(result["missing_fields"], ["drink"])
+        result = create_add_item_tool(self.service)("BURGER_CLASICA")
+        self.assertEqual(
+            result["missing_modifier_groups"],
+            [{"id": "drink", "name": "Bebida"}],
+        )
         self.assertFalse(self.service.get_cart().items)
 
     def test_unknown_and_unavailable_product_do_not_add(self) -> None:
         """El servicio rechaza productos fuera de catálogo o indisponibles."""
         with self.assertRaises(ValueError):
             self.service.add_item("PIZZA", 1, self.options)
-        self.service.menu.get_product("COMBO_BIG_MAC").available = False
+        self.service.menu.get_product("BURGER_CLASICA").available = False
         with self.assertRaises(ValueError):
-            self.service.add_item("COMBO_BIG_MAC", 1, self.options)
+            self.service.add_item("BURGER_CLASICA", 1, self.options)
         self.assertFalse(self.service.get_cart().items)
 
     def test_replacement_validates_before_mutating(self) -> None:
         """Un reemplazo inválido conserva línea, configuración y precio originales."""
-        item = self.service.add_item("COMBO_BIG_MAC", 2, self.options)
+        item = self.service.add_item("BURGER_CLASICA", 2, self.options)
         previous = asdict(item)
         with self.assertRaises(ValueError):
-            self.service.replace_item(item.line_id, "COMBO_QUARTER_POUNDER", {})
+            self.service.replace_item(item.line_id, "BURGER_DOBLE", {})
         self.assertEqual(asdict(item), previous)
-        self.assertEqual(self.service.get_cart().total, 25000)
+        self.assertEqual(self.service.get_cart().total, 17000)
 
     def test_confirmation_blocks_later_changes(self) -> None:
         """Confirmar exige carrito no vacío y bloquea operaciones posteriores."""
         with self.assertRaises(ValueError):
             self.service.confirm_order()
-        self.service.add_item("COMBO_BIG_MAC", 1, self.options)
+        self.service.add_item("BURGER_CLASICA", 1, self.options)
         self.service.confirm_order()
         with self.assertRaises(ValueError):
             self.service.remove_item(1)
 
     def test_user_text_hides_internal_modifier_ids_and_dollars(self) -> None:
         """La salida pública usa nombres y moneda argentinos, nunca códigos internos."""
-        text = OrderConversationOrchestrator._sanitize_user_text(
-            "Elegiste Medium ($12.500) en lugar de LARGE; no es USD."
+        orchestrator = OrderConversationOrchestrator.__new__(
+            OrderConversationOrchestrator
+        )
+        orchestrator.service = self.service
+        text = orchestrator._sanitize_user_text(
+            "Elegiste ADD_CHEESE ($9.500) en BURGER_CLASICA; no es USD."
         )
         self.assertEqual(
             text,
-            "Elegiste Mediano (12.500 pesos argentinos) en lugar de Grande; "
+            "Elegiste Queso (9.500 pesos argentinos) en Burger Clásica; "
             "no es pesos argentinos.",
         )
+
+    def test_optional_extras_accumulate_and_can_be_removed(self) -> None:
+        """Suma extras opcionales y conserva la bebida obligatoria."""
+        item = self.service.add_item(
+            "BURGER_CLASICA",
+            1,
+            {
+                "drink": "COCA",
+                "extra_tomato": "ADD_TOMATO",
+                "extra_cheese": "ADD_CHEESE",
+            },
+        )
+        self.assertEqual(item.unit_price, 10500)
+        updated = self.service.change_modifier(
+            item.line_id,
+            "extra_tomato",
+            None,
+        )
+        self.assertEqual(updated.unit_price, 9500)
+        self.assertNotIn("extra_tomato", updated.selected_modifiers)
+
+    def test_unknown_modifier_group_does_not_add(self) -> None:
+        """Rechaza grupos no definidos antes de alterar el carrito."""
+        with self.assertRaises(ValueError):
+            self.service.add_item(
+                "BURGER_CLASICA",
+                1,
+                {"drink": "COCA", "unknown": "VALUE"},
+            )
+        self.assertFalse(self.service.get_cart().items)
 
     def test_orchestrator_executes_multiple_requested_operations(self) -> None:
         """Ejecuta dos tools distintas del mismo turno en el orden recibido."""
@@ -83,17 +120,18 @@ class OrderRulesTests(unittest.TestCase):
                 SimpleNamespace(
                     name="add_item",
                     args={
-                        "product_id": "COMBO_BIG_MAC",
-                        "size": "LARGE",
-                        "drink": "COCA",
+                        "product_id": "BURGER_CLASICA",
+                        "selected_modifiers": {
+                            "drink": "COCA",
+                            "extra_cheese": "ADD_CHEESE",
+                        },
                     },
                 ),
                 SimpleNamespace(
                     name="add_item",
                     args={
-                        "product_id": "COMBO_QUARTER_POUNDER",
-                        "size": "MEDIUM",
-                        "drink": "SPRITE",
+                        "product_id": "BURGER_DOBLE",
+                        "selected_modifiers": {"drink": "SPRITE"},
                     },
                 ),
             ],
@@ -105,8 +143,7 @@ class OrderRulesTests(unittest.TestCase):
         )
 
         response = orchestrator.send_message(
-            "Agregá un Big Mac grande con Coca y un Cuarto de Libra mediano "
-            "con Sprite."
+            "Agregá una clásica con queso y Coca, y una doble con Sprite."
         )
 
         self.assertEqual(response, "Listo")
@@ -123,9 +160,8 @@ class OrderRulesTests(unittest.TestCase):
             SimpleNamespace(
                 name="add_item",
                 args={
-                    "product_id": "COMBO_BIG_MAC",
-                    "size": "LARGE",
-                    "drink": "COCA",
+                    "product_id": "BURGER_CLASICA",
+                    "selected_modifiers": {"drink": "COCA"},
                 },
             )
         ]
@@ -137,7 +173,7 @@ class OrderRulesTests(unittest.TestCase):
 
     def test_payment_demo_requires_method_before_closing_session(self) -> None:
         """Genera pedido, método y cierre en tres estados controlados."""
-        self.service.add_item("COMBO_BIG_MAC", 1, self.options)
+        self.service.add_item("BURGER_CLASICA", 1, self.options)
 
         pending = self.service.prepare_payment()
         self.assertEqual(self.service.session.state.value, "PAYMENT_PENDING")
@@ -151,11 +187,11 @@ class OrderRulesTests(unittest.TestCase):
         self.assertEqual(completed["status"], "confirmed")
         self.assertEqual(self.service.session.state.value, "CONFIRMED")
         with self.assertRaises(ValueError):
-            self.service.add_item("COMBO_BIG_MAC", 1, self.options)
+            self.service.add_item("BURGER_CLASICA", 1, self.options)
 
     def test_payment_back_restores_editable_order(self) -> None:
         """La vuelta desde pago conserva el carrito y permite modificarlo."""
-        self.service.add_item("COMBO_BIG_MAC", 1, self.options)
+        self.service.add_item("BURGER_CLASICA", 1, self.options)
         self.service.prepare_payment()
         self.service.select_payment_method("CARD")
 

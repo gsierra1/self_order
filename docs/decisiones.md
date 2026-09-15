@@ -130,10 +130,23 @@ serialización de envíos; sigue pendiente la reconexión automática del navega
 sistema de ventas. Los modificadores modelados como grupos evitan que el precio
 se deduzca de frases del usuario.
 
-**Consecuencia:** el catálogo es configurable, pero las tools y el frontend
-todavía asumen tamaño/bebida y dos opciones por grupo. Ampliar el menú requiere
-revisar esas capas. El prompt incluye nombres e IDs, pero no precios ni el flag
-de disponibilidad; no existe una tool específica de consulta de catálogo/precios.
+**Consecuencia inicial:** el catálogo era configurable, pero las tools y el
+frontend asumían tamaño/bebida y dos opciones por grupo.
+
+**Ajuste adoptado el 15/09/2026:** las tools reciben un diccionario genérico de
+modificadores y consultan los grupos obligatorios del producto antes de mutar.
+`OrderService` rechaza grupos desconocidos, valida opciones y recalcula precios;
+el frontend recibe nombres visibles desde el backend. Los extras se modelan como
+grupos opcionales independientes, lo que permite acumular tomate, lechuga, jamón
+y queso sin habilitar valores inventados.
+
+**Motivo:** ampliar el menú solo desde JSON habría conservado reglas ocultas para
+tamaño y bebida. Llevar la definición de grupos al catálogo evita duplicar esas
+reglas entre Gemini, backend y frontend.
+
+**Límite:** cada grupo actual admite una sola opción. Si en el futuro un grupo
+necesita varias elecciones dentro del mismo grupo, habrá que extender el contrato
+de modificadores y repetir sus pruebas.
 
 Los precios enteros evitan aritmética flotante en este catálogo de pesos argentinos completos.
 Antes de integrar un POS habrá que fijar moneda, unidad monetaria y redondeo.

@@ -104,6 +104,12 @@ def serialize_cart(
                 "selected_modifiers": (
                     item.selected_modifiers
                 ),
+                "selected_modifier_details": (
+                    service.menu.get_modifier_details(
+                        item.product_id,
+                        item.selected_modifiers,
+                    )
+                ),
                 "unit_price": item.unit_price,
             }
             for item in cart.items

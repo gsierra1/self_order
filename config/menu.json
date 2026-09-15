@@ -1,86 +1,106 @@
 {
-    "products": [
+  "products": [
+    {
+      "id": "BURGER_CLASICA",
+      "name": "Burger Clásica",
+      "category": "hamburguesas",
+      "base_price": 8500,
+      "available": true,
+      "modifier_groups": [
         {
-            "id": "COMBO_BIG_MAC",
-            "name": "Combo Big Mac",
-            "category": "combo",
-            "base_price": 10500,
-            "available": true,
-            "modifier_groups": [
-                {
-                    "id": "size",
-                    "required": true,
-                    "options": [
-                        {
-                            "id": "MEDIUM",
-                            "name": "Mediano",
-                            "price_delta": 0
-                        },
-                        {
-                            "id": "LARGE",
-                            "name": "Grande",
-                            "price_delta": 2000
-                        }
-                    ]
-                },
-                {
-                    "id": "drink",
-                    "required": true,
-                    "options": [
-                        {
-                            "id": "COCA",
-                            "name": "Coca-Cola",
-                            "price_delta": 0
-                        },
-                        {
-                            "id": "SPRITE",
-                            "name": "Sprite",
-                            "price_delta": 0
-                        }
-                    ]
-                }
-            ]
+          "id": "drink",
+          "name": "Bebida",
+          "required": true,
+          "options": [
+            {"id": "COCA", "name": "Coca-Cola", "price_delta": 0},
+            {"id": "SPRITE", "name": "Sprite", "price_delta": 0},
+            {"id": "WATER", "name": "Agua", "price_delta": 0}
+          ]
         },
         {
-            "id": "COMBO_QUARTER_POUNDER",
-            "name": "Combo Cuarto de Libra",
-            "category": "combo",
-            "base_price": 11500,
-            "available": true,
-            "modifier_groups": [
-                {
-                    "id": "size",
-                    "required": true,
-                    "options": [
-                        {
-                            "id": "MEDIUM",
-                            "name": "Mediano",
-                            "price_delta": 0
-                        },
-                        {
-                            "id": "LARGE",
-                            "name": "Grande",
-                            "price_delta": 2000
-                        }
-                    ]
-                },
-                {
-                    "id": "drink",
-                    "required": true,
-                    "options": [
-                        {
-                            "id": "COCA",
-                            "name": "Coca-Cola",
-                            "price_delta": 0
-                        },
-                        {
-                            "id": "SPRITE",
-                            "name": "Sprite",
-                            "price_delta": 0
-                        }
-                    ]
-                }
-            ]
+          "id": "extra_tomato",
+          "name": "Extra de tomate",
+          "required": false,
+          "options": [
+            {"id": "ADD_TOMATO", "name": "Tomate", "price_delta": 1000}
+          ]
+        },
+        {
+          "id": "extra_lettuce",
+          "name": "Extra de lechuga",
+          "required": false,
+          "options": [
+            {"id": "ADD_LETTUCE", "name": "Lechuga", "price_delta": 1000}
+          ]
+        },
+        {
+          "id": "extra_ham",
+          "name": "Extra de jamón",
+          "required": false,
+          "options": [
+            {"id": "ADD_HAM", "name": "Jamón", "price_delta": 1000}
+          ]
+        },
+        {
+          "id": "extra_cheese",
+          "name": "Extra de queso",
+          "required": false,
+          "options": [
+            {"id": "ADD_CHEESE", "name": "Queso", "price_delta": 1000}
+          ]
         }
-    ]
+      ]
+    },
+    {
+      "id": "BURGER_DOBLE",
+      "name": "Burger Doble",
+      "category": "hamburguesas",
+      "base_price": 10500,
+      "available": true,
+      "modifier_groups": [
+        {
+          "id": "drink",
+          "name": "Bebida",
+          "required": true,
+          "options": [
+            {"id": "COCA", "name": "Coca-Cola", "price_delta": 0},
+            {"id": "SPRITE", "name": "Sprite", "price_delta": 0},
+            {"id": "WATER", "name": "Agua", "price_delta": 0}
+          ]
+        },
+        {
+          "id": "extra_tomato",
+          "name": "Extra de tomate",
+          "required": false,
+          "options": [
+            {"id": "ADD_TOMATO", "name": "Tomate", "price_delta": 1000}
+          ]
+        },
+        {
+          "id": "extra_lettuce",
+          "name": "Extra de lechuga",
+          "required": false,
+          "options": [
+            {"id": "ADD_LETTUCE", "name": "Lechuga", "price_delta": 1000}
+          ]
+        },
+        {
+          "id": "extra_ham",
+          "name": "Extra de jamón",
+          "required": false,
+          "options": [
+            {"id": "ADD_HAM", "name": "Jamón", "price_delta": 1000}
+          ]
+        },
+        {
+          "id": "extra_cheese",
+          "name": "Extra de queso",
+          "required": false,
+          "options": [
+            {"id": "ADD_CHEESE", "name": "Queso", "price_delta": 1000}
+          ]
+        }
+      ]
+    }
+  ]
 }

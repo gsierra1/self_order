@@ -11,6 +11,7 @@ class ModifierOption:
 @dataclass
 class ModifierGroup:
     id: str
+    name: str
     required: bool
     options: list[ModifierOption] = field(default_factory=list)
 

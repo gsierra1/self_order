@@ -10,10 +10,78 @@ class Menu:
     products: dict[str, Product]
 
     def get_product(self, product_id: str) -> Product | None:
+        """Busca un producto por su identificador interno.
+
+        Args:
+            product_id: Identificador técnico definido en el catálogo.
+
+        Returns:
+            Producto encontrado o ``None`` si no pertenece al menú.
+        """
         return self.products.get(product_id)
+
+    def get_modifier_details(
+        self,
+        product_id: str,
+        selected_modifiers: dict[str, str],
+    ) -> list[dict[str, str]]:
+        """Traduce los modificadores internos a textos aptos para la interfaz.
+
+        Args:
+            product_id: Identificador del producto asociado al carrito.
+            selected_modifiers: Relación entre grupos y opciones validadas.
+
+        Returns:
+            Lista ordenada con los nombres visibles de cada selección. Devuelve
+            una lista vacía si el producto ya no existe en el catálogo.
+        """
+        product = self.get_product(product_id)
+
+        if product is None:
+            return []
+
+        details = []
+
+        for group in product.modifier_groups:
+            option_id = selected_modifiers.get(group.id)
+
+            if option_id is None:
+                continue
+
+            option = next(
+                (
+                    candidate
+                    for candidate in group.options
+                    if candidate.id == option_id
+                ),
+                None,
+            )
+
+            if option is not None:
+                details.append(
+                    {
+                        "group_name": group.name,
+                        "option_name": option.name,
+                    }
+                )
+
+        return details
 
 
 def load_menu(path: str | Path) -> Menu:
+    """Carga el catálogo JSON y lo transforma en objetos de dominio.
+
+    Args:
+        path: Ruta del archivo JSON que define productos y modificadores.
+
+    Returns:
+        Menú disponible para validar y cotizar pedidos.
+
+    Raises:
+        FileNotFoundError: Si no existe el archivo indicado.
+        json.JSONDecodeError: Si el archivo no contiene JSON válido.
+        KeyError: Si falta un atributo obligatorio del catálogo.
+    """
     with open(path, "r", encoding="utf-8") as file:
         data = json.load(file)
 
@@ -35,6 +103,7 @@ def load_menu(path: str | Path) -> Menu:
             modifier_groups.append(
                 ModifierGroup(
                     id=group_data["id"],
+                    name=group_data["name"],
                     required=group_data["required"],
                     options=options,
                 )

@@ -28,17 +28,17 @@ class BrowserTranscriber(LiveTranscriber):
             publish: Publicador de estados y transcripciones.
 
         Returns:
-            Pedido completo de un combo para verificar actualización visual.
+            Pedido completo con un extra para verificar etiquetas visibles.
         """
         await publish("voice.ready", {})
         chunk = await self.chunks.get()
         if chunk is None:
             raise ValueError("No se capturó audio.")
         assert len(chunk) == 3200
-        await publish("voice.transcript", {"text": "Quiero un Big Mac", "final": False})
+        await publish("voice.transcript", {"text": "Quiero una Burger Clásica", "final": False})
         while await self.chunks.get() is not None:
             pass
-        return "Quiero un Big Mac grande con Coca"
+        return "Quiero una Burger Clásica con Coca y queso"
 
 
 class BrowserAssistant:
@@ -65,8 +65,12 @@ class BrowserAssistant:
         if message == "confirmar":
             self.service.confirm_order()
             return "Pedido confirmado"
-        self.service.add_item("COMBO_BIG_MAC", 1, {"size": "LARGE", "drink": "COCA"})
-        return "Agregué tu combo. El total es 12.500 pesos."
+        self.service.add_item(
+            "BURGER_CLASICA",
+            1,
+            {"drink": "COCA", "extra_cheese": "ADD_CHEESE"},
+        )
+        return "Agregué tu hamburguesa. El total es 9.500 pesos argentinos."
 
 
 class BrowserVoiceTests(unittest.TestCase):
@@ -106,12 +110,15 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator("#mic-button")).to_be_enabled()
                         page.locator("#mic-button").click()
                         expect(page.locator("#mic-button")).to_have_text("Enviar audio")
-                        expect(page.locator("#voice-transcript")).to_contain_text("Quiero un Big Mac")
+                        expect(page.locator("#voice-transcript")).to_contain_text("Quiero una Burger Clásica")
                         expect(page.locator(".cart-item")).to_have_count(0)
                         expect(page.locator("#message-input")).to_be_disabled()
                         page.locator("#mic-button").click()
                         expect(page.locator(".cart-item")).to_have_count(1)
-                        expect(page.locator("#cart-total")).to_have_text("ARS 12.500")
+                        expect(page.locator("#cart-total")).to_have_text("ARS 9.500")
+                        expect(page.locator(".cart-item-details")).to_have_text(
+                            "Bebida: Coca-Cola · Extra de queso: Queso"
+                        )
                         expect(page.locator("#message-input")).to_be_enabled()
                         self.assertEqual(len(page.evaluate("window.spokenTexts")), 1)
                         page.locator("#audio-button").click()

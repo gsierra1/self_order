@@ -143,7 +143,8 @@ class OrderConversationOrchestrator:
 
             for group in product.modifier_groups:
                 option_ids = ", ".join(
-                    f"{option.id} (+ARS {option.price_delta})"
+                    f"{option.name} [id={option.id}] "
+                    f"(+ARS {option.price_delta})"
                     for option in group.options
                 )
 
@@ -154,7 +155,8 @@ class OrderConversationOrchestrator:
                 )
 
                 catalog_lines.append(
-                    f"  - {group.id} ({required_text}): {option_ids}"
+                    f"  - {group.name} [grupo={group.id}] "
+                    f"({required_text}): {option_ids}"
                 )
 
         catalog = "\n".join(catalog_lines)
@@ -174,7 +176,8 @@ REGLAS TRANSACCIONALES:
 - Si el usuario pregunta precios, menú u opciones, respondé con el catálogo y
   nunca utilices add_item solo para calcular o mostrar un precio.
 - Para consultar el carrito utilizá get_cart.
-- Para cambiar tamaño o bebida utilizá change_modifier.
+- Para cambiar o quitar una opción de cualquier grupo utilizá
+  change_modifier. Para quitar una opción opcional usá option_id=null.
 - Para sustituir un producto utilizá replace_item.
 - Para eliminar una línea utilizá remove_item.
 - Para finalizar el pedido utilizá confirm_order.
@@ -194,9 +197,8 @@ REGLAS TRANSACCIONALES:
 
 REGLAS SOBRE INFORMACIÓN FALTANTE:
 
-- Nunca elijas un tamaño, bebida u otro modificador obligatorio por defecto.
-- Nunca supongas MEDIUM, LARGE, COCA, SPRITE ni otra opción si el usuario no
-  la indicó explícitamente.
+- Nunca elijas un modificador obligatorio por defecto.
+- Nunca supongas una opción si el usuario no la indicó explícitamente.
 - Si falta un modificador obligatorio, preguntale al usuario antes de agregar
   el producto.
 - Si faltan varios modificadores obligatorios, podés preguntarlos juntos.
@@ -212,18 +214,16 @@ FORMATO DE RESPUESTA:
 - Para montos utilizá punto como separador de miles y decí explícitamente
   "pesos argentinos". Ejemplo: 12.500 pesos argentinos. No uses "$", "USD"
   ni "dólares", porque la respuesta también puede leerse en voz alta.
-- Usá solamente nombres en español para la persona: "Mediano" y "Grande".
-  MEDIUM y LARGE son identificadores internos y nunca deben aparecer en la
-  respuesta escrita o hablada. Lo mismo aplica a IDs de productos, grupos y
-  opciones.
+- Usá solamente los nombres visibles del catálogo para la persona. Los IDs de
+  productos, grupos y opciones son internos y nunca deben aparecer en la
+  respuesta escrita o hablada.
 
 CATÁLOGO ACTUAL:
 
 {catalog}
         """.strip()
 
-    @staticmethod
-    def _sanitize_user_text(text: str) -> str:
+    def _sanitize_user_text(self, text: str) -> str:
         """Elimina identificadores internos y símbolos ambiguos de la respuesta.
 
         Args:
@@ -232,16 +232,25 @@ CATÁLOGO ACTUAL:
         Returns:
             Texto preparado para mostrar y leer a la persona.
         """
-        replacements = (
-            (r"\bMEDIUM\b", "Mediano"),
-            (r"\bMedium\b", "Mediano"),
-            (r"\bmedium\b", "mediano"),
-            (r"\bLARGE\b", "Grande"),
-            (r"\bLarge\b", "Grande"),
-            (r"\blarge\b", "grande"),
-        )
+        replacements = []
+
+        for product in self.service.menu.products.values():
+            replacements.append((product.id, product.name))
+
+            for group in product.modifier_groups:
+                replacements.append((group.id, group.name))
+
+                for option in group.options:
+                    replacements.append((option.id, option.name))
+
+        replacements.sort(key=lambda pair: len(pair[0]), reverse=True)
+
         for pattern, replacement in replacements:
-            text = re.sub(pattern, replacement, text)
+            text = re.sub(
+                rf"\b{re.escape(pattern)}\b",
+                replacement,
+                text,
+            )
         text = re.sub(
             r"\$\s*([0-9][0-9.]*)",
             r"\1 pesos argentinos",
@@ -409,7 +418,10 @@ CATÁLOGO ACTUAL:
                 "tool.needs_clarification",
                 session_id=self.service.session.session_id,
                 tool=function_call.name,
-                missing_fields=result_payload.get("missing_fields", []),
+                missing_modifier_groups=result_payload.get(
+                    "missing_modifier_groups",
+                    [],
+                ),
             )
         elif result.get("ok"):
             log_event(
