@@ -70,9 +70,16 @@ en backend.
 La configuración recomendada para la cuenta revisada el 15/09/2026 usa
 `gemini-3.7-flash` para chat y `gemini-3.5-transcribe-live` para transcripción.
 Los nombres se configuran mediante `GEMINI_CHAT_MODEL` y
-`GEMINI_TRANSCRIPTION_MODEL`. Un modelo de chat necesita la acción
-`generateContent`; para voz se necesita `bidiGenerateContent`. La disponibilidad
-futura depende del proveedor y de la cuenta.
+`GEMINI_TRANSCRIPTION_MODEL` en `.env`.
+
+Un modelo de chat necesita la acción `generateContent`. Para voz,
+`bidiGenerateContent` es necesario, pero no suficiente: el modelo también debe
+estar documentado para **Live Transcription**, aceptar
+`response_modalities=["TEXT"]` e `input_audio_transcription`, y emitir
+`server_content.input_transcription` final después de `activity_end`. El listado
+de modelos solo confirma la primera condición; las demás se validan con la
+documentación oficial y una prueba de audio real. La disponibilidad futura depende
+del proveedor y de la cuenta.
 
 Si se configura un nombre inexistente o incompatible, el chat o la voz muestran
 el nombre concreto del modelo y la etapa que falló, sin modificar el carrito.
