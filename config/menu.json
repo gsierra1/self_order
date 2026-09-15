@@ -9,7 +9,7 @@
           "id": "COCA",
           "name": "Coca-Cola",
           "price_delta": 0,
-          "available": true
+          "available": false
         },
         {
           "id": "SPRITE",
