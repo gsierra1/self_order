@@ -351,3 +351,24 @@ Estos puntos son una hoja de evolución; no forman parte de la demo actual.
 - **Operación y seguridad:** configurar autenticación del dispositivo, métricas de latencia, monitoreo, políticas de logs y recuperación ante caída de red.
 
 El criterio de escalabilidad es agregar adaptadores detrás de contratos pequeños. La conversación y `OrderService` deben mantenerse estables mientras cambian el motor de voz, el proveedor de pago o el sistema externo.
+
+### Disponibilidad de productos, bebidas y extras (15/09/2026)
+
+El catalogo local ahora declara `available` para productos base y para cada
+opcion de modificador. El estado permite informar "agotado" sin convertir el
+producto en inexistente. `OrderService` rechaza una opcion no disponible antes
+de cambiar el carrito, tambien durante un reemplazo o un cambio de modificador.
+Las tools no piden una eleccion cuando un grupo obligatorio no conserva ninguna
+alternativa disponible.
+
+La suite automatica ejecuto 17 pruebas de reglas con `unittest`. Se verifico que
+un extra agotado no agrega la linea, que una bebida obligatoria sin opciones
+disponibles devuelve `unavailable_required_modifier` sin mutar y que un reemplazo
+hacia un producto agotado conserva la linea original. La comprobacion usa un
+catalogo cargado localmente; no prueba todavia una conversacion real de Gemini ni
+la sincronizacion con un sistema externo de stock.
+
+Para una prueba manual, cambiar temporalmente `available` a `false` en
+`config/menu.json`, reiniciar la API y pedir ese producto por texto o voz. Se
+espera que el asistente informe la falta de disponibilidad y que el carrito no
+incorpore esa seleccion. Volver el valor a `true` al terminar la demostracion.

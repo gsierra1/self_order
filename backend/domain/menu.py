@@ -66,6 +66,7 @@ class Menu:
                         "option_name": option.name,
                         "price_delta": option.price_delta,
                         "required": group.required,
+                        "available": option.available,
                     }
                 )
 
@@ -100,6 +101,7 @@ def load_menu(path: str | Path) -> Menu:
                     id=option_data["id"],
                     name=option_data["name"],
                     price_delta=option_data["price_delta"],
+                    available=option_data.get("available", True),
                 )
                 for option_data in group_data.get("options", [])
             ]

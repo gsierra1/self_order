@@ -55,3 +55,21 @@ todavía debe conocerse.
 La prioridad expresada es completar voz manteniendo el canal escrito. Ampliar el
 menú y mejorar la estética quedan para después. Una presentación y un speech
 se prepararán sobre capacidades demostrables y decisiones comprendidas.
+
+## Disponibilidad de productos y opciones
+
+El catalogo diferencia dos situaciones: `available` en un producto base indica
+si esa hamburguesa se puede pedir; `available` en una opcion indica si se puede
+elegir esa bebida o extra. Ambos valores son configurables en `config/menu.json`
+y hoy comienzan en `true`.
+
+Si se marca, por ejemplo, Coca-Cola con `"available": false`, el asistente debe
+explicar que existe pero esta agotada y ofrecer Sprite o agua, sin agregar una
+Coca-Cola al carrito. Si no queda ninguna alternativa en un grupo obligatorio
+como Bebida, la hamburguesa no se agrega porque no puede quedar incompleta.
+`OrderService` aplica esta regla para texto, voz y botones; Gemini recibe el
+catalogo como contexto, pero no decide el estado valido del pedido.
+
+Esta disponibilidad es local y manual para la demo. En una integracion real, el
+valor deberia llegar desde el sistema de stock mediante un adaptador, sin cambiar
+las reglas de carrito ni los canales de interaccion.

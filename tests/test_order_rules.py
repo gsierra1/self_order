@@ -5,7 +5,11 @@ from dataclasses import asdict
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from backend.ai.tools import create_add_item_tool, create_confirm_order_tool
+from backend.ai.tools import (
+    create_add_item_tool,
+    create_confirm_order_tool,
+    create_replace_item_tool,
+)
 from backend.ai.errors import classify_gemini_api_error
 from backend.ai.orchestrator import OrderConversationOrchestrator
 from backend.domain.menu import load_menu
@@ -98,6 +102,50 @@ class OrderRulesTests(unittest.TestCase):
         self.assertEqual(updated.unit_price, 9500)
         self.assertNotIn("extra_tomato", updated.selected_modifiers)
 
+    def test_unavailable_option_does_not_add(self) -> None:
+        """Rechaza un extra agotado y mantiene el carrito sin cambios."""
+        product = self.service.menu.get_product("BURGER_CLASICA")
+        product.modifier_groups[4].options[0].available = False
+
+        with self.assertRaisesRegex(ValueError, "Queso"):
+            self.service.add_item(
+                "BURGER_CLASICA",
+                1,
+                {"drink": "COCA", "extra_cheese": "ADD_CHEESE"},
+            )
+
+        self.assertFalse(self.service.get_cart().items)
+
+    def test_required_group_without_options_does_not_add(self) -> None:
+        """No pregunta ni agrega cuando una eleccion obligatoria es imposible."""
+        product = self.service.menu.get_product("BURGER_CLASICA")
+        for option in product.modifier_groups[0].options:
+            option.available = False
+
+        result = create_add_item_tool(self.service)("BURGER_CLASICA")
+
+        self.assertEqual(result["status"], "unavailable_required_modifier")
+        self.assertEqual(
+            result["unavailable_modifier_groups"],
+            [{"id": "drink", "name": "Bebida"}],
+        )
+        self.assertFalse(self.service.get_cart().items)
+
+    def test_unavailable_replacement_preserves_original_item(self) -> None:
+        """Conserva la linea original si el producto de destino esta agotado."""
+        item = self.service.add_item("BURGER_CLASICA", 1, self.options)
+        previous = asdict(item)
+        self.service.menu.get_product("BURGER_DOBLE").available = False
+
+        with self.assertRaisesRegex(ValueError, "Burger Doble"):
+            create_replace_item_tool(self.service)(
+                item.line_id,
+                "BURGER_DOBLE",
+                {"drink": "COCA"},
+            )
+
+        self.assertEqual(asdict(item), previous)
+
     def test_catalog_exposes_aliases_and_visible_price_details(self) -> None:
         """Mantiene aliases conversacionales y precios para el carrito visible."""
         product = self.service.menu.get_product("BURGER_CLASICA")
@@ -115,6 +163,7 @@ class OrderRulesTests(unittest.TestCase):
                     "option_name": "Coca-Cola",
                     "price_delta": 0,
                     "required": True,
+                    "available": True,
                 },
                 {
                     "group_id": "extra_cheese",
@@ -122,6 +171,7 @@ class OrderRulesTests(unittest.TestCase):
                     "option_name": "Queso",
                     "price_delta": 1000,
                     "required": False,
+                    "available": True,
                 },
             ],
         )

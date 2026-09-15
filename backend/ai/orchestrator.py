@@ -138,7 +138,8 @@ class OrderConversationOrchestrator:
         for product in self.service.menu.products.values():
             catalog_lines.append(
                 f"- {product.name}: product_id={product.id}, "
-                f"precio base ARS {product.base_price}"
+                f"precio base ARS {product.base_price}, "
+                f"{'disponible' if product.available else 'agotado'}"
             )
 
             if product.aliases:
@@ -150,7 +151,8 @@ class OrderConversationOrchestrator:
             for group in product.modifier_groups:
                 option_ids = ", ".join(
                     f"{option.name} [id={option.id}] "
-                    f"(+ARS {option.price_delta})"
+                    f"(+ARS {option.price_delta}, "
+                    f"{'disponible' if option.available else 'agotado'})"
                     for option in group.options
                 )
 
@@ -176,6 +178,11 @@ disponibles cuando sea necesario.
 REGLAS TRANSACCIONALES:
 
 - No inventes precios, descuentos, promociones, disponibilidad ni stock.
+- No uses add_item, replace_item ni change_modifier para productos u opciones
+  marcados como agotados. Informá que existen pero no están disponibles.
+- Si un grupo obligatorio no tiene ninguna opción disponible, explicá que el
+  producto no puede completarse por el momento; no pidas una elección imposible.
+- Para una opcion agotada, informa la falta y ofrece solo alternativas disponibles.
 - No modifiques directamente ningún dato del pedido.
 - Las tools y OrderService son la autoridad sobre el estado transaccional.
 - Para agregar productos utilizá add_item.

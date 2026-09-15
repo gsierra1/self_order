@@ -6,6 +6,7 @@ class ModifierOption:
     id: str
     name: str
     price_delta: int
+    available: bool = True
 
 
 @dataclass

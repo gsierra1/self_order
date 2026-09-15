@@ -33,6 +33,33 @@ def _get_missing_required_groups(
     ]
 
 
+def _get_required_groups_without_available_options(
+    service: OrderService,
+    product_id: str,
+) -> list[dict[str, str]]:
+    """Identifica grupos obligatorios que no tienen opciones disponibles.
+
+    Args:
+        service: Servicio que conserva el catálogo de la sesión.
+        product_id: Identificador técnico del producto solicitado.
+
+    Returns:
+        Grupos obligatorios agotados con identificador y nombre visible. Si el
+        producto no existe, devuelve una lista vacía para que ``OrderService``
+        informe el error correspondiente.
+    """
+    product = service.menu.get_product(product_id)
+
+    if product is None:
+        return []
+
+    return [
+        {"id": group.id, "name": group.name}
+        for group in product.modifier_groups
+        if group.required and not any(option.available for option in group.options)
+    ]
+
+
 def _serialize_item_result(
     service: OrderService,
     item,
@@ -95,6 +122,23 @@ def create_add_item_tool(service: OrderService):
             ValueError: Si producto, cantidad o modificadores no son válidos.
         """
         modifiers = selected_modifiers or {}
+        unavailable_groups = _get_required_groups_without_available_options(
+            service,
+            product_id,
+        )
+
+        if unavailable_groups:
+            return {
+                "status": "unavailable_required_modifier",
+                "product_id": product_id,
+                "quantity": quantity,
+                "unavailable_modifier_groups": unavailable_groups,
+                "message": (
+                    "No hay opciones disponibles para un modificador obligatorio. "
+                    "No se debe agregar el producto."
+                ),
+            }
+
         missing_groups = _get_missing_required_groups(
             service,
             product_id,
@@ -211,6 +255,22 @@ def create_replace_item_tool(service: OrderService):
             ValueError: Si la línea, producto o configuración no son válidos.
         """
         modifiers = selected_modifiers or {}
+        unavailable_groups = _get_required_groups_without_available_options(
+            service,
+            new_product_id,
+        )
+
+        if unavailable_groups:
+            return {
+                "status": "unavailable_required_modifier",
+                "product_id": new_product_id,
+                "unavailable_modifier_groups": unavailable_groups,
+                "message": (
+                    "No hay opciones disponibles para un modificador obligatorio. "
+                    "No se debe reemplazar el producto."
+                ),
+            }
+
         missing_groups = _get_missing_required_groups(
             service,
             new_product_id,

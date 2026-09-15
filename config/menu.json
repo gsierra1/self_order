@@ -6,16 +6,36 @@
       "category": "hamburguesas",
       "base_price": 8500,
       "available": true,
-      "aliases": ["hamburguesa simple", "simple", "hamburguesa clásica", "clásica"],
+      "aliases": [
+        "hamburguesa simple",
+        "simple",
+        "hamburguesa clásica",
+        "clásica"
+      ],
       "modifier_groups": [
         {
           "id": "drink",
           "name": "Bebida",
           "required": true,
           "options": [
-            {"id": "COCA", "name": "Coca-Cola", "price_delta": 0},
-            {"id": "SPRITE", "name": "Sprite", "price_delta": 0},
-            {"id": "WATER", "name": "Agua", "price_delta": 0}
+            {
+              "id": "COCA",
+              "name": "Coca-Cola",
+              "price_delta": 0,
+              "available": true
+            },
+            {
+              "id": "SPRITE",
+              "name": "Sprite",
+              "price_delta": 0,
+              "available": true
+            },
+            {
+              "id": "WATER",
+              "name": "Agua",
+              "price_delta": 0,
+              "available": true
+            }
           ]
         },
         {
@@ -23,7 +43,12 @@
           "name": "Extra de tomate",
           "required": false,
           "options": [
-            {"id": "ADD_TOMATO", "name": "Tomate", "price_delta": 1000}
+            {
+              "id": "ADD_TOMATO",
+              "name": "Tomate",
+              "price_delta": 1000,
+              "available": true
+            }
           ]
         },
         {
@@ -31,7 +56,12 @@
           "name": "Extra de lechuga",
           "required": false,
           "options": [
-            {"id": "ADD_LETTUCE", "name": "Lechuga", "price_delta": 1000}
+            {
+              "id": "ADD_LETTUCE",
+              "name": "Lechuga",
+              "price_delta": 1000,
+              "available": true
+            }
           ]
         },
         {
@@ -39,7 +69,12 @@
           "name": "Extra de jamón",
           "required": false,
           "options": [
-            {"id": "ADD_HAM", "name": "Jamón", "price_delta": 1000}
+            {
+              "id": "ADD_HAM",
+              "name": "Jamón",
+              "price_delta": 1000,
+              "available": true
+            }
           ]
         },
         {
@@ -47,7 +82,12 @@
           "name": "Extra de queso",
           "required": false,
           "options": [
-            {"id": "ADD_CHEESE", "name": "Queso", "price_delta": 1000}
+            {
+              "id": "ADD_CHEESE",
+              "name": "Queso",
+              "price_delta": 1000,
+              "available": true
+            }
           ]
         }
       ]
@@ -58,16 +98,34 @@
       "category": "hamburguesas",
       "base_price": 10500,
       "available": true,
-      "aliases": ["hamburguesa doble", "doble"],
+      "aliases": [
+        "hamburguesa doble",
+        "doble"
+      ],
       "modifier_groups": [
         {
           "id": "drink",
           "name": "Bebida",
           "required": true,
           "options": [
-            {"id": "COCA", "name": "Coca-Cola", "price_delta": 0},
-            {"id": "SPRITE", "name": "Sprite", "price_delta": 0},
-            {"id": "WATER", "name": "Agua", "price_delta": 0}
+            {
+              "id": "COCA",
+              "name": "Coca-Cola",
+              "price_delta": 0,
+              "available": true
+            },
+            {
+              "id": "SPRITE",
+              "name": "Sprite",
+              "price_delta": 0,
+              "available": true
+            },
+            {
+              "id": "WATER",
+              "name": "Agua",
+              "price_delta": 0,
+              "available": true
+            }
           ]
         },
         {
@@ -75,7 +133,12 @@
           "name": "Extra de tomate",
           "required": false,
           "options": [
-            {"id": "ADD_TOMATO", "name": "Tomate", "price_delta": 1000}
+            {
+              "id": "ADD_TOMATO",
+              "name": "Tomate",
+              "price_delta": 1000,
+              "available": true
+            }
           ]
         },
         {
@@ -83,7 +146,12 @@
           "name": "Extra de lechuga",
           "required": false,
           "options": [
-            {"id": "ADD_LETTUCE", "name": "Lechuga", "price_delta": 1000}
+            {
+              "id": "ADD_LETTUCE",
+              "name": "Lechuga",
+              "price_delta": 1000,
+              "available": true
+            }
           ]
         },
         {
@@ -91,7 +159,12 @@
           "name": "Extra de jamón",
           "required": false,
           "options": [
-            {"id": "ADD_HAM", "name": "Jamón", "price_delta": 1000}
+            {
+              "id": "ADD_HAM",
+              "name": "Jamón",
+              "price_delta": 1000,
+              "available": true
+            }
           ]
         },
         {
@@ -99,7 +172,12 @@
           "name": "Extra de queso",
           "required": false,
           "options": [
-            {"id": "ADD_CHEESE", "name": "Queso", "price_delta": 1000}
+            {
+              "id": "ADD_CHEESE",
+              "name": "Queso",
+              "price_delta": 1000,
+              "available": true
+            }
           ]
         }
       ]

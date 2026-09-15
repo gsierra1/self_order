@@ -276,3 +276,12 @@ Una interfaz web permite probar rápidamente escritura, voz, carrito y pagos sim
 ### Por qué los pagos, POS y hardware quedan fuera de la demo
 
 Una integración real depende del proveedor, del país, de certificaciones, del hardware disponible y del contrato con el local. Simular un pinpad, un POS o una pasarela como si fueran reales daría una falsa sensación de seguridad. Por eso el proyecto deja puntos de integración claros y usa pagos demo hasta contar con contratos y entornos de prueba verificables.
+
+### Disponibilidad en el catalogo
+
+`available` esta presente en productos base y en cada opcion de modificador.
+`OrderService` rechaza una opcion agotada antes de crear, cambiar o reemplazar
+una linea. Si un grupo obligatorio queda sin opciones disponibles, las tools
+devuelven `unavailable_required_modifier` y no piden una seleccion imposible.
+Gemini recibe el estado del catalogo para explicarlo, pero la autoridad final
+sigue en el servicio.

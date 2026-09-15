@@ -219,6 +219,12 @@ class OrderService:
                     f"for modifier '{group.id}'"
                 )
 
+            if not selected_option.available:
+                raise ValueError(
+                    f"La opción «{selected_option.name}» de "
+                    f"«{group.name}» no está disponible en este momento"
+                )
+
             unit_price += selected_option.price_delta
 
         return unit_price
@@ -270,7 +276,7 @@ class OrderService:
 
         if not product.available:
             raise ValueError(
-                f"Product unavailable: {product_id}"
+                f"El producto «{product.name}» no está disponible en este momento"
             )
 
         if quantity <= 0:
@@ -552,7 +558,7 @@ class OrderService:
 
         if not new_product.available:
             raise ValueError(
-                f"Product unavailable: {new_product_id}"
+                f"El producto «{new_product.name}» no está disponible en este momento"
             )
 
         new_unit_price = self._calculate_unit_price(

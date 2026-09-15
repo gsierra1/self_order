@@ -327,3 +327,29 @@ o hacer failover sin reescribir las reglas del pedido.
 **Fuentes de consulta:** [cuotas de Gemini](https://ai.google.dev/gemini-api/docs/rate-limits),
 [facturación de Gemini](https://ai.google.dev/gemini-api/docs/billing) y
 [capacidad aprovisionada en Vertex AI](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/resources/throughput-quota).
+
+## 15. Disponibilidad declarada en catalogo
+
+**Estado:** implementada para la demo local.
+
+**Contexto:** un producto puede existir en el menu y estar agotado. La misma
+situacion aplica a una bebida o un extra: quitarlo del JSON haria imposible
+distinguir "no existe" de "existe, pero hoy no se puede pedir".
+
+**Decision:** conservar `available` en `Product` y agregarlo en cada
+`ModifierOption`. `OrderService` rechaza ambos casos antes de mutar el carrito.
+Las tools detectan ademas si un grupo obligatorio quedo sin ninguna opcion
+disponible y devuelven un estado explicito, para que la conversacion no pregunte
+por una seleccion imposible. Gemini recibe disponibilidad y alternativas en su
+catalogo, pero la validacion final no depende de que siga la instruccion.
+
+**Alternativas consideradas:** eliminar temporalmente items del menu o dejar que
+solo el prompt controle el stock. La primera pierde la explicacion y referencias
+estables; la segunda permite que una respuesta incorrecta del modelo agregue una
+opcion agotada.
+
+**Consecuencias:** para agotar Coca-Cola se cambia solo su `available` a `false`
+en `config/menu.json` y se recarga la aplicacion. El carrito no se altera si una
+alta, cambio o reemplazo contiene una opcion agotada; un reemplazo conserva su
+linea original. La fuente sigue siendo manual y local: la integracion con stock
+real requiere un adaptador que actualice esa informacion.
