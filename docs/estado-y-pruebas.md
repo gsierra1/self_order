@@ -392,3 +392,11 @@ navegador con Edge. Esta ultima fuerza el cierre del socket desde el servidor y
 comprueba que la pagina muestra `Conexion restablecida` antes de continuar el
 recorrido de voz, carrito y confirmacion. No prueba una perdida real de internet
 ni recuperacion despues de reiniciar el proceso.
+
+### Guia visual del recorrido de un pedido (15/09/2026)
+
+Se agrego `docs/recorrido-pedido.html` como material de apoyo para la defensa.
+Explica el arranque local, la sesion, el WebSocket, la captura, STT, Gemini,
+tools, `OrderService` y el carrito mediante el ejemplo de una Burger Clasica con
+Coca-Cola y tomate. El archivo es estatico: no ejecuta Gemini ni el pedido; sus
+enlaces locales y estructura HTML se verificaron automaticamente.
