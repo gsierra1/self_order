@@ -230,6 +230,13 @@ Falta una prueba manual nueva con Gemini para medir si el cambio de chat reduce
 la latencia o la saturación: que un nombre exista no garantiza capacidad ni
 mejor rendimiento.
 
+La consulta posterior del mismo día también mostró como alternativas de chat
+`gemini-3.7-flash`, `gemini-3.8-flash` y `gemini-3.5-flash`; para Live mostró
+`gemini-3.8-live`, `gemini-3.1-flash-live-preview` y
+`gemini-3.5-live-translate-preview`. Se dejaron comentadas en `.env.example`.
+La acción `generateContent` o `bidiGenerateContent` confirma la capacidad que
+declara el proveedor, pero no sustituye una evaluación real del flujo de pedido.
+
 El flujo de pago demo quedó implementado: `PAYMENT_PENDING` genera un número de
 pedido en backend, permite elegir QR, tarjeta o caja por texto, voz o botones y
 finaliza en `CONFIRMED`. El QR es inválido a propósito, la tarjeta no se envía
