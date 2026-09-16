@@ -397,6 +397,10 @@ ni recuperacion despues de reiniciar el proceso.
 
 Se agrego `docs/recorrido-pedido.html` como material de apoyo para la defensa.
 Explica el arranque local, la sesion, el WebSocket, la captura, STT, Gemini,
-tools, `OrderService` y el carrito mediante el ejemplo de una Burger Clasica con
-Coca-Cola y tomate. El archivo es estatico: no ejecuta Gemini ni el pedido; sus
-enlaces locales y estructura HTML se verificaron automaticamente.
+tools, `OrderService` y el carrito. El diagrama ahora presenta los pasos en una
+sola columna para que cada flecha una el paso consecutivo, y agrega una tabla de
+conexiones concretas entre funciones y archivos. El ejemplo se amplio a una
+sesion completa: alta de dos productos, consulta sin mutacion, cambio de
+modificadores, eliminacion, confirmacion y pago QR simulado. El archivo es
+estatico: no ejecuta Gemini ni el pedido; sus enlaces locales y estructura HTML
+se verificaron automaticamente.

@@ -53,12 +53,7 @@
     th { color: var(--violet-dark); }
     .warning { background: #fff8df; border: 1px solid #f2db85; border-radius: 10px; padding: .8rem; }
     footer { text-align: center; color: var(--muted); padding: 1rem; font-size: .9rem; }
-    @media (min-width: 760px) {
-      .flow { grid-template-columns: 1fr 1fr; column-gap: 2.8rem; }
-      .step:nth-child(odd)::after { left: calc(100% + 1.4rem); bottom: 50%; transform: translate(-50%, 50%); content: "\2192"; }
-      .step:nth-child(even)::after { left: 50%; bottom: -1.08rem; transform: translateX(-50%); content: "\2193"; }
-      .step:nth-child(8)::after { display: none; }
-    }
+    .flow { max-width: 860px; }
   </style>
 </head>
 <body>
@@ -85,7 +80,7 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
 
     <section>
       <h2>2. Diagrama de flujo: pedido hablado</h2>
-      <p>Ejemplo: la persona dice <strong>&laquo;Hola, quiero una hamburguesa cl&aacute;sica con Coca-Cola y tomate&raquo;</strong>.</p>
+      <p>Ejemplo: la persona dice <strong>&laquo;Hola, quiero una hamburguesa cl&aacute;sica con Coca-Cola y tomate&raquo;</strong>. Las tarjetas se presentan en una sola columna para que cada flecha una exclusivamente un paso con el siguiente: 1 &darr; 2 &darr; 3.</p>
       <div class="flow">
         <article class="step backend">
           <h3>1. Arranque de FastAPI</h3>
@@ -95,12 +90,12 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         <article class="step frontend">
           <h3>2. Pantalla y sesi&oacute;n</h3>
           <a href="../frontend/app.js"><code>frontend/app.js</code></a>
-          <small><code>createSession()</code> llama <code>POST /api/sessions</code> y <code>connectWebSocket()</code> abre el canal de la sesi&oacute;n.</small>
+          <small><code>createSession()</code> ejecuta <code>fetch(&quot;/api/sessions&quot;, { method: &quot;POST&quot; })</code>. Con el <code>session_id</code> recibido, <code>connectWebSocket()</code>, en este mismo archivo, abre <code>ws://.../ws/sessions/{session_id}</code>.</small>
         </article>
         <article class="step backend">
           <h3>3. Backend crea el pedido vac&iacute;o</h3>
           <a href="../backend/api/app.py"><code>backend/api/app.py</code></a>
-          <small><code>create_session()</code> ensambla <code>Session</code>, <code>OrderService</code> y <code>OrderConversationOrchestrator</code>.</small>
+          <small>La ruta <code>@app.post(&quot;/api/sessions&quot;)</code> ejecuta <code>create_session()</code>, que ensambla <code>Session</code>, <code>OrderService</code> y <code>OrderConversationOrchestrator</code>. La ruta WebSocket de este archivo recibe despu&eacute;s la conexi&oacute;n abierta en el paso 2.</small>
         </article>
         <article class="step frontend">
           <h3>4. La persona toca Hablar</h3>
@@ -151,16 +146,33 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
     </section>
 
     <section class="example">
-      <h2>3. Ejemplo concreto, paso por paso</h2>
-      <p class="example-phrase">&laquo;Hola, quiero una hamburguesa cl&aacute;sica con Coca-Cola y tomate.&raquo;</p>
+      <h2>3. Conversaci&oacute;n completa: agregar, consultar, modificar, eliminar y pagar</h2>
+      <p class="example-phrase">Una misma sesi&oacute;n puede recibir varios turnos. Este ejemplo muestra el recorrido esperado de cada operaci&oacute;n.</p>
+      <p>Las tools indicadas son las operaciones que Gemini puede proponer. <code>OrderService</code> decide si son v&aacute;lidas; una pregunta de precio no debe crear una l&iacute;nea provisional en el carrito.</p>
       <table>
-        <thead><tr><th>Etapa</th><th>Dato que circula</th><th>Qui&eacute;n decide</th></tr></thead>
+        <thead><tr><th>Turno de la persona</th><th>Recorrido y operaci&oacute;n</th><th>Resultado visible</th></tr></thead>
         <tbody>
-          <tr><td>STT</td><td>Texto final: <code>Hola, quiero una hamburguesa cl&aacute;sica con Coca-Cola y tomate.</code></td><td><code>LiveTranscriber.transcribe()</code></td></tr>
-          <tr><td>Interpretaci&oacute;n</td><td>Gemini reconoce el alias y propone <code>add_item</code> con <code>BURGER_CLASICA</code>, <code>COCA</code> y <code>ADD_TOMATO</code>.</td><td><code>OrderConversationOrchestrator.send_message()</code></td></tr>
-          <tr><td>Validaci&oacute;n</td><td>La bebida existe, es obligatoria y fue indicada. Tomate es un extra disponible.</td><td><code>OrderService.add_item()</code></td></tr>
-          <tr><td>Precio</td><td>ARS 8.500 base + ARS 1.000 de tomate = <strong>ARS 9.500</strong>.</td><td><code>OrderService._calculate_unit_price()</code></td></tr>
-          <tr><td>Resultado</td><td>Se agrega una l&iacute;nea al carrito y se env&iacute;a el snapshot al navegador.</td><td><code>_log_cart_updated()</code>, WebSocket y <code>renderCart()</code></td></tr>
+          <tr><td>&laquo;Quiero una Burger Cl&aacute;sica con Coca-Cola y tomate, y una Burger Doble con agua y queso.&raquo;</td><td>Voz o texto llega a <code>process_turn()</code> en <code>conversation_socket.py</code>. El orquestador propone dos <code>add_item()</code> de <code>tools.py</code>; ambos delegan en <code>OrderService.add_item()</code>.</td><td>Dos l&iacute;neas validadas: Cl&aacute;sica (ARS 9.500) y Doble (ARS 11.500). El total es ARS 21.000.</td></tr>
+          <tr><td>&laquo;&iquest;Cu&aacute;nto cuesta una Burger Doble con agua?&raquo;</td><td>El orquestador consulta el cat&aacute;logo para responder. No propone una mutaci&oacute;n del carrito.</td><td>La respuesta informa ARS 10.500. Las dos l&iacute;neas y el total siguen iguales.</td></tr>
+          <tr><td>&laquo;A la cl&aacute;sica sacale tomate y cambi&aacute; Coca-Cola por Sprite.&raquo;</td><td>Gemini puede proponer dos <code>change_modifier()</code>. Cada cambio pasa por <code>OrderService.change_modifier()</code>, que recalcula el precio y conserva la l&iacute;nea si algo falla.</td><td>La Cl&aacute;sica queda con Sprite y sin tomate: ARS 8.500. El total pasa a ARS 20.000.</td></tr>
+          <tr><td>&laquo;Sac&aacute; la doble.&raquo;</td><td><code>remove_item()</code> de <code>tools.py</code> delega en <code>OrderService.remove_item()</code>.</td><td>Desaparece la Burger Doble. Solo queda la Cl&aacute;sica con Sprite por ARS 8.500.</td></tr>
+          <tr><td>&laquo;&iquest;Qu&eacute; tengo en el carrito?&raquo;</td><td>El orquestador consulta el estado actual mediante la tool de carrito, sin mutarlo.</td><td>El asistente enumera la Burger Cl&aacute;sica, Sprite y el total ARS 8.500.</td></tr>
+          <tr><td>La persona toca <strong>Confirmar pedido</strong> o dice &laquo;Confirmo&raquo;.</td><td>El bot&oacute;n llama a <code>POST /api/sessions/{session_id}/payment/start</code>; la voz puede llegar a <code>confirm_order()</code>. Ambos usan la misma transici&oacute;n de <code>OrderService</code>.</td><td>El pedido queda pendiente de pago y el backend genera el n&uacute;mero para retirar.</td></tr>
+          <tr><td>La persona toca QR o dice &laquo;Pago con QR&raquo;.</td><td>El frontend o la tool de selecci&oacute;n registra el m&eacute;todo de pago. La demo muestra un QR inv&aacute;lido y, tras cinco segundos, completa el pago simulado.</td><td>Se muestra el n&uacute;mero de pedido para retirar en caja; al terminar la cuenta regresiva se abre una sesi&oacute;n nueva.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="notes">
+      <h2>4. Conexiones concretas entre archivos</h2>
+      <table>
+        <thead><tr><th>Origen</th><th>Puente</th><th>Destino</th></tr></thead>
+        <tbody>
+          <tr><td><code>createSession()</code> en <code>frontend/app.js</code></td><td><code>fetch</code> env&iacute;a <code>POST /api/sessions</code></td><td><code>create_session()</code> en <code>backend/api/app.py</code>, que devuelve <code>session_id</code> y el carrito.</td></tr>
+          <tr><td><code>connectWebSocket()</code> en <code>frontend/app.js</code></td><td><code>new WebSocket(.../ws/sessions/{session_id})</code></td><td><code>session_websocket()</code> en <code>backend/api/app.py</code>, que entrega mensajes a <code>handle_conversation()</code> de <code>conversation_socket.py</code>.</td></tr>
+          <tr><td><code>toggleMicrophone()</code> en <code>frontend/app.js</code></td><td><code>VoiceInput</code> y <code>sendAudio()</code> env&iacute;an PCM por el WebSocket</td><td><code>LiveTranscriber.transcribe()</code> en <code>backend/ai/live_transcriber.py</code>; su texto final vuelve a <code>process_turn()</code>.</td></tr>
+          <tr><td><code>process_turn()</code> en <code>conversation_socket.py</code></td><td><code>OrderConversationOrchestrator.send_message()</code></td><td>Gemini propone una tool de <code>backend/ai/tools.py</code>.</td></tr>
+          <tr><td>Una tool de <code>tools.py</code></td><td>llama a un m&eacute;todo de <code>OrderService</code></td><td><code>Cart</code> se actualiza y el evento <code>cart.updated</code> regresa por WebSocket a <code>onServerMessage()</code> y <code>renderCart()</code> en <code>frontend/app.js</code>.</td></tr>
         </tbody>
       </table>
     </section>
