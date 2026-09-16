@@ -46,7 +46,8 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/domain/cart.py` | `Cart.total`: suma precio unitario por cantidad de cada línea. |
 | `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
 | `backend/services/order_service.py` | Validacion y mutacion mediante `add_item`, `remove_item`, `change_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
-| `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para el LLM configurado. |
+| `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para el LLM configurado. Incluye `clear_cart` para vaciar el carrito en una sola operación. |
+| `backend/ai/order_tools_runtime.py` | Comparte instrucciones, ejecución segura, detección de mutaciones y sanitización de respuestas entre proveedores; transforma tablas Markdown del carrito en listas legibles. |
 | `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |
 | `backend/ai/live_transcriber.py` | `GeminiLiveTranscriber`: implementación Gemini del contrato STT; `LiveTranscriber` es alias temporal. |
 | `backend/ai/orchestrator.py` | `GeminiOrderInterpreter`: implementación Gemini de `OrderInterpreter`, conservada para `LLM_PROVIDER=gemini`. |
@@ -90,11 +91,11 @@ streaming de tokens de respuesta ni procesamiento parcial de pedidos hablados.
 
 ## Tools y reglas
 
-Las ocho tools expuestas son `add_item`, `get_cart`, `change_modifier`,
-`replace_item`, `remove_item`, `confirm_order`, `select_payment_method` y
-`return_to_order`. `change_quantity` y `clear_cart` existen en el servicio pero
-no tienen una tool expuesta: no debe anunciarse que el bot las ejecuta directamente
-por conversación.
+Las nueve tools expuestas son `add_item`, `get_cart`, `change_modifier`,
+`replace_item`, `remove_item`, `clear_cart`, `confirm_order`,
+`select_payment_method` y `return_to_order`. `change_quantity` existe en el
+servicio pero todavía no tiene una tool expuesta: no debe anunciarse que el bot
+la ejecuta directamente por conversación.
 
 `add_item` devuelve `needs_clarification` si no recibe cualquier grupo marcado
 como obligatorio por el catálogo, sin modificar nada. Después el servicio verifica

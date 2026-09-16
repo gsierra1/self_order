@@ -235,6 +235,35 @@ class ProviderFactoryTests(unittest.TestCase):
 
         self.assertEqual(text, "El total es 9.500 pesos argentinos.")
 
+    def test_runtime_converts_cart_table_to_readable_list(self) -> None:
+        """Convierte una tabla del carrito en una lista apta para pantalla y voz."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        runtime = OrderToolsRuntime(service)
+
+        text = runtime.sanitize_user_text(
+            "Tu carrito contiene:\n"
+            "| Línea | Producto | Cantidad | Modificadores | Precio unitario |\n"
+            "|---|---|---|---|---|\n"
+            "| 3 | Burger Doble | 1 | Agua, queso | 11.500 pesos argentinos |"
+        )
+
+        self.assertNotIn("|", text)
+        self.assertNotIn("Línea", text)
+        self.assertIn("Burger Doble (cantidad: 1; modificadores: Agua, queso;", text)
+        self.assertIn("11.500 pesos argentinos", text)
+
+    def test_clear_cart_tool_removes_all_lines_in_one_operation(self) -> None:
+        """La tool clear_cart vacía varias líneas sin encadenar eliminaciones."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+        service.add_item("BURGER_DOBLE", 1, {"drink": "WATER"})
+        runtime = OrderToolsRuntime(service)
+
+        result = runtime.execute(type("Call", (), {"name": "clear_cart", "args": {}})())
+
+        self.assertEqual(result["result"]["removed_count"], 2)
+        self.assertEqual(service.get_cart().items, [])
+
     def test_groq_interpreter_uses_the_same_tool_and_service(self) -> None:
         """Groq simulado ejecuta tools sin asumir precios ni estado del dominio."""
         service = OrderService(load_menu("config/menu.json"), Session())

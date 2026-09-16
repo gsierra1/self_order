@@ -325,6 +325,34 @@ def create_remove_item_tool(service: OrderService):
     return remove_item
 
 
+def create_clear_cart_tool(service: OrderService):
+    """Crea la tool que vacía el carrito en una única operación.
+
+    Args:
+        service: Servicio de pedidos asociado a la sesión actual.
+
+    Returns:
+        Función preparada para el intérprete LLM.
+    """
+
+    def clear_cart() -> dict:
+        """Elimina todas las líneas editables del carrito.
+
+        Returns:
+            Cantidad de líneas eliminadas y total actualizado.
+
+        Raises:
+            ValueError: Si la sesión ya no permite modificar el pedido.
+        """
+        removed_items = service.clear_cart()
+        return {
+            "removed_count": len(removed_items),
+            "cart_total": service.get_cart().total,
+        }
+
+    return clear_cart
+
+
 def create_confirm_order_tool(service: OrderService):
     """Crea la tool que inicia el pago de demostración.
 

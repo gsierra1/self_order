@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from backend.ai.tools import (
     create_add_item_tool,
     create_change_modifier_tool,
+    create_clear_cart_tool,
     create_confirm_order_tool,
     create_get_cart_tool,
     create_remove_item_tool,
@@ -21,7 +22,7 @@ from backend.services.order_service import OrderService
 class OrderToolsRuntime:
     """Reune prompt, tools y validaciones sin depender de un proveedor LLM."""
 
-    MUTATING_TOOLS = {"add_item", "change_modifier", "replace_item", "remove_item", "confirm_order", "select_payment_method", "return_to_order"}
+    MUTATING_TOOLS = {"add_item", "change_modifier", "replace_item", "remove_item", "clear_cart", "confirm_order", "select_payment_method", "return_to_order"}
 
     def __init__(self, service: OrderService) -> None:
         """Crea las tools ligadas a una sesion y su servicio real.
@@ -36,6 +37,7 @@ class OrderToolsRuntime:
             "change_modifier": create_change_modifier_tool(service),
             "replace_item": create_replace_item_tool(service),
             "remove_item": create_remove_item_tool(service),
+            "clear_cart": create_clear_cart_tool(service),
             "confirm_order": create_confirm_order_tool(service),
             "select_payment_method": create_select_payment_method_tool(service),
             "return_to_order": create_return_to_order_tool(service),
@@ -60,7 +62,7 @@ Interpreta al usuario y usa tools solo cuando corresponde.
 No inventes precios, descuentos, disponibilidad ni stock. OrderService y las tools son la autoridad.
 No agregues ni reemplaces productos con modificadores obligatorios faltantes: pregunta antes.
 No uses add_item para consultar precios o menu. Usa get_cart para consultar el pedido.
-Usa change_modifier para modificar o quitar un adicional opcional, replace_item para cambiar producto y remove_item para quitar una linea.
+Usa change_modifier para modificar o quitar un adicional opcional, replace_item para cambiar producto, remove_item para quitar una linea y clear_cart para vaciar todo el carrito de una sola vez.
 confirm_order solo prepara pago. En PAYMENT_PENDING usa select_payment_method o return_to_order; no repitas confirm_order.
 Para CASH di siempre "En caja". Para CARD indica que debe ingresar el numero de tarjeta.
 Puedes solicitar varias tools distintas en una frase, pero nunca repitas la misma operacion con los mismos argumentos.
@@ -154,4 +156,38 @@ CATALOGO ACTUAL:
             flags=re.IGNORECASE,
         )
         text = re.sub(r"\bUSD\b|\bdolares?\b", "pesos argentinos", text, flags=re.IGNORECASE)
-        return re.sub(r"\befectivo\b", "en caja", text, flags=re.IGNORECASE)
+        text = re.sub(r"\befectivo\b", "en caja", text, flags=re.IGNORECASE)
+        return self._normalize_cart_tables(text)
+
+    def _normalize_cart_tables(self, text: str) -> str:
+        """Convierte tablas Markdown del carrito en una lista legible.
+
+        Args:
+            text: Respuesta del intérprete que puede contener una tabla Markdown.
+
+        Returns:
+            Texto con las filas del carrito expresadas como líneas descriptivas.
+        """
+        lines = text.splitlines()
+        normalized: list[str] = []
+        index = 0
+        while index < len(lines):
+            current = lines[index]
+            next_line = lines[index + 1] if index + 1 < len(lines) else ""
+            if "|" not in current or not re.search(r"\|?\s*:?-{3,}", next_line):
+                normalized.append(current)
+                index += 1
+                continue
+            headers = [cell.strip() for cell in current.strip().strip("|").split("|")]
+            index += 2
+            while index < len(lines) and "|" in lines[index] and lines[index].strip():
+                cells = [cell.strip() for cell in lines[index].strip().strip("|").split("|")]
+                if len(cells) >= len(headers) and len(cells) >= 5:
+                    normalized.append(
+                        f"{cells[1]} (cantidad: {cells[2]}; "
+                        f"modificadores: {cells[3]}; precio unitario: {cells[4]})."
+                    )
+                else:
+                    normalized.append(lines[index])
+                index += 1
+        return "\n".join(normalized)

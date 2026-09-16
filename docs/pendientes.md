@@ -26,9 +26,10 @@ verificacion registrada junto con su cambio.
   errores 429/503 y tasa de exito para un conjunto de pedidos representativo.
   Definir ambos modelos y el plan de cuenta con evidencia, no solo por
   disponibilidad declarada.
-- **Capacidades conversacionales futuras:** decidir si `change_quantity` y
-  `clear_cart`, ya disponibles en `OrderService`, deben exponerse al usuario por
-  voz y texto. Si se incorporan, definir frases esperadas y pruebas.
+- **Capacidades conversacionales futuras:** decidir si `change_quantity`, ya
+  disponible en `OrderService`, debe exponerse al usuario por voz y texto. Si se
+  incorpora, definir frases esperadas y pruebas. `clear_cart` ya está expuesto
+  como una única tool para evitar encadenar eliminaciones individuales.
 
 ## Para un piloto de kiosco
 

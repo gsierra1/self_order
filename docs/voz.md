@@ -82,6 +82,9 @@ mutaciones automáticos. Los fallos después de una tool conservan el indicador
 
 La captura se libera al enviar, confirmar, fallar o salir de página. La lectura
 usa voces del navegador/sistema: prefiere es-AR y luego otra voz española.
+Antes de sintetizar, el frontend convierte puntos de miles como `11.500` en
+una separación que la voz suele pronunciar como once mil quinientos, y elimina
+marcas Markdown que no aportan información audible.
 Su timbre y disponibilidad varían; no se garantiza ejecución local. Voz OFF
 cancela la lectura, manteniendo el texto disponible.
 

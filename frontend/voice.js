@@ -91,7 +91,7 @@ export function speak(text, onError) {
         return;
     }
     speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(prepareSpeechText(text));
     const voices = speechSynthesis.getVoices();
     utterance.voice = voices.find(voice => voice.lang === "es-AR")
         || voices.find(voice => voice.lang.startsWith("es")) || null;
@@ -102,4 +102,17 @@ export function speak(text, onError) {
         }
     };
     speechSynthesis.speak(utterance);
+}
+
+/**
+ * Adapta importes y marcas de formato para que la voz del navegador los lea naturalmente.
+ * @param {string} text Texto visible generado por el asistente.
+ * @returns {string} Texto preparado para síntesis, sin puntos de miles ni Markdown.
+ */
+function prepareSpeechText(text) {
+    return text
+        .replace(/\b(\d{1,3}(?:\.\d{3})+)\b/g, (_, amount) => amount.replace(/\./g, " "))
+        .replace(/[|*_`]/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
 }

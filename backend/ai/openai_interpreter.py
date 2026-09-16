@@ -101,6 +101,7 @@ class OpenAIOrderInterpreter(OrderInterpreter):
             self._function("remove_item", "Elimina una linea del carrito.", {
                 "line_id": {"type": "integer"},
             }, ["line_id"]),
+            self._function("clear_cart", "Elimina todas las lineas del carrito en una sola operacion.", {}, []),
             self._function("confirm_order", "Prepara el pedido para seleccionar pago.", {}, []),
             self._function("select_payment_method", "Selecciona QR, tarjeta o pago en caja.", {
                 "method": {"type": "string", "enum": ["QR", "CARD", "CASH"]},

@@ -13,6 +13,7 @@ from backend.ai.gemini_client import create_gemini_client
 from backend.ai.tools import (
     create_add_item_tool,
     create_change_modifier_tool,
+    create_clear_cart_tool,
     create_confirm_order_tool,
     create_get_cart_tool,
     create_remove_item_tool,
@@ -109,6 +110,7 @@ class GeminiOrderInterpreter(OrderInterpreter):
         change_modifier_tool = create_change_modifier_tool(self.service)
         replace_item_tool = create_replace_item_tool(self.service)
         remove_item_tool = create_remove_item_tool(self.service)
+        clear_cart_tool = create_clear_cart_tool(self.service)
         confirm_order_tool = create_confirm_order_tool(self.service)
         select_payment_method_tool = create_select_payment_method_tool(self.service)
         return_to_order_tool = create_return_to_order_tool(self.service)
@@ -119,6 +121,7 @@ class GeminiOrderInterpreter(OrderInterpreter):
             "change_modifier": change_modifier_tool,
             "replace_item": replace_item_tool,
             "remove_item": remove_item_tool,
+            "clear_cart": clear_cart_tool,
             "confirm_order": confirm_order_tool,
             "select_payment_method": select_payment_method_tool,
             "return_to_order": return_to_order_tool,
@@ -196,6 +199,7 @@ REGLAS TRANSACCIONALES:
   change_modifier. Para quitar una opción opcional usá option_id=null.
 - Para sustituir un producto utilizá replace_item.
 - Para eliminar una línea utilizá remove_item.
+- Para vaciar todo el carrito utilizá clear_cart una sola vez.
 - Para finalizar el pedido utilizá confirm_order.
 - confirm_order solo prepara el pago y devuelve las opciones; no cierres la
   sesión ni anuncies el pago confirmado todavía.
