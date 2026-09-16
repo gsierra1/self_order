@@ -274,6 +274,17 @@ function updateControls() {
 }
 
 /**
+ * Reemplaza temporalmente los botones de pago mientras se procesa la voz.
+ * @returns {void} Actualiza el contenido visible del panel de pago.
+ * @effects Evita que la persona elija otra opción durante el turno.
+ */
+function showPaymentProcessing() {
+    if (!paymentPanel.hidden) {
+        paymentContent.innerHTML = "<p>Procesando tu elección de pago...</p>";
+    }
+}
+
+/**
  * Envía un evento JSON por la conexión abierta.
  * @param {string} type Tipo del evento.
  * @param {Object} data Datos del evento.
@@ -357,6 +368,10 @@ function renderPayment(cart) {
     }
     const method = cart.payment_method;
     if (!method) {
+        if (phase !== "ready") {
+            paymentContent.innerHTML = "<p>Procesando tu elección de pago...</p>";
+            return;
+        }
         paymentContent.innerHTML = "<p>Elegí una opción para continuar.</p><button type=\"button\" class=\"payment-action\" id=\"payment-back\">ATRÁS</button>";
         document.getElementById("payment-back").addEventListener("click", returnToOrder);
         return;
@@ -526,6 +541,7 @@ function maybeStartRecording() {
     clearTimeout(voiceTimer);
     voice.start();
     phase = "recording";
+    showPaymentProcessing();
     transcript.textContent = "Escuchando… tocá Enviar audio cuando termines.";
     setStatus("Escuchando", "processing");
     updateControls();
@@ -539,6 +555,7 @@ function maybeStartRecording() {
 async function toggleMicrophone() {
     if (phase === "recording") {
         phase = "processing";
+        showPaymentProcessing();
         clearTimeout(voiceTimer);
         updateControls();
         setStatus("Procesando audio...", "processing");
@@ -548,6 +565,7 @@ async function toggleMicrophone() {
     }
     if (phase !== "ready" || sessionClosed) return;
     phase = "preparing";
+    showPaymentProcessing();
     voiceBackendReady = false;
     voicePrepared = false;
     updateControls();
@@ -635,6 +653,9 @@ function onServerMessage(event) {
     } else if (type === "assistant.text") {
         appendMessage("Asistente", data.text, "assistant");
         phase = "ready";
+        if (data.cart?.state === "PAYMENT_PENDING" && !data.cart.payment_method) {
+            renderPayment(data.cart);
+        }
         if (!sessionClosed) setStatus("Listo");
         if (assistantAudioEnabled) speak(data.text, text => appendMessage("Sistema", text, "error"));
     } else if (["voice.error", "backend.error", "ai.error", "client.error", "voice.cancelled"].includes(type)) {
