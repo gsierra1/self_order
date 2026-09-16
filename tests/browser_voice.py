@@ -79,6 +79,18 @@ class BrowserAssistant:
         return "Agregué tu hamburguesa. El total es 9.500 pesos argentinos."
 
 
+def create_browser_assistant(service) -> BrowserAssistant:
+    """Crea el intérprete simulado sin depender del proveedor configurado.
+
+    Args:
+        service: Servicio real construido por la API para la sesión de prueba.
+
+    Returns:
+        Intérprete determinista conectado al servicio real.
+    """
+    return BrowserAssistant(service, model="simulado")
+
+
 class BrowserVoiceTests(unittest.TestCase):
     """Prueba visible del circuito completo con Edge y dispositivos sintéticos."""
 
@@ -90,7 +102,10 @@ class BrowserVoiceTests(unittest.TestCase):
         server = uvicorn.Server(uvicorn.Config(api.app, log_level="error"))
         previous = set(api.sessions)
         with patch("backend.logging.event_logger.LOGGER.disabled", True), \
-             patch("backend.ai.factories.GeminiOrderInterpreter", BrowserAssistant), \
+             patch(
+                 "backend.api.app.create_order_interpreter",
+                 side_effect=create_browser_assistant,
+             ), \
              patch("backend.api.conversation_socket.create_speech_to_text", BrowserTranscriber):
             thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
             thread.start()
