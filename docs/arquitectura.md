@@ -216,6 +216,11 @@ usa su `cart` validado para mostrar de inmediato el QR, el formulario de tarjeta
 o el número de pedido para caja. La respuesta textual del LLM puede llegar
 después y solo aporta la explicación conversacional.
 
+Durante `PAYMENT_PENDING`, `conversation_socket.py` reconoce localmente una
+solicitud explícita de QR, tarjeta o caja y la delega a `OrderService`. Esto evita
+una llamada innecesaria al LLM para una selección cerrada y reduce la latencia;
+las frases ambiguas siguen el flujo normal del intérprete.
+
 El callback de eventos evita importar WebSocket desde el servicio.
 `send_event_threadsafe()` usa `asyncio.run_coroutine_threadsafe()`. El envío es
 asíncrono y no se espera su resultado; no hay entrega garantizada ni replay.

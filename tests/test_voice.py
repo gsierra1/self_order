@@ -11,6 +11,7 @@ from google.genai import types
 from starlette.websockets import WebSocketDisconnect
 
 import backend.api.app as api
+from backend.api.conversation_socket import _detect_payment_method
 from backend.ai.live_transcriber import LiveTranscriber
 from backend.ai.errors import AIProviderError
 from backend.domain.session import Session
@@ -62,6 +63,13 @@ class ConversationTests(unittest.TestCase):
         api.websocket_manager.disconnect(self.session.session_id)
         self.fake.stop()
         self.log_patch.stop()
+
+    def test_payment_phrases_are_detected_without_llm(self) -> None:
+        """Reconoce las opciones explícitas para evitar latencia del LLM."""
+        self.assertEqual(_detect_payment_method("quiero pagar con tarjeta"), "CARD")
+        self.assertEqual(_detect_payment_method("prefiero pagar en caja"), "CASH")
+        self.assertEqual(_detect_payment_method("pago por QR"), "QR")
+        self.assertIsNone(_detect_payment_method("quiero pagar"))
 
     def start_voice(self, ws) -> None:
         """Inicia voz y verifica que la hipótesis todavía no ejecuta el pedido.

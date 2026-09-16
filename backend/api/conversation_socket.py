@@ -3,6 +3,7 @@
 import asyncio
 import json
 import time
+import unicodedata
 from contextlib import suppress
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -12,6 +13,26 @@ from backend.ai.contracts import SpeechToText
 from backend.ai.factories import create_speech_to_text
 from backend.domain.session import SessionState
 from backend.logging.event_logger import log_event
+
+
+def _detect_payment_method(text: str) -> str | None:
+    """Detecta una opción de pago explícita durante la etapa de pago.
+
+    Args:
+        text: Texto transcripto o escrito por la persona.
+
+    Returns:
+        Código interno ``QR``, ``CARD`` o ``CASH`` cuando la frase contiene una
+        opción inequívoca; ``None`` si debe interpretarla el LLM.
+    """
+    normalized = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().upper()
+    if "TARJETA" in normalized:
+        return "CARD"
+    if "CAJA" in normalized or "EFECTIVO" in normalized:
+        return "CASH"
+    if "QR" in normalized:
+        return "QR"
+    return None
 
 
 async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) -> None:
@@ -43,6 +64,29 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
             text: Mensaje escrito o transcripción definitiva del usuario.
         """
         started_at = time.perf_counter()
+        if runtime.service.session.state == SessionState.PAYMENT_PENDING:
+            payment_method = _detect_payment_method(text)
+            if payment_method is not None:
+                try:
+                    runtime.service.select_payment_method(payment_method)
+                    labels = {"QR": "QR", "CARD": "tarjeta", "CASH": "caja"}
+                    await publish("assistant.text", {
+                        "text": f"Seleccioné el pago en {labels[payment_method]}.",
+                        "cart": snapshot(runtime.service),
+                        "session_closed": False,
+                    })
+                    log_event(
+                        "INFO",
+                        "conversation.completed",
+                        session_id=session_id,
+                        input_length=len(text),
+                        duration_ms=round((time.perf_counter() - started_at) * 1000),
+                    )
+                    return
+                except ValueError:
+                    # Si la sesión cambió mientras llegaba el turno, conserva
+                    # el flujo general y deja que el orquestador informe el estado.
+                    pass
         worker = asyncio.create_task(asyncio.to_thread(runtime.assistant.send_message, text))
         try:
             response = await asyncio.shield(worker)
