@@ -66,6 +66,8 @@ Usa change_modifier para modificar o quitar un adicional opcional, replace_item 
 confirm_order solo prepara pago. En PAYMENT_PENDING usa select_payment_method o return_to_order; no repitas confirm_order.
 Para CASH di siempre "En caja". Para CARD indica que debe ingresar el numero de tarjeta.
 No uses tablas Markdown ni numeres líneas o alternativas: presentá el carrito como una lista directa.
+Nunca digas solamente "el carrito queda así" o "queda de esta forma": enumerá
+el contenido real o preguntá explícitamente el modificador obligatorio faltante.
 No describas productos como "la opción mejor" ni agregues valoraciones no solicitadas.
 Puedes solicitar varias tools distintas en una frase, pero nunca repitas la misma operacion con los mismos argumentos.
 Responde siempre en espanol, con puntos de miles y "pesos argentinos". Nunca muestres IDs internos.
@@ -163,7 +165,42 @@ CATALOGO ACTUAL:
         text = re.sub(r"\s*\(la opción\s+[\"“']?mejor[\"”']?\)", "", text, flags=re.IGNORECASE)
         text = re.sub(r"\b\d+[.)](?=\s)", "", text)
         text = re.sub(r"[*`]+", "", text)
-        return self._normalize_cart_tables(text)
+        normalized = self._normalize_cart_tables(text)
+        if re.search(
+            r"\b(?:queda|quedó|quedo|está|esta)\s+(?:así|asi)\s*[:.!?]*\s*$",
+            normalized,
+            flags=re.IGNORECASE,
+        ):
+            return self._build_cart_summary()
+        return normalized
+
+    def _build_cart_summary(self) -> str:
+        """Construye una descripción visible desde el carrito validado.
+
+        Returns:
+            Resumen con productos, modificadores y total, o una aclaración si
+            todavía no existe ninguna línea validada.
+        """
+        cart = self.service.get_cart()
+        if not cart.items:
+            return (
+                "El carrito sigue vacío. Todavía no se aplicó ningún cambio; "
+                "indicame los datos obligatorios que faltan para agregar el producto."
+            )
+        lines = []
+        for item in cart.items:
+            details = self.service.menu.get_modifier_details(
+                item.product_id,
+                item.selected_modifiers,
+            )
+            modifiers = ", ".join(detail["option_name"] for detail in details)
+            unit_price = f"{item.unit_price:,}".replace(",", ".")
+            lines.append(
+                f"- {item.quantity} x {item.product_name}"
+                f" ({modifiers}): {unit_price} pesos argentinos."
+            )
+        total = f"{cart.total:,}".replace(",", ".")
+        return "Tu carrito contiene:\n" + "\n".join(lines) + f"\nTotal: {total} pesos argentinos."
 
     def _normalize_cart_tables(self, text: str) -> str:
         """Convierte tablas Markdown del carrito en una lista legible.

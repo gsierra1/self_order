@@ -28,6 +28,8 @@ const transcript = document.getElementById("voice-transcript");
 const confirmCartButton = document.getElementById("confirm-cart-button");
 const paymentPanel = document.getElementById("payment-panel");
 const paymentContent = document.getElementById("payment-content");
+const paymentOptions = paymentPanel.querySelector(".payment-options");
+const paymentTitle = paymentPanel.querySelector("h3");
 
 const voice = new VoiceInput(sendAudio, failVoice);
 
@@ -281,6 +283,8 @@ function updateControls() {
  */
 function showPaymentProcessing() {
     if (currentCart?.state === "PAYMENT_PENDING" && !currentCart.payment_method) {
+        paymentOptions.hidden = true;
+        paymentTitle.hidden = true;
         paymentContent.innerHTML = "<p>Procesando tu elección de pago...</p>";
     }
 }
@@ -364,10 +368,15 @@ function renderPayment(cart) {
     clearInterval(countdownTimer);
     paymentPanel.hidden = cart.state !== "PAYMENT_PENDING";
     if (paymentPanel.hidden) {
+        paymentOptions.hidden = true;
+        paymentTitle.hidden = true;
         paymentContent.innerHTML = "";
         return;
     }
     const method = cart.payment_method;
+    const showSelector = !method && phase === "ready";
+    paymentOptions.hidden = !showSelector;
+    paymentTitle.hidden = !showSelector;
     if (!method) {
         if (phase !== "ready") {
             paymentContent.innerHTML = "<p>Procesando tu elección de pago...</p>";

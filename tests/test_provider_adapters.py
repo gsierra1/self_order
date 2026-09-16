@@ -284,6 +284,28 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertNotIn("etc.", text)
         self.assertIn("etcétera", text)
 
+    def test_runtime_replaces_empty_cart_reference_with_real_state(self) -> None:
+        """Evita una respuesta que promete mostrar el carrito sin detallarlo."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        runtime = OrderToolsRuntime(service)
+
+        text = runtime.sanitize_user_text("Tu carrito queda así:")
+
+        self.assertIn("carrito sigue vacío", text)
+        self.assertIn("datos obligatorios", text)
+
+    def test_runtime_builds_real_summary_for_incomplete_reference(self) -> None:
+        """Completa una referencia vacía usando únicamente el carrito validado."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+        runtime = OrderToolsRuntime(service)
+
+        text = runtime.sanitize_user_text("Tu carrito queda así.")
+
+        self.assertIn("Burger Clásica", text)
+        self.assertIn("Agua", text)
+        self.assertIn("8.500 pesos argentinos", text)
+
     def test_clear_cart_tool_removes_all_lines_in_one_operation(self) -> None:
         """La tool clear_cart vacía varias líneas sin encadenar eliminaciones."""
         service = OrderService(load_menu("config/menu.json"), Session())

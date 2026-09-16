@@ -220,6 +220,9 @@ El frontend trata `payment.method_selected` como una actualización prioritaria:
 usa su `cart` validado para mostrar de inmediato el QR, el formulario de tarjeta
 o el número de pedido para caja. La respuesta textual del LLM puede llegar
 después y solo aporta la explicación conversacional.
+El título y los botones para elegir método se muestran únicamente mientras
+`payment_method` sea nulo; al existir una elección, queda visible solo el flujo
+correspondiente a QR, tarjeta o caja.
 Ese snapshot incluye `payment_method` y `order_number`; así, aunque los eventos
 asíncronos lleguen muy próximos, ninguno puede reconstruir el panel con datos de
 pago incompletos.
@@ -232,6 +235,11 @@ las frases ambiguas siguen el flujo normal del intérprete.
 Mientras un turno de voz está en curso, `frontend/app.js` reemplaza los botones
 de pago por un aviso de procesamiento. Así se evita que la persona duplique la
 selección con un clic antes de recibir el resultado del turno.
+
+Las instrucciones del intérprete exigen enumerar el carrito o preguntar el dato
+obligatorio faltante. Como defensa adicional, si el proveedor termina con una
+referencia vacía como “el carrito queda así”, `OrderToolsRuntime` la reemplaza
+por un resumen construido desde el carrito validado por `OrderService`.
 
 El callback de eventos evita importar WebSocket desde el servicio.
 `send_event_threadsafe()` usa `asyncio.run_coroutine_threadsafe()`. El envío es
