@@ -10,8 +10,12 @@ class SessionState(str, Enum):
     Representa el estado transaccional de una sesión de pedido.
 
     Attributes:
-        ACTIVE: La sesión admite consultas y modificaciones del carrito.
-        CONFIRMED: El pedido fue confirmado y ya no admite modificaciones.
+        ACTIVE: La sesion admite consultas y modificaciones del carrito.
+        PAYMENT_PENDING: El carrito queda reservado para elegir o completar el
+            pago. Conserva su contenido, no admite mutaciones y puede volver a
+            ``ACTIVE`` mediante ``return_to_order``.
+        CONFIRMED: El pago de demostracion fue completado y el pedido ya no
+            admite modificaciones.
     """
 
     ACTIVE = "ACTIVE"
@@ -28,9 +32,13 @@ class Session:
     transaccional que determina si el pedido todavía puede modificarse.
 
     Attributes:
-        session_id: Identificador técnico único de la sesión.
-        cart: Carrito asociado a la sesión.
-        state: Estado transaccional actual de la sesión.
+        session_id: Identificador tecnico unico de la sesion.
+        cart: Carrito asociado a la sesion.
+        state: Estado transaccional actual: ``ACTIVE``, ``PAYMENT_PENDING`` o
+            ``CONFIRMED``.
+        order_number: Numero generado al preparar el pago; se conserva hasta
+            que el pedido se confirma o se vuelve a editar.
+        payment_method: Metodo elegido durante ``PAYMENT_PENDING``.
     """
 
     session_id: str = field(

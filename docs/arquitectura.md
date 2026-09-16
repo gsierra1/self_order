@@ -39,10 +39,10 @@ sí sola, evidencia de que un pedido se haya modificado.
 | Archivo | Responsabilidad y puntos de entrada |
 | --- | --- |
 | `backend/domain/product.py` | `Product`, `ModifierGroup`, `ModifierOption`: estructura del catálogo y adicionales de precio. |
-| `backend/domain/menu.py` | `load_menu()` convierte JSON a objetos; `Menu.get_product()` busca por identificador. |
+| `backend/domain/menu.py` | `load_menu()` convierte JSON a objetos; `Menu.get_product()` busca por identificador y `Menu.get_modifier_details()` transforma una seleccion interna ya validada en datos visibles para el frontend. |
 | `backend/domain/cart_item.py` | `CartItem`: una línea con producto, cantidad, configuración y precio unitario. |
 | `backend/domain/cart.py` | `Cart.total`: suma precio unitario por cantidad de cada línea. |
-| `backend/domain/session.py` | `Session`: UUID, carrito independiente y estado `ACTIVE` o `CONFIRMED`. |
+| `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
 | `backend/services/order_service.py` | Validación y mutación mediante `add_item`, `remove_item`, `change_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `confirm_order`; consulta mediante `get_cart`. |
 | `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para Gemini. |
 | `backend/ai/orchestrator.py` | `OrderConversationOrchestrator`: instrucciones, catálogo, historial conversacional del chat, control y ejecución manual de tools. |
@@ -109,17 +109,33 @@ y argumentos repetida dentro del turno. Esto también puede rechazar consultas
 repetidas legítimas; no es una garantía general contra duplicados entre mensajes
 o reconexiones.
 
-La confirmación conversacional pasa primero la sesión a `PAYMENT_PENDING` y
-genera el número de pedido en backend. `select_payment_method` acepta `QR`,
-`CARD` o `CASH`; el frontend completa la demo mediante un endpoint y recién
-entonces la sesión pasa a `CONFIRMED`. El QR es una imagen inválida de demo,
-sin datos de pago ni destino real; la tarjeta tampoco se envía ni se almacena.
-Mientras el pago está pendiente, `return_to_order` permite volver al carrito y
-eliminar líneas sigue pasando por `OrderService`. Tras finalizar, la interfaz
-muestra el número de pedido, cuenta cinco segundos y crea otra sesión.
-La confirmación también puede iniciarse desde el botón del carrito sin pasar por
-Gemini; las consultas de precios usan la información del catálogo y no mutan el
+La confirmacion conversacional pasa primero la sesion a `PAYMENT_PENDING` y
+genera el numero de pedido en backend. `select_payment_method` acepta `QR`,
+`CARD` o `CASH`; el frontend completa la demo mediante un endpoint y recien
+entonces la sesion pasa a `CONFIRMED`. El QR es una imagen invalida de demo,
+sin datos de pago ni destino real; la tarjeta tampoco se envia ni se almacena.
+Mientras el pago esta pendiente, `return_to_order` permite volver al carrito y
+eliminar lineas sigue pasando por `OrderService`. Tras finalizar, la interfaz
+muestra el numero de pedido, cuenta cinco segundos y crea otra sesion.
+La confirmacion tambien puede iniciarse desde el boton del carrito sin pasar por
+Gemini; las consultas de precios usan la informacion del catalogo y no mutan el
 pedido.
+
+### Estados de una sesion
+
+| Estado | Cuando aparece | Operaciones y transicion permitida |
+| --- | --- | --- |
+| `ACTIVE` | Al crear la sesion o al volver desde pago. | Permite agregar, cambiar o eliminar. `prepare_payment()` la lleva a `PAYMENT_PENDING`. |
+| `PAYMENT_PENDING` | Se confirmo el carrito para elegir QR, tarjeta o caja; el backend ya asigno numero de pedido. | No permite mutar el carrito. `select_payment_method()` guarda la eleccion; `complete_payment()` la lleva a `CONFIRMED`; `return_to_order()` recupera `ACTIVE` con el mismo carrito. |
+| `CONFIRMED` | El pago demo se completo. | Es el estado final: el pedido no admite texto, voz ni cambios de carrito. El frontend inicia una sesion nueva luego de la cuenta regresiva. |
+
+El flujo expuesto por el dashboard y las tools usa siempre
+`ACTIVE -> PAYMENT_PENDING -> CONFIRMED`. Sin embargo, `OrderService.confirm_order()`
+permanece como una operacion heredada usada por pruebas previas y puede pasar de
+`ACTIVE` a `CONFIRMED` de forma directa. No participa en el recorrido normal de
+pago; conservar ambas rutas explica la diferencia historica, pero es deuda de
+mantenimiento a retirar o unificar antes de presentar el servicio como contrato
+estable.
 
 ## Modelo de datos y precios
 
@@ -147,9 +163,20 @@ hamburguesas con bebidas o extras diferentes deben representarse en líneas dist
 eliminar líneas. `replace_item` conserva ID y cantidad, valida el destino y
 recién después modifica producto, opciones y precio.
 
-`confirm_order()` rechaza carrito vacío y cambia el estado a `CONFIRMED`.
-Después las mutaciones están bloqueadas. Esa confirmación es local, sin pago
-ni aceptación de un sistema externo.
+El recorrido vigente del dashboard usa `prepare_payment()` y
+`complete_payment()` para pasar por los tres estados de pago. El metodo
+`confirm_order()` todavia rechaza carrito vacio y cambia directamente a
+`CONFIRMED`, pero es una ruta heredada de pruebas y no debe usarse para incorporar
+nuevas integraciones de pago. Despues de `CONFIRMED` las mutaciones estan
+bloqueadas; la confirmacion sigue siendo local, sin una aceptacion externa.
+
+`Menu.get_modifier_details()` no determina que modificadores debe pedir el bot ni
+valida una seleccion nueva. Recibe el producto y las opciones que ya quedaron
+validadas en `CartItem.selected_modifiers`, busca sus nombres y precios en el
+catalogo y devuelve detalles aptos para la interfaz. Por ejemplo, traduce
+`{"drink": "COCA", "extras": "ADD_TOMATO"}` a datos visibles como
+"Bebida: Coca-Cola" y "Tomate + ARS 1.000". Asi el frontend no necesita conocer
+identificadores tecnicos ni duplicar el catalogo.
 
 ## Contratos de transporte
 

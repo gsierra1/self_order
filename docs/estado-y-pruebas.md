@@ -379,6 +379,21 @@ dentro de cada hamburguesa, por lo que Coca-Cola podia agotarse solo para una de
 ellas. Los grupos ahora son compartidos y la prueba automatica confirma que una
 Coca-Cola agotada se rechaza tambien al pedir Burger Doble.
 
+### Estados de sesion y representacion de modificadores (16/09/2026)
+
+Se completo la documentacion de `SessionState`: el flujo vigente del dashboard
+es `ACTIVE` -> `PAYMENT_PENDING` -> `CONFIRMED`. Mientras el pago esta pendiente,
+la persona puede elegir metodo o usar atras para volver a `ACTIVE` y editar el
+mismo carrito. Se identifico una ruta heredada: `OrderService.confirm_order()`
+pasa directamente a `CONFIRMED` y continua utilizada por pruebas antiguas, pero
+no por el recorrido normal de frontend ni por las tools. Queda pendiente unificar
+o retirar esa ruta antes de estabilizar el contrato de pagos.
+
+Tambien se documento `Menu.get_modifier_details()`: no infiere ni valida
+modificadores. Traduce IDs ya validados del carrito a nombres, obligatoriedad y
+precios visibles para que el frontend renderice "Bebida", "Extras" y sus importes
+sin repetir reglas de catalogo.
+
 ### Reconexion automatica del navegador (15/09/2026)
 
 El frontend reintenta el WebSocket de la misma sesion despues de un cierre
