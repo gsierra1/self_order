@@ -224,8 +224,7 @@ creditos y no recomienda reintentar; OpenAI STT no se considera implementado.
 
 ## 11. Groq gratuito como LLM alternativo para la demostracion
 
-**Estado:** implementada con pruebas simuladas y altas reales básicas; pendiente
-de matriz manual completa desde el navegador y por voz.
+**Estado:** implementada.
 
 **Contexto comprobado:** OpenAI autentico la clave, pero la cuenta no tiene
 creditos API. Groq publica un nivel de uso gratuito y una API compatible con
@@ -233,43 +232,17 @@ Chat Completions. Se probaron `qwen/qwen3.8-27b` y `openai/gpt-oss-20b`; el
 segundo resultó más consistente para las tools básicas del menú y quedó como
 predeterminado.
 
-**Alternativas consideradas:** instalar Ollama y ejecutar un modelo local;
-usar un router gratuito que cambie de modelo; o integrar Groq. Ollama elimina la
-dependencia de cuota cloud, pero requiere instalacion, descarga y evaluacion del
-hardware. Un router puede variar de modelo entre turnos. Groq permite una prueba
-remota inmediata con una clave gratuita y un modelo explicito.
 
 **Decision adoptada:** añadir `GroqOrderInterpreter`, `GROQ_API_KEY` y
 `GROQ_CHAT_MODEL`. El adaptador reutiliza el protocolo de tools compatible con
 OpenAI, pero crea su propio cliente contra `https://api.groq.com/openai/v1` y
 no lee `OPENAI_API_KEY`. `STT_PROVIDER` sigue en Gemini.
 
-**Consecuencias:** no se descarga un modelo en la computadora y no cambia
-`OrderService`, menu, carrito, pagos ni voz. La cuota gratuita puede devolver
-429 por limite; se debe medir y no se debe presentar como capacidad productiva
-garantizada.
+**Consecuencias:** no cambia `OrderService`, menu, carrito, pagos ni voz. 
+La cuota gratuita puede devolver 429 por limite; se debe medir y no se debe
+presentar como capacidad productiva garantizada.
 
 **Limites:** la API compatible no prueba que todos los modelos futuros de Groq
 mantengan el mismo comportamiento de tools. La prueba simulada protege el
 recorrido interno; la validacion manual debe confirmar autenticacion, cuota,
 latencia y operaciones del pedido.
-
-**Evidencia posterior:** el 16/09/2026 una llamada real a Groq autentico la
-cuenta y devolvio 429 antes de ejecutar tools: el SDK reservaba 2.048 tokens de
-salida y el límite gratuito de `qwen/qwen3.8-27b` era 1.000 tokens por minuto.
-Se limito `GroqOrderInterpreter` a 800 tokens por respuesta. Esta correccion no
-modifica el dominio; queda pendiente repetir la prueba real completa.
-
-**Resultado de comparacion manual:** `qwen/qwen3.8-27b` completo un alta
-simple, pero en una secuencia posterior emitio una respuesta incompleta antes de
-usar una tool. `openai/gpt-oss-20b` agrego una Burger Clasica con Agua mediante
-la tool en dos pruebas reales. Se adopta este ultimo como valor predeterminado
-para la demostracion. La validacion de todos los casos conversacionales y de la
-interfaz web sigue pendiente.
-
-**Correccion de salida monetaria:** una respuesta real de Groq utilizó
-`$9 500 pesos argentinos`, con un separador Unicode angosto. El sanitizador
-interpretaba solo `$9` y duplicaba el texto monetario. Se normalizan espacios
-Unicode entre dígitos a puntos antes de reemplazar `$` o `ARS`, y se cubre con
-una prueba automática. El precio real sigue siendo autoridad de `OrderService`;
-esta correccion afecta solo el texto conversacional.

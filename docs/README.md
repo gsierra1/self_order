@@ -1,11 +1,8 @@
 # Documentación del proyecto
 
-Primera revisión: 14 de septiembre de 2026.
-
 Este proyecto busca permitir que una persona haga su pedido hablando o
-escribiendo, vea cómo se arma en pantalla y reciba aclaraciones antes de agregar
-productos incompletos. La presentación técnica debe explicar tanto la experiencia
-como las decisiones que la hacen confiable.
+escribiendo, vea cómo se va modificando su carrito en pantalla y reciba 
+aclaraciones antes de agregar productos incompletos. 
 
 ## Recorrido sugerido
 
@@ -24,11 +21,3 @@ Cada implementación debe actualizar el documento correspondiente en el mismo
 cambio. Una capacidad pasa a «verificada» solo si se registra cómo se comprobó.
 Una decisión propuesta pasa a «adoptada» cuando se decide y se implementa según
 su alcance. Conservar los pendientes hasta resolverlos con evidencia.
-
-La revisión inicial leyó todos los archivos fuente, configuración no secreta,
-scripts de pruebas, historial Git reciente y estadísticas de logs locales.
-No se inspeccionó el contenido de `.env` ni se escucharon audios de usuarios.
-No se ejecutó una conversación real nueva contra Gemini durante esta revisión.
-
-Los motivos históricos que no están escritos en código o commits se presentan
-como interpretaciones, no como recuerdos de decisiones de la autora.
