@@ -203,6 +203,7 @@ interrupciones; esta arquitectura permite esa comparación sin reescribir
 `OrderService`.
 
 
-OpenAI esta implementado solo como interprete LLM. `STT_PROVIDER=openai` no es
-valido todavia: la transcripcion OpenAI por streaming requerira otro adaptador
-que implemente el contrato completo de voz.
+OpenAI y Groq estan implementados solo como interpretes LLM.
+`STT_PROVIDER=openai` o `STT_PROVIDER=groq` no son validos todavia: cada
+transcripcion por streaming requerira otro adaptador que implemente el contrato
+completo de voz.

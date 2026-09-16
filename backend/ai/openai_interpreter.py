@@ -17,6 +17,8 @@ class OpenAIOrderInterpreter(OrderInterpreter):
     """Implementa OrderInterpreter con Chat Completions y function calling."""
 
     provider_name = "openai"
+    provider_label = "OpenAI"
+    max_completion_tokens: int | None = None
 
     def __init__(
         self,
@@ -24,16 +26,16 @@ class OpenAIOrderInterpreter(OrderInterpreter):
         model: str,
         max_tool_rounds: int = 5,
     ) -> None:
-        """Inicializa historial, herramientas y cliente de OpenAI.
+        """Inicializa historial, herramientas y cliente del proveedor.
 
         Args:
             service: Autoridad que valida cada operacion solicitada.
-            model: Modelo OpenAI de chat con function calling.
+            model: Modelo de chat con function calling compatible.
             max_tool_rounds: Maximo de rondas de tools por mensaje.
 
         Raises:
             ValueError: Si max_tool_rounds no es positivo.
-            RuntimeError: Si OPENAI_API_KEY no esta configurada.
+            RuntimeError: Si falta la credencial del proveedor concreto.
         """
         if max_tool_rounds <= 0:
             raise ValueError("max_tool_rounds debe ser mayor que cero.")
@@ -42,21 +44,32 @@ class OpenAIOrderInterpreter(OrderInterpreter):
         self.max_tool_rounds = max_tool_rounds
         self.runtime = OrderToolsRuntime(service)
         self.available_tools = self.runtime.available_tools
-        self.client = create_openai_client()
+        self.client = self._create_client()
         self.messages = [{
             "role": "system",
             "content": self.runtime.build_system_instruction(),
         }]
         log_event(
             "INFO",
-            "openai_interpreter.started",
+            f"{self.provider_name}_interpreter.started",
             session_id=service.session.session_id,
             model=model,
         )
 
     def close(self) -> None:
-        """Cierra el cliente OpenAI sin modificar el pedido de la sesion."""
+        """Cierra el cliente del proveedor sin modificar el pedido de la sesion."""
         self.client.close()
+
+    def _create_client(self):
+        """Crea el cliente compatible con Chat Completions del proveedor.
+
+        Returns:
+            Cliente sincronico que implementa Chat Completions.
+
+        Raises:
+            RuntimeError: Si faltan las credenciales del proveedor concreto.
+        """
+        return create_openai_client()
 
     def _tool_definitions(self) -> list[dict]:
         """Describe las tools autorizadas con el esquema de OpenAI.
@@ -134,7 +147,7 @@ class OpenAIOrderInterpreter(OrderInterpreter):
         transaction_applied: bool,
         last_tool: str | None = None,
     ):
-        """Solicita una respuesta OpenAI y traduce fallas al error comun.
+        """Solicita una respuesta del proveedor y traduce fallas al error comun.
 
         Args:
             stage: Etapa logica de la interpretacion.
@@ -145,14 +158,17 @@ class OpenAIOrderInterpreter(OrderInterpreter):
             Respuesta de Chat Completions.
 
         Raises:
-            AIProviderError: Si OpenAI rechaza o no puede atender la solicitud.
+            AIProviderError: Si el proveedor rechaza o no puede atender la solicitud.
         """
         try:
-            return self.client.chat.completions.create(
-                model=self.model,
-                messages=self.messages,
-                tools=self._tool_definitions(),
-            )
+            request = {
+                "model": self.model,
+                "messages": self.messages,
+                "tools": self._tool_definitions(),
+            }
+            if self.max_completion_tokens is not None:
+                request["max_tokens"] = self.max_completion_tokens
+            return self.client.chat.completions.create(**request)
         except (APIStatusError, APIConnectionError, APITimeoutError) as exc:
             raise self._classify_error(
                 exc, stage, transaction_applied, last_tool,
@@ -165,10 +181,10 @@ class OpenAIOrderInterpreter(OrderInterpreter):
         transaction_applied: bool,
         last_tool: str | None,
     ) -> AIProviderError:
-        """Convierte un error OpenAI en un mensaje seguro para el frontend.
+        """Convierte un error del proveedor en un mensaje seguro para el frontend.
 
         Args:
-            exc: Excepcion emitida por el SDK OpenAI.
+            exc: Excepcion emitida por el SDK compatible con OpenAI.
             stage: Etapa en la que ocurrio la falla.
             transaction_applied: Indica si el pedido ya fue mutado.
             last_tool: Ultima tool aplicada antes del error.
@@ -179,37 +195,37 @@ class OpenAIOrderInterpreter(OrderInterpreter):
         status_code = getattr(exc, "status_code", None)
         if status_code == 401:
             error_type, retryable = "AUTHENTICATION_ERROR", False
-            message = "OpenAI rechazo la autenticacion de la aplicacion (401)."
+            message = f"{self.provider_label} rechazo la autenticacion de la aplicacion (401)."
         elif status_code == 404:
             error_type, retryable = "MODEL_NOT_FOUND", False
-            message = f"El modelo OpenAI configurado {self.model!r} no esta disponible (404)."
+            message = f"El modelo {self.provider_label} configurado {self.model!r} no esta disponible (404)."
         elif status_code == 429:
             technical_message = str(exc).lower()
             if "credit_balance_exhausted" in technical_message or "no credits" in technical_message:
                 error_type, retryable = "CREDIT_BALANCE_EXHAUSTED", False
                 message = (
-                    "La cuenta de OpenAI no tiene creditos disponibles para la API "
+                    f"La cuenta de {self.provider_label} no tiene creditos disponibles para la API "
                     "(429). Configura facturacion o agrega creditos antes de reintentar."
                 )
             else:
                 error_type, retryable = "RATE_LIMIT", True
-                message = "OpenAI alcanzo temporalmente un limite de uso (429)."
+                message = f"{self.provider_label} alcanzo temporalmente un limite de uso (429)."
         elif status_code in {500, 502, 503, 504}:
             error_type, retryable = "SERVICE_UNAVAILABLE", True
-            message = f"OpenAI no esta disponible temporalmente ({status_code})."
+            message = f"{self.provider_label} no esta disponible temporalmente ({status_code})."
         elif status_code is None:
             error_type, retryable = "NETWORK_ERROR", True
-            message = "No se pudo comunicar el backend con OpenAI."
+            message = f"No se pudo comunicar el backend con {self.provider_label}."
         else:
             error_type, retryable = "OPENAI_API_ERROR", False
-            message = f"OpenAI devolvio un error de API ({status_code})."
+            message = f"{self.provider_label} devolvio un error de API ({status_code})."
         suffix = (
             " La operacion del pedido ya se aplico; no la repitas."
             if transaction_applied
             else " El pedido no fue modificado por esta operacion."
         )
         return AIProviderError(
-            provider="OpenAI", model=self.model, error_type=error_type,
+            provider=self.provider_label, model=self.model, error_type=error_type,
             status_code=status_code, api_status=None, stage=stage,
             retryable=retryable, transaction_applied=transaction_applied,
             last_tool=last_tool, technical_message=str(exc),
@@ -227,7 +243,7 @@ class OpenAIOrderInterpreter(OrderInterpreter):
 
         Raises:
             ValueError: Si el mensaje esta vacio o una tool repite una mutacion.
-            AIProviderError: Si OpenAI no completa una solicitud.
+            AIProviderError: Si el proveedor no completa una solicitud.
             RuntimeError: Si la respuesta no contiene texto final util.
         """
         if not message.strip():
@@ -238,7 +254,11 @@ class OpenAIOrderInterpreter(OrderInterpreter):
         executed_calls: set = set()
         for tool_round in range(self.max_tool_rounds + 1):
             response = self._request(
-                stage="OPENAI_INTERPRETATION" if not last_tool else "OPENAI_AFTER_TOOL",
+                stage=(
+                    f"{self.provider_name.upper()}_INTERPRETATION"
+                    if not last_tool
+                    else f"{self.provider_name.upper()}_AFTER_TOOL"
+                ),
                 transaction_applied=transaction_applied,
                 last_tool=last_tool,
             )
@@ -256,7 +276,9 @@ class OpenAIOrderInterpreter(OrderInterpreter):
                 try:
                     arguments = json.loads(call.function.arguments or "{}")
                 except json.JSONDecodeError as exc:
-                    raise RuntimeError("OpenAI devolvio argumentos JSON invalidos.") from exc
+                    raise RuntimeError(
+                        f"{self.provider_label} devolvio argumentos JSON invalidos."
+                    ) from exc
                 calls.append(SimpleNamespace(name=call.function.name, args=arguments, call_id=call.id))
             self.runtime.validate_calls(calls, executed_calls)
             for call in calls:

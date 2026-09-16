@@ -65,6 +65,16 @@ def get_openai_chat_model() -> str:
     return os.getenv("OPENAI_CHAT_MODEL", "gpt-4.1-mini")
 
 
+def get_groq_chat_model() -> str:
+    """Obtiene el modelo Groq configurado para interpretar pedidos.
+
+    Returns:
+        Nombre del modelo usado unicamente cuando LLM_PROVIDER es groq.
+    """
+    load_dotenv()
+    return os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-20b")
+
+
 def get_gemini_api_key() -> str:
     """Obtiene la API key de Gemini desde las variables de entorno.
 

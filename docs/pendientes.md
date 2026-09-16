@@ -7,11 +7,13 @@ verificacion registrada junto con su cambio.
 ## Antes de una demostracion formal
 
 - **Prueba manual con proveedor real:** completar la matriz de texto y voz con
-  Gemini configurado y, cuando OpenAI tenga creditos API, repetir texto con
-  `LLM_PROVIDER=openai`, incluyendo producto incompleto, producto agotado,
+  Gemini configurado y repetir texto con `LLM_PROVIDER=groq`, incluyendo
+  producto incompleto, producto agotado,
   reemplazo, varios extras, pago QR/tarjeta/caja, vuelta desde pago y errores
   temporales del proveedor. Registrar modelo, fecha, latencias y resultado
-  observado.
+  observado. Ya se verificaron manualmente el alta de una Burger Clásica con
+  Agua y el cambio de extra con `openai/gpt-oss-20b`; aún falta ejecutar la
+  matriz completa desde el navegador y por voz.
 - **Prueba de microfono y parlantes fisicos:** verificar permisos, silencio,
   ruido, cancelacion, interrupcion, reconexion y calidad audible en el equipo
   de la demo. Las pruebas actuales usan audio y navegador simulados.

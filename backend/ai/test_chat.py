@@ -1,9 +1,10 @@
+import sys
+
 from backend.ai.errors import AIProviderError
-from backend.ai.orchestrator import OrderConversationOrchestrator
+from backend.ai.factories import create_order_interpreter
 from backend.domain.menu import load_menu
 from backend.domain.session import Session, SessionState
 from backend.services.order_service import OrderService
-from config.settings import get_chat_model
 
 
 def print_cart(service: OrderService) -> None:
@@ -42,13 +43,13 @@ def print_cart(service: OrderService) -> None:
 
 def print_ai_error(exc: AIProviderError) -> None:
     """
-    Muestra un error de Gemini de forma legible y diagnóstica.
+    Muestra un error de proveedor de IA de forma legible y diagnóstica.
 
     Se separa el mensaje destinado al usuario de la información técnica que
     permite identificar proveedor, modelo, código HTTP y etapa del fallo.
 
     Args:
-        exc: Error estructurado producido durante la comunicación con Gemini.
+        exc: Error estructurado producido durante la comunicación con IA.
     """
     print("\n[ERROR IA]")
 
@@ -76,7 +77,7 @@ def print_ai_error(exc: AIProviderError) -> None:
         "Sí" if exc.retryable else "No",
     )
 
-    print("Detalle Gemini:", exc.technical_message)
+    print("Detalle técnico:", exc.technical_message)
 
     print("\nMENSAJE PARA EL USUARIO:")
     print(exc.user_message)
@@ -86,19 +87,18 @@ def main() -> None:
     """
     Inicia una interfaz conversacional de terminal para probar el pedido.
 
-    Mantiene una única sesión, un carrito y una conversación con Gemini.
-    Los errores propios del proveedor se muestran por separado de errores
-    internos del código. La ejecución finaliza cuando el usuario escribe
+    Mantiene una única sesión, un carrito y una conversación con el proveedor
+    seleccionado por LLM_PROVIDER. Los errores propios del proveedor se muestran
+    por separado de errores internos del código. La ejecución finaliza cuando el usuario escribe
     "salir" o cuando el pedido queda confirmado.
     """
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     menu = load_menu("config/menu.json")
     session = Session()
     service = OrderService(menu, session)
 
-    assistant = OrderConversationOrchestrator(
-        service=service,
-        model=get_chat_model(),
-    )
+    assistant = create_order_interpreter(service)
 
     print("Asistente de pedidos iniciado.")
     print(f"Session ID: {session.session_id}")
@@ -125,7 +125,7 @@ def main() -> None:
                 message
             )
 
-            print("\nGEMINI:")
+            print(f"\n{assistant.provider_name.upper()}:")
             print(response)
 
         except AIProviderError as exc:
@@ -135,7 +135,7 @@ def main() -> None:
             print("\n[ERROR INTERNO]")
             print(
                 "Este error no fue identificado como un error "
-                "reportado por Gemini."
+                "reportado por el proveedor de IA."
             )
             print("Tipo:", type(exc).__name__)
             print("Detalle:", exc)

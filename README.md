@@ -82,15 +82,29 @@ Los nombres se configuran mediante `GEMINI_CHAT_MODEL` y
 `GEMINI_API_KEY` para las dos capas; sus modelos se configuran con
 `GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
 
-Gemini esta implementado para STT y LLM. OpenAI esta implementado solo para
-`LLM_PROVIDER=openai`; su STT sigue pendiente. Para probar OpenAI, conserva
-`STT_PROVIDER=gemini` y agrega en tu `.env` local:
+Gemini esta implementado para STT y LLM. OpenAI y Groq estan implementados solo
+para LLM; su STT sigue pendiente. Para probar cualquiera de los dos, conserva
+`STT_PROVIDER=gemini` y configura solo la credencial y modelo del LLM elegido:
 
 ```dotenv
 LLM_PROVIDER=openai
 OPENAI_API_KEY=tu_clave_local
 OPENAI_CHAT_MODEL=gpt-4.1-mini
 ```
+
+```dotenv
+LLM_PROVIDER=groq
+GROQ_API_KEY=tu_clave_local
+GROQ_CHAT_MODEL=openai/gpt-oss-20b
+```
+
+Groq ejecuta ese modelo en la nube: no se instala un modelo en la computadora.
+Su plan gratuito aplica límites de solicitudes y tokens; por eso es apto para
+desarrollo y demostraciones acotadas, no una garantía de capacidad productiva.
+La integración usa su API compatible con Chat Completions y mantiene el mismo
+camino tools → `OrderService` que Gemini y OpenAI.
+El adaptador limita cada respuesta a 800 tokens, para respetar el límite gratuito
+de salida conocido de esos modelos y mantener respuestas breves para el kiosco.
 
 `whisper`, `vosk`, `anthropic`, `google-cloud`, `azure` u otro valor no
 implementado se informa claramente y no intenta usar una clave ajena.

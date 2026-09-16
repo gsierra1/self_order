@@ -367,8 +367,10 @@ flowchart LR
   `OrderService`.
 
 `backend/ai/factories.py` lee `STT_PROVIDER` y `LLM_PROVIDER` mediante
-`config/settings.py`. Hoy ambas fábricas implementan solamente `gemini` y
-construyen `GeminiLiveTranscriber` y `GeminiOrderInterpreter` respectivamente.
+`config/settings.py`. Para voz, la fábrica implementa solamente `gemini` y
+construye `GeminiLiveTranscriber`. Para chat, implementa `gemini`, `openai` y
+`groq`, que construyen respectivamente `GeminiOrderInterpreter`,
+`OpenAIOrderInterpreter` y `GroqOrderInterpreter`.
 Los nombres anteriores, `LiveTranscriber` y `OrderConversationOrchestrator`, se
 conservan como alias transitorios para que imports de pruebas o diagnósticos
 existentes no rompan durante la transición. El código nuevo depende de los
@@ -384,6 +386,8 @@ implementada.
 | Selección | Variables que se exigen hoy | Variables de modelo |
 | --- | --- | --- |
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=gemini` | `GEMINI_API_KEY` una sola vez | `GEMINI_TRANSCRIPTION_MODEL`, `GEMINI_CHAT_MODEL` |
+| `STT_PROVIDER=gemini`, `LLM_PROVIDER=groq` | `GEMINI_API_KEY` y `GROQ_API_KEY` | `GEMINI_TRANSCRIPTION_MODEL`, `GROQ_CHAT_MODEL` |
+| `STT_PROVIDER=gemini`, `LLM_PROVIDER=openai` | `GEMINI_API_KEY` y `OPENAI_API_KEY` | `GEMINI_TRANSCRIPTION_MODEL`, `OPENAI_CHAT_MODEL` |
 | Gemini + LLM futuro | `GEMINI_API_KEY` y la clave del LLM elegido al implementar su adaptador | Modelo Gemini STT y variable del LLM futuro |
 | STT futuro + Gemini | Credencial o modelo local del STT y `GEMINI_API_KEY` | Variable STT futura y `GEMINI_CHAT_MODEL` |
 | Ambos futuros | Solo credenciales o archivos de los proveedores seleccionados | Variables propias de los adaptadores |
@@ -450,3 +454,19 @@ La clave es valida pero la cuenta no posee creditos API: no hay prueba manual de
 tools aprobada hasta agregar saldo. Ese error se clasifica como
 `CREDIT_BALANCE_EXHAUSTED`, no como saturacion transitoria. Las simulaciones si
 verifican OpenAI -> tool -> OrderService.
+
+### Ajuste de cuota gratuita de Groq
+
+La primera llamada real del 16/09/2026 autentico la cuenta Groq, pero recibio
+429 antes de ejecutar tools: el valor predeterminado del SDK esperaba hasta
+2.048 tokens de salida y el límite gratuito del modelo era 1.000. El adaptador
+`GroqOrderInterpreter` establece `max_tokens=800`; la correccion conserva el
+mismo contrato y las mismas tools. Falta repetir la conversación real para
+validar el flujo completo.
+
+**Evidencia manual de Groq (16/09/2026):** con `openai/gpt-oss-20b`, una
+conversación de terminal real agregó una Burger Clásica con Agua mediante
+`add_item`; `OrderService` devolvió una línea por ARS 8.500. Una secuencia
+posterior también aplicó el agregado y eliminación de tomate. La prueba fue
+contra la API real y no mide todavía el recorrido completo en navegador, voz,
+pago ni carga sostenida.

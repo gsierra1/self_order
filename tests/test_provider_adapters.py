@@ -7,6 +7,7 @@ from unittest.mock import ANY, Mock, patch
 
 from backend.ai.contracts import OrderInterpreter, SpeechToText, VoiceEventPublisher
 from backend.ai.factories import create_order_interpreter, create_speech_to_text
+from backend.ai.groq_interpreter import GroqOrderInterpreter
 from backend.ai.openai_interpreter import OpenAIOrderInterpreter
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
@@ -219,6 +220,49 @@ class ProviderFactoryTests(unittest.TestCase):
         sentinel = object()
         with patch.dict(os.environ, {"LLM_PROVIDER": "openai"}, clear=False), \
              patch("backend.ai.factories.OpenAIOrderInterpreter", return_value=sentinel) as adapter:
+            self.assertIs(create_order_interpreter(service), sentinel)
+        adapter.assert_called_once_with(service=service, model=ANY)
+
+    def test_groq_interpreter_uses_the_same_tool_and_service(self) -> None:
+        """Groq simulado ejecuta tools sin asumir precios ni estado del dominio."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        first = type("Response", (), {"choices": [type("Choice", (), {
+            "message": type("Message", (), {
+                "content": None,
+                "tool_calls": [type("Call", (), {
+                    "id": "call_add",
+                    "function": type("Function", (), {
+                        "name": "add_item",
+                        "arguments": '{"product_id":"BURGER_CLASICA","selected_modifiers":{"drink":"WATER"}}',
+                    })(),
+                })()],
+            })(),
+        })()]})()
+        second = type("Response", (), {"choices": [type("Choice", (), {
+            "message": type("Message", (), {
+                "content": "Agregue tu Burger Clasica con Agua.",
+                "tool_calls": [],
+            })(),
+        })()]})()
+        client = Mock()
+        client.chat.completions.create.side_effect = [first, second]
+        with patch("backend.ai.groq_interpreter.create_groq_client", return_value=client):
+            interpreter = GroqOrderInterpreter(service, "openai/gpt-oss-20b")
+            response = interpreter.send_message("Quiero una Burger Clasica con Agua")
+        self.assertEqual(response, "Agregue tu Burger Clasica con Agua.")
+        self.assertEqual(service.get_cart().total, 8500)
+        self.assertEqual(client.chat.completions.create.call_count, 2)
+        self.assertEqual(
+            client.chat.completions.create.call_args_list[0].kwargs["max_tokens"],
+            800,
+        )
+
+    def test_groq_factory_uses_only_the_groq_adapter(self) -> None:
+        """LLM_PROVIDER=groq selecciona el adaptador sin crear Gemini u OpenAI."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        sentinel = object()
+        with patch.dict(os.environ, {"LLM_PROVIDER": "groq"}, clear=False), \
+             patch("backend.ai.factories.GroqOrderInterpreter", return_value=sentinel) as adapter:
             self.assertIs(create_order_interpreter(service), sentinel)
         adapter.assert_called_once_with(service=service, model=ANY)
 
