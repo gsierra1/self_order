@@ -230,7 +230,9 @@ pago incompletos.
 Durante `ACTIVE` o `PAYMENT_PENDING`, `conversation_socket.py` reconoce localmente
 una solicitud explícita de QR, tarjeta o caja y la delega a `OrderService`. Esto evita
 una llamada innecesaria al LLM para una selección cerrada y reduce la latencia;
-las frases ambiguas siguen el flujo normal del intérprete.
+las frases ambiguas siguen el flujo normal del intérprete. Las preguntas como
+«¿con qué puedo pagar?» se responden localmente enumerando QR, tarjeta y caja,
+sin preparar el pago ni elegir una opción por la persona.
 
 Mientras un turno de voz está en curso, `frontend/app.js` reemplaza los botones
 de pago por un aviso de procesamiento. Así se evita que la persona duplique la
@@ -240,6 +242,11 @@ Las instrucciones del intérprete exigen enumerar el carrito o preguntar el dato
 obligatorio faltante. Como defensa adicional, si el proveedor termina con una
 referencia vacía como “el carrito queda así”, `OrderToolsRuntime` la reemplaza
 por un resumen construido desde el carrito validado por `OrderService`.
+Los adaptadores compatibles con Chat Completions también detectan respuestas
+vacías, palabras truncadas y cortesías aisladas. Si todavía no hubo una mutación,
+solicitan un solo reprocesamiento; si vuelve a fallar, informan que el carrito no
+cambió. Si la operación ya se aplicó, no vuelven a pedir tools y remiten al carrito
+visible para evitar duplicar una mutación.
 
 El callback de eventos evita importar WebSocket desde el servicio.
 `send_event_threadsafe()` usa `asyncio.run_coroutine_threadsafe()`. El envío es

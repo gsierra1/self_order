@@ -1,6 +1,7 @@
 ﻿"""Interprete OpenAI que conserva OrderService como autoridad transaccional."""
 
 import json
+import unicodedata
 from types import SimpleNamespace
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError
@@ -238,6 +239,31 @@ class OpenAIOrderInterpreter(OrderInterpreter):
             user_message=message + suffix, retry_after=retry_after,
         )
 
+    @staticmethod
+    def _is_incomplete_response(text: str) -> bool:
+        """Reconoce fragmentos sin contenido suficiente para cerrar un turno.
+
+        Args:
+            text: Contenido devuelto por el proveedor sin procesar.
+
+        Returns:
+            ``True`` para respuestas vacías, palabras truncadas o cortesías
+            aisladas que no explican ni ejecutan el pedido.
+        """
+        compact = " ".join(text.split()).strip()
+        if not compact or len(compact) < 8:
+            return True
+        normalized = unicodedata.normalize("NFKD", compact).encode("ascii", "ignore").decode()
+        normalized = normalized.lower().strip(" .,!¡?¿")
+        return normalized in {
+            "claro",
+            "con gusto",
+            "de acuerdo",
+            "listo",
+            "perfecto",
+            "por supuesto",
+        }
+
     def send_message(self, message: str) -> str:
         """Interpreta un mensaje y ejecuta solo tools autorizadas por el servicio.
 
@@ -258,6 +284,7 @@ class OpenAIOrderInterpreter(OrderInterpreter):
         transaction_applied = False
         last_tool = None
         executed_calls: set = set()
+        incomplete_retry_used = False
         for tool_round in range(self.max_tool_rounds + 1):
             response = self._request(
                 stage=(
@@ -272,9 +299,38 @@ class OpenAIOrderInterpreter(OrderInterpreter):
             tool_calls = list(assistant_message.tool_calls or [])
             self.messages.append(assistant_message)
             if not tool_calls:
-                return self.runtime.sanitize_user_text(
-                    assistant_message.content or "",
-                )
+                content = assistant_message.content or ""
+                if self._is_incomplete_response(content):
+                    log_event(
+                        "WARN",
+                        "llm.incomplete_response",
+                        provider=self.provider_name,
+                        session_id=self.service.session.session_id,
+                        transaction_applied=transaction_applied,
+                        retry_used=incomplete_retry_used,
+                    )
+                    if transaction_applied:
+                        return (
+                            "El cambio se aplicó. Revisá el carrito en pantalla "
+                            "antes de continuar."
+                        )
+                    if not incomplete_retry_used:
+                        incomplete_retry_used = True
+                        self.messages.append({
+                            "role": "system",
+                            "content": (
+                                "La respuesta anterior quedó incompleta. Reprocesá "
+                                "el último pedido: ejecutá la tool necesaria o formulá "
+                                "una pregunta completa si falta un dato obligatorio. "
+                                "No respondas con una cortesía aislada."
+                            ),
+                        })
+                        continue
+                    return (
+                        "No pude completar la interpretación del pedido. El carrito "
+                        "no cambió; repetí el pedido o escribilo."
+                    )
+                return self.runtime.sanitize_user_text(content)
             if tool_round >= self.max_tool_rounds:
                 raise RuntimeError("Se alcanzo el maximo de ciclos de tools permitidos.")
             calls = []

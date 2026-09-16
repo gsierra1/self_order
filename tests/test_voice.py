@@ -11,7 +11,7 @@ from google.genai import types
 from starlette.websockets import WebSocketDisconnect
 
 import backend.api.app as api
-from backend.api.conversation_socket import _detect_payment_method
+from backend.api.conversation_socket import _detect_payment_method, _is_payment_methods_question
 from backend.ai.live_transcriber import LiveTranscriber
 from backend.ai.errors import AIProviderError
 from backend.domain.session import Session
@@ -70,6 +70,30 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(_detect_payment_method("prefiero pagar en caja"), "CASH")
         self.assertEqual(_detect_payment_method("pago por QR"), "QR")
         self.assertIsNone(_detect_payment_method("quiero pagar"))
+
+    def test_payment_questions_do_not_choose_a_method(self) -> None:
+        """Distingue una consulta de pago de una selección explícita."""
+        self.assertTrue(_is_payment_methods_question("¿Con qué puedo pagar?"))
+        self.assertTrue(_is_payment_methods_question("¿Qué medios de pago aceptan?"))
+        self.assertFalse(_is_payment_methods_question("quiero pagar con QR"))
+
+    def test_payment_question_preserves_state_and_skips_llm(self) -> None:
+        """Enumera los medios disponibles sin preparar ni elegir el pago."""
+        self.runtime.service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+
+        with self.client.websocket_connect(self.url) as ws:
+            self.assertEqual(ws.receive_json()["type"], "connection.ready")
+            ws.send_json({
+                "type": "user.text",
+                "data": {"message": "¿Con qué puedo pagar?"},
+            })
+            response = ws.receive_json()
+
+        self.assertEqual(response["type"], "assistant.text")
+        self.assertEqual(response["data"]["text"], "Podés pagar con QR, tarjeta o en caja.")
+        self.assertEqual(response["data"]["cart"]["state"], "ACTIVE")
+        self.assertIsNone(response["data"]["cart"]["payment_method"])
+        self.assistant.send_message.assert_not_called()
 
     def test_direct_payment_from_active_skips_llm_and_selector(self) -> None:
         """Elige caja desde ACTIVE sin mostrar ni delegar la lista al LLM."""

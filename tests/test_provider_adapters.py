@@ -398,6 +398,62 @@ class ProviderFactoryTests(unittest.TestCase):
             800,
         )
 
+    def test_openai_interpreter_retries_an_incomplete_response_once(self) -> None:
+        """Reprocesa un fragmento sin tools y aplica el pedido una sola vez."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        incomplete = type("Response", (), {"choices": [type("Choice", (), {
+            "message": type("Message", (), {"content": "Agre", "tool_calls": []})(),
+        })()]})()
+        tool_response = type("Response", (), {"choices": [type("Choice", (), {
+            "message": type("Message", (), {
+                "content": None,
+                "tool_calls": [type("Call", (), {
+                    "id": "call_add",
+                    "function": type("Function", (), {
+                        "name": "add_item",
+                        "arguments": '{"product_id":"BURGER_CLASICA","selected_modifiers":{"drink":"WATER"}}',
+                    })(),
+                })()],
+            })(),
+        })()]})()
+        complete = type("Response", (), {"choices": [type("Choice", (), {
+            "message": type("Message", (), {
+                "content": "Agregué tu Burger Clásica con agua.",
+                "tool_calls": [],
+            })(),
+        })()]})()
+        client = Mock()
+        client.chat.completions.create.side_effect = [incomplete, tool_response, complete]
+
+        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=client):
+            interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
+            response = interpreter.send_message("Quiero una hamburguesa simple con agua")
+
+        self.assertEqual(response, "Agregué tu Burger Clásica con agua.")
+        self.assertEqual(service.get_cart().total, 8500)
+        self.assertEqual(len(service.get_cart().items), 1)
+        self.assertEqual(client.chat.completions.create.call_count, 3)
+
+    def test_openai_interpreter_replaces_a_second_incomplete_response(self) -> None:
+        """Evita exponer una cortesía aislada cuando el reintento tampoco sirve."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        responses = [
+            type("Response", (), {"choices": [type("Choice", (), {
+                "message": type("Message", (), {"content": text, "tool_calls": []})(),
+            })()]})()
+            for text in ("Con gusto", "Claro")
+        ]
+        client = Mock()
+        client.chat.completions.create.side_effect = responses
+
+        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=client):
+            interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
+            response = interpreter.send_message("Quiero una hamburguesa simple con agua")
+
+        self.assertIn("No pude completar", response)
+        self.assertEqual(service.get_cart().total, 0)
+        self.assertEqual(client.chat.completions.create.call_count, 2)
+
     def test_groq_factory_uses_only_the_groq_adapter(self) -> None:
         """LLM_PROVIDER=groq selecciona el adaptador sin crear Gemini u OpenAI."""
         service = OrderService(load_menu("config/menu.json"), Session())

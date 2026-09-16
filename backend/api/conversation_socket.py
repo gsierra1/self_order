@@ -35,6 +35,33 @@ def _detect_payment_method(text: str) -> str | None:
     return None
 
 
+def _is_payment_methods_question(text: str) -> bool:
+    """Distingue una consulta sobre medios de pago de una elección concreta.
+
+    Args:
+        text: Texto transcripto o escrito por la persona.
+
+    Returns:
+        ``True`` si la persona pregunta qué opciones de pago existen; ``False``
+        si la frase debe continuar por el flujo normal de interpretación.
+    """
+    normalized = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().upper()
+    normalized = " ".join(normalized.split())
+    question_patterns = (
+        "CON QUE PUEDO PAGAR",
+        "COMO PUEDO PAGAR",
+        "QUE MEDIOS DE PAGO",
+        "CUALES SON LOS MEDIOS DE PAGO",
+        "QUE METODOS DE PAGO",
+        "CUALES SON LOS METODOS DE PAGO",
+        "QUE FORMAS DE PAGO",
+        "CUALES SON LAS FORMAS DE PAGO",
+        "QUE OPCIONES DE PAGO",
+        "CUALES SON LAS OPCIONES DE PAGO",
+    )
+    return any(pattern in normalized for pattern in question_patterns)
+
+
 async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) -> None:
     """Recibe turnos, publica resultados y limpia audio/conexión al desconectar.
 
@@ -65,6 +92,20 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
         """
         started_at = time.perf_counter()
         if runtime.service.session.state in {SessionState.ACTIVE, SessionState.PAYMENT_PENDING}:
+            if _is_payment_methods_question(text):
+                await publish("assistant.text", {
+                    "text": "Podés pagar con QR, tarjeta o en caja.",
+                    "cart": snapshot(runtime.service),
+                    "session_closed": False,
+                })
+                log_event(
+                    "INFO",
+                    "conversation.completed",
+                    session_id=session_id,
+                    input_length=len(text),
+                    duration_ms=round((time.perf_counter() - started_at) * 1000),
+                )
+                return
             payment_method = _detect_payment_method(text)
             if payment_method is not None:
                 try:
