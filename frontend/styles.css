@@ -445,9 +445,7 @@ h2 {
 .payment-options button, .payment-action { border: 0; border-radius: 9px; padding: 10px 12px; cursor: pointer; background: #242833; color: white; }
 .payment-options button:disabled, .payment-action:disabled { opacity: .55; cursor: wait; }
 .payment-content { margin-top: 14px; }
-.fake-qr { width: min(80vw, 360px); aspect-ratio: 1; height: auto; margin: 18px auto; display: grid; grid-template-columns: repeat(15, 1fr); gap: 2px; background: white; padding: 10px; border: 1px solid #222; box-sizing: border-box; }
-.fake-qr span { background: #111; }
-.fake-qr span:nth-child(3n) { background: white; }
+.demo-qr { width: min(80vw, 360px); aspect-ratio: 1; height: auto; margin: 18px auto; display: block; background: white; padding: 12px; border: 2px solid #242833; border-radius: 12px; box-shadow: 0 8px 20px rgba(32, 25, 70, .12); }
 .card-input { width: 100%; box-sizing: border-box; margin: 8px 0; padding: 10px; border: 1px solid #ccd1da; border-radius: 8px; }
 .payment-success { margin: 0; color: #176b3a; font-weight: 600; }
 .remove-item-button,

@@ -55,19 +55,22 @@ class BrowserAssistant:
         self.service = service
 
     def send_message(self, message: str) -> str:
-        """Aplica un alta conocida o confirma para verificar el frontend.
+        """Aplica respuestas simuladas para alta, QR y confirmacion.
 
         Args:
             message: Texto final de voz o escritura.
 
         Returns:
-            Respuesta de prueba para pantalla y síntesis.
+            Respuesta de prueba para pantalla y sintesis.
         """
         if message == "confirmar":
             self.service.prepare_payment()
             self.service.select_payment_method("CASH")
             self.service.complete_payment()
             return "Pedido confirmado"
+        if message == "Quiero pagar con QR.":
+            self.service.select_payment_method("QR")
+            return "QR seleccionado"
         self.service.add_item(
             "BURGER_CLASICA",
             1,
@@ -80,7 +83,7 @@ class BrowserVoiceTests(unittest.TestCase):
     """Prueba visible del circuito completo con Edge y dispositivos sintéticos."""
 
     def test_microphone_to_cart_and_confirmation(self) -> None:
-        """Verifica hipótesis sin alta, cierre de audio, lectura y confirmación escrita."""
+        """Verifica voz, QR demo visible, vuelta al carrito y cierre de pago."""
         listener = socket.socket()
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
@@ -144,14 +147,24 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator(".remove-extra-button")).to_have_count(0)
                         expect(page.locator(".cart-item-total .remove-item-button")).to_have_count(1)
                         expect(page.locator("#message-input")).to_be_enabled()
-                        self.assertEqual(len(page.evaluate("window.spokenTexts")), 1)
+                        page.locator("#confirm-cart-button").click()
+                        expect(page.locator("#payment-panel")).to_be_visible()
+                        page.locator('[data-payment-method="QR"]').click()
+                        expect(page.locator(".demo-qr")).to_be_visible()
+                        expect(page.locator(".demo-qr")).to_have_attribute(
+                            "src", "/static/assets/qr-demostracion.svg"
+                        )
+                        page.locator("#payment-back").click()
+                        expect(page.locator("#payment-panel")).to_be_hidden()
+                        expect(page.locator("#message-input")).to_be_enabled()
+                        self.assertEqual(len(page.evaluate("window.spokenTexts")), 2)
                         page.locator("#audio-button").click()
                         page.locator("#message-input").fill("confirmar")
                         page.locator("#send-button").click()
                         expect(page.locator("#session-state")).to_have_text("CONFIRMED")
                         expect(page.locator("#mic-button")).to_be_disabled()
                         expect(page.locator("#message-input")).to_be_disabled()
-                        self.assertEqual(len(page.evaluate("window.spokenTexts")), 1)
+                        self.assertEqual(len(page.evaluate("window.spokenTexts")), 2)
                         self.assertFalse(errors, errors)
                     finally:
                         browser.close()

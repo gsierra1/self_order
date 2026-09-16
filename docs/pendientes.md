@@ -33,7 +33,7 @@ cuando existe codigo, documentacion y una verificacion registrada.
 
 ## Para operar en un local
 
-- **Pago real:** reemplazar QR, tarjeta y caja simulados por un adaptador a la
+- **Pago real:** reemplazar QR de texto, tarjeta y caja simulados por un adaptador a la
   pasarela o sistema de cobro aprobado por el local. No almacenar datos de
   tarjetas en el proyecto.
 - **POS, cocina y ticketera:** integrar clientes separados que reciban el pedido

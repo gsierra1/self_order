@@ -379,6 +379,14 @@ dentro de cada hamburguesa, por lo que Coca-Cola podia agotarse solo para una de
 ellas. Los grupos ahora son compartidos y la prueba automatica confirma que una
 Coca-Cola agotada se rechaza tambien al pedir Burger Doble.
 
+### QR escaneable de demostracion (16/09/2026)
+
+Se reemplazo la cuadricula decorativa por `frontend/assets/qr-demostracion.svg`.
+El recurso fue generado con un codificador QR y contiene exclusivamente el texto
+`SIA SELF ORDER | QR DE DEMOSTRACION | SIN PAGO NI URL`. Escanearlo no abre una
+pagina ni genera un cobro; conserva la aclaracion visible y el temporizador de
+pago simulado. El evento de seleccion de metodo ahora incluye un snapshot con `state`, por lo que el frontend actualiza el QR sin esperar otra respuesta de Gemini. Las pruebas automatizadas verifican que FastAPI sirve el SVG local y que Edge lo muestra al elegir QR.
+
 ### Estados de sesion y representacion de modificadores (16/09/2026)
 
 El flujo de pago se unifico en `ACTIVE` -> `PAYMENT_PENDING` -> `CONFIRMED`.

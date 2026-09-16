@@ -112,8 +112,8 @@ o reconexiones.
 La confirmacion conversacional pasa primero la sesion a `PAYMENT_PENDING` y
 genera el numero de pedido en backend. `select_payment_method` acepta `QR`,
 `CARD` o `CASH`; el frontend completa la demo mediante un endpoint y recien
-entonces la sesion pasa a `CONFIRMED`. El QR es una imagen invalida de demo,
-sin datos de pago ni destino real; la tarjeta tampoco se envia ni se almacena.
+entonces la sesion pasa a `CONFIRMED`. El QR es un codigo escaneable de demo que contiene solo texto,
+sin URL, datos de pago ni destino real; la tarjeta tampoco se envia ni se almacena.
 Mientras el pago esta pendiente, `return_to_order` permite volver al carrito y
 eliminar lineas sigue pasando por `OrderService`. Tras finalizar, la interfaz
 muestra el numero de pedido, cuenta cinco segundos y crea otra sesion.
@@ -197,6 +197,7 @@ Ejemplo de entrada WebSocket:
 | `connection.ready` | `session_id`, `state`, `cart` para sincronizar al conectar. |
 | `assistant.text` | `text`, `session_closed`, `cart`. |
 | `cart.updated` | `action`, `line_id`, `cart`. |
+| `payment.pending`, `payment.method_selected` | Numero de pedido, metodo cuando corresponde y `cart` con el estado actualizado. |
 | `order.confirmed` | `cart` con estado confirmado. |
 | `voice.ready`, `voice.transcript`, `voice.error`, `voice.cancelled` | Protocolo de voz detallado en `voz.md`; reemplaza el acuse experimental `audio.received`. |
 | `ai.error` | Tipo, código, etapa, `retryable`, `transaction_applied`, última tool y mensaje. |
@@ -253,7 +254,7 @@ La guía de Adrián describe una arquitectura de producción para un kiosco fís
 | Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo kiosco/PWA, indicador de volumen, detección de silencio, interrupciones y empaquetado de dispositivo. |
 | STT | `LiveTranscriber` envía audio por WebSocket a Gemini Transcribe Live. | Es el enfoque cloud de la guía, configurable y útil para avanzar rápido. Introduce dependencia de red y latencia; todavía no se justifica reemplazarlo por Edge sin medir calidad, costo y hardware. |
 | NLU y extracción | Gemini Chat recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
-| Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR inválido, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisión de ticket. |
+| Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR escaneable de texto, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisi?n de ticket. |
 
 ### Qué conservar
 

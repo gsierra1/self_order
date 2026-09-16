@@ -71,7 +71,7 @@ class OrderService:
                 for item in cart.items
             ],
             "total": cart.total,
-            "session_state": self.session.state.value,
+            "state": self.session.state.value,
         }
     
     def _emit_event(
@@ -142,7 +142,7 @@ class OrderService:
                 "cart": {
                     "items": snapshot["items"],
                     "total": snapshot["total"],
-                    "state": snapshot["session_state"],
+                    "state": snapshot["state"],
                 },
             },
         )
@@ -693,11 +693,13 @@ class OrderService:
             order_number=self.session.order_number,
             payment_method=normalized,
         )
+        snapshot = self._get_cart_snapshot()
         self._emit_event(
             "payment.method_selected",
             {
                 "method": normalized,
                 "order_number": self.session.order_number,
+                "cart": snapshot,
             },
         )
         return {

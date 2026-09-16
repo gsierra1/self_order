@@ -342,9 +342,11 @@ function createExtraRow(lineId, detail, editable) {
     return extraRow;
 }
 
-/** Muestra el selector y el estado del pago de demostración.
- * @param {Object} cart Snapshot validado con estado y método de pago.
- * @returns {void} Actualiza el panel de pago y sus controles. */
+/** Muestra el selector y el estado del pago de demostracion.
+ * @param {Object} cart Snapshot validado con estado y metodo de pago.
+ * @returns {void} Actualiza el panel de pago y sus controles.
+ * @effects Muestra un QR escaneable que contiene solo texto de demostracion,
+ * sin URL ni instruccion de pago real. */
 function renderPayment(cart) {
     clearTimeout(paymentTimer);
     clearInterval(countdownTimer);
@@ -361,16 +363,12 @@ function renderPayment(cart) {
     }
     if (method === "QR") {
         paymentContent.innerHTML = `
-            <p>Escaneá este QR de demostración. No contiene un pago real.</p>
-            <div class="fake-qr" aria-label="QR inválido de demostración"></div>
+            <p>Escane\u00e1 este QR de demostraci\u00f3n. Al leerlo muestra texto, no abre
+                una URL ni inicia un pago real.</p>
+            <img class="demo-qr" src="/static/assets/qr-demostracion.svg"
+                alt="C\u00f3digo QR de demostraci\u00f3n sin pago real">
             <p>Procesando pago...</p>
-            <button type="button" class="payment-action" id="payment-back">ATRÁS</button>`;
-        const qr = paymentContent.querySelector(".fake-qr");
-        for (let index = 0; index < 225; index += 1) {
-            const cell = document.createElement("span");
-            cell.style.opacity = ((index * 17 + 3) % 5) ? "1" : "0";
-            qr.appendChild(cell);
-        }
+            <button type="button" class="payment-action" id="payment-back">ATR\u00c1S</button>`;
         document.getElementById("payment-back").addEventListener("click", returnToOrder);
         paymentTimer = setTimeout(() => completePayment(), 5000);
     } else if (method === "CARD") {

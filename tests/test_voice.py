@@ -210,6 +210,14 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(cart["total"], 8500)
         self.assertEqual(cart["items"][0]["selected_modifiers"], {"drink": "WATER"})
 
+    def test_serves_scannable_demo_qr_asset(self) -> None:
+        """Entrega el SVG QR local sin depender de un proveedor de pagos."""
+        response = self.client.get("/static/assets/qr-demostracion.svg")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("<svg", response.text)
+        self.assertIn("qr-path", response.text)
+
     def test_cancel_immediately_releases_reservation(self) -> None:
         """Cancelar sin esperar voice.ready no deja la sesión bloqueada."""
         with self.client.websocket_connect(self.url) as ws:
