@@ -12,6 +12,7 @@ let paymentTimer = null;
 let countdownTimer = null;
 let reconnectTimer = null;
 let reconnectAttempts = 0;
+let currentCart = null;
 
 const conversation = document.getElementById("conversation");
 const messageForm = document.getElementById("message-form");
@@ -279,7 +280,7 @@ function updateControls() {
  * @effects Evita que la persona elija otra opción durante el turno.
  */
 function showPaymentProcessing() {
-    if (!paymentPanel.hidden) {
+    if (currentCart?.state === "PAYMENT_PENDING" && !currentCart.payment_method) {
         paymentContent.innerHTML = "<p>Procesando tu elección de pago...</p>";
     }
 }
@@ -593,6 +594,7 @@ function toggleAssistantAudio() {
  * @param {Object} cart Snapshot del carrito.
  */
 function applyCart(cart) {
+    currentCart = cart;
     renderCart(cart);
     renderPayment(cart);
     sessionClosed = cart.state === "CONFIRMED";
