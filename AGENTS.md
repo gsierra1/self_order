@@ -19,7 +19,7 @@ antes de modificar comportamiento o arquitectura.
   de la misma exigencia de documentación al lenguaje.
 - Todo cambio de comportamiento, contratos, módulos o configuración debe incluir
   la actualización de los documentos afectados en `docs/` y, si corresponde,
-  del README. Registrar validación y pendientes en `docs/estado-y-pruebas.md`.
+  del README. Registrar pendientes en `docs/pendientes.md` y la validacion en el documento afectado o el README cuando corresponda.
 - Registrar decisiones de arquitectura con contexto, alternativas, motivos,
   consecuencias y estado en `docs/decisiones.md`. Diferenciar intención expresada
   por la autora, comportamiento comprobado e interpretación de decisiones previas.

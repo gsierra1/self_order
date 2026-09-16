@@ -17,7 +17,7 @@ no se detectan silencios ni se agregan productos durante una frase en curso.
 
 Empezar por [la guía del proyecto](docs/README.md). Incluye alcance,
 [arquitectura](docs/arquitectura.md), [decisiones y alternativas](docs/decisiones.md)
-y [estado, pruebas y pendientes](docs/estado-y-pruebas.md).
+y [pendientes](docs/pendientes.md).
 Las reglas de docstrings Google y actualización documental están en
 [AGENTS.md](AGENTS.md).
 
@@ -110,5 +110,5 @@ anteriores ni archivos de audio de muestra.
 
 `logs/runtime.log` contiene eventos legibles; `logs/events.jsonl`, el detalle
 estructurado. No confundir estos registros locales con persistencia de pedidos.
-Consultar [estado y pruebas](docs/estado-y-pruebas.md) para los límites conocidos
+Consultar [pendientes](docs/pendientes.md) para los límites conocidos
 y distinguir evidencia histórica, pruebas simuladas y verificaciones pendientes.

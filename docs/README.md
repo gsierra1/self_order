@@ -13,13 +13,12 @@ como las decisiones que la hacen confiable.
 2. [Arquitectura y contratos](arquitectura.md): módulos, funciones y recorrido
    de una interacción.
 3. [Decisiones de arquitectura](decisiones.md): razones, alternativas y límites.
-4. [Estado y pruebas](estado-y-pruebas.md): evidencia, problemas y siguientes etapas.
-5. [Pendientes](pendientes.md): trabajo pendiente, prioridad y criterio para darlo por resuelto.
-6. [README principal](../README.md): configuración y ejecución local.
-7. [Seguimiento desde VS Code](seguimiento.md): acuerdos de commits y comandos
+4. [Pendientes](pendientes.md): trabajo pendiente, prioridad y criterio para darlo por resuelto.
+5. [README principal](../README.md): configuración y ejecución local.
+6. [Seguimiento desde VS Code](seguimiento.md): acuerdos de commits y comandos
    para probar el frontend y revisar cambios.
-8. [Voz por turnos](voz.md): arquitectura implementada, protocolo y pruebas.
-9. [Recorrido visual de un pedido](recorrido-pedido.html): diagrama interactivo con archivos y funciones.
+7. [Voz por turnos](voz.md): arquitectura implementada, protocolo y pruebas.
+8. [Recorrido visual de un pedido](recorrido-pedido.html): diagrama interactivo con archivos y funciones.
 
 ## Cómo mantener estos documentos
 

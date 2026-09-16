@@ -1,22 +1,26 @@
 # Pendientes del proyecto
 
 Este documento contiene el trabajo que aun no esta implementado o verificado.
-No repite el historial: la evidencia de cada cambio queda en
-[estado-y-pruebas.md](estado-y-pruebas.md). Un punto se retira de esta lista solo
-cuando existe codigo, documentacion y una verificacion registrada.
+Un punto se retira de esta lista solo cuando existe codigo, documentacion y una
+verificacion registrada junto con su cambio.
 
 ## Antes de una demostracion formal
 
 - **Prueba manual con proveedor real:** completar la matriz de texto y voz con
   Gemini configurado, incluyendo producto incompleto, producto agotado,
-  reemplazo, varios extras, pago y vuelta desde pago. Registrar modelo, fecha,
-  latencias y resultado observado.
+  reemplazo, varios extras, pago QR/tarjeta/caja, vuelta desde pago y errores
+  temporales del proveedor. Registrar modelo, fecha, latencias y resultado
+  observado.
 - **Prueba de microfono y parlantes fisicos:** verificar permisos, silencio,
-  ruido, cancelacion, interrupcion y calidad audible en el equipo de la demo.
-  Las pruebas actuales usan audio y navegador simulados.
-- **Estabilidad de IA:** medir latencia, errores 429/503 y tasa de exito para un
-  conjunto de pedidos representativo. Definir el modelo y plan de cuenta con
-  evidencia, no solo por disponibilidad declarada.
+  ruido, cancelacion, interrupcion, reconexion y calidad audible en el equipo
+  de la demo. Las pruebas actuales usan audio y navegador simulados.
+- **Estabilidad de IA:** medir por separado transcripcion y chat: latencia,
+  errores 429/503 y tasa de exito para un conjunto de pedidos representativo.
+  Definir ambos modelos y el plan de cuenta con evidencia, no solo por
+  disponibilidad declarada.
+- **Capacidades conversacionales futuras:** decidir si `change_quantity` y
+  `clear_cart`, ya disponibles en `OrderService`, deben exponerse al usuario por
+  voz y texto. Si se incorporan, definir frases esperadas y pruebas.
 
 ## Para un piloto de kiosco
 
