@@ -3,8 +3,14 @@
 from backend.ai.contracts import OrderInterpreter, SpeechToText
 from backend.ai.live_transcriber import GeminiLiveTranscriber
 from backend.ai.orchestrator import GeminiOrderInterpreter
+from backend.ai.openai_interpreter import OpenAIOrderInterpreter
 from backend.services.order_service import OrderService
-from config.settings import get_chat_model, get_llm_provider, get_stt_provider
+from config.settings import (
+    get_chat_model,
+    get_llm_provider,
+    get_openai_chat_model,
+    get_stt_provider,
+)
 
 
 def create_speech_to_text(session_id: str | None = None) -> SpeechToText:
@@ -43,6 +49,8 @@ def create_order_interpreter(service: OrderService) -> OrderInterpreter:
     provider = get_llm_provider()
     if provider == "gemini":
         return GeminiOrderInterpreter(service=service, model=get_chat_model())
+    if provider == "openai":
+        return OpenAIOrderInterpreter(service=service, model=get_openai_chat_model())
     raise RuntimeError(
         f"LLM_PROVIDER={provider!r} todavía no tiene un adaptador implementado. "
         "Usá 'gemini' o agregá el adaptador y sus pruebas antes de seleccionarlo."

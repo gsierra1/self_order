@@ -7,7 +7,8 @@ verificacion registrada junto con su cambio.
 ## Antes de una demostracion formal
 
 - **Prueba manual con proveedor real:** completar la matriz de texto y voz con
-  Gemini configurado, incluyendo producto incompleto, producto agotado,
+  Gemini configurado y, cuando OpenAI tenga creditos API, repetir texto con
+  `LLM_PROVIDER=openai`, incluyendo producto incompleto, producto agotado,
   reemplazo, varios extras, pago QR/tarjeta/caja, vuelta desde pago y errores
   temporales del proveedor. Registrar modelo, fecha, latencias y resultado
   observado.
@@ -27,7 +28,7 @@ verificacion registrada junto con su cambio.
 - **Evaluación de proveedores ya desacoplados:** los contratos `SpeechToText` y
   `OrderInterpreter`, las fábricas y Gemini ya están implementados. Falta crear
   un adaptador real por cada candidato que se quiera comparar (por ejemplo,
-  Whisper, Vosk, OpenAI, Anthropic, Google Cloud o Azure), configurar solamente
+  Whisper, Vosk, Anthropic, Google Cloud o Azure), configurar solamente
   sus credenciales o modelos correspondientes y ejecutar la misma matriz de
   pruebas con audio real. No seleccionar un nombre futuro en `.env` hasta que su
   adaptador y sus pruebas existan.

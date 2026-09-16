@@ -174,9 +174,30 @@ un STT local necesita modelo instalado y ruta, no una API key cloud para ese
 tramo.
 
 **Límites:** una interfaz no hace interoperables los protocolos por sí sola.
-OpenAI, Anthropic, Google Cloud, Azure, Whisper, Vosk y Ollama no están
+Anthropic, Google Cloud, Azure, Whisper, Vosk y Ollama no están
 implementados ni probados contra el sistema. La simulación confirma la unión
 interna y la protección de `OrderService`, pero no resuelve los 503 ni demuestra
 latencia, costo, disponibilidad, exactitud con ruido o seguridad de una cuenta
 productiva. Cada adaptador futuro deberá convertir sus tools o resultados al
 mismo límite autorizado y someterse a pruebas manuales y de regresión.
+
+
+## 10. Primer proveedor alternativo: OpenAI solo para LLM
+
+**Estado:** implementada con simulaciones; validacion manual real bloqueada por
+creditos de la cuenta OpenAI.
+
+**Contexto comprobado:** la cuenta lista modelos de chat y acepto autenticacion,
+pero una solicitud real a `gpt-4.1-mini` respondio `429` con
+`credit_balance_exhausted`. No fue un 503 de Gemini ni una senal de que el modelo
+no exista.
+
+**Decision:** probar primero `LLM_PROVIDER=openai` y conservar
+`STT_PROVIDER=gemini`. `OpenAIOrderInterpreter` usa Chat Completions con
+function calling y sus llamadas terminan en las mismas tools y `OrderService`.
+`OPENAI_CHAT_MODEL` queda separado de un futuro `OPENAI_TRANSCRIPTION_MODEL`
+porque voz streaming requiere otro protocolo.
+
+**Consecuencia:** se puede comparar chat sin alterar voz. La cuenta necesita
+creditos API para una prueba manual. Un 429 por saldo se muestra como falta de
+creditos y no recomienda reintentar; OpenAI STT no se considera implementado.

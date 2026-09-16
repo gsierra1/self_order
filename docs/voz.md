@@ -201,3 +201,8 @@ cloud requerirían la credencial del proveedor seleccionado. La elección se deb
 hacer con una matriz de prueba real de latencia, ruido, costo, hardware e
 interrupciones; esta arquitectura permite esa comparación sin reescribir
 `OrderService`.
+
+
+OpenAI esta implementado solo como interprete LLM. `STT_PROVIDER=openai` no es
+valido todavia: la transcripcion OpenAI por streaming requerira otro adaptador
+que implemente el contrato completo de voz.

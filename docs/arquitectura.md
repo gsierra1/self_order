@@ -428,3 +428,25 @@ comprueba que el cambio de adaptador conserva el cálculo real de ARS 8.500 y qu
 un parcial no muta el carrito. No llama a Gemini, OpenAI, Anthropic, Whisper,
 Vosk ni a otro proveedor; por lo tanto no mide disponibilidad, 503, latencia,
 costo ni precisión de reconocimiento.
+
+
+### OpenAI LLM: implementacion y evidencia
+
+`LLM_PROVIDER=openai` crea `OpenAIOrderInterpreter`. El adaptador envia el
+catalogo, traduce function calls de OpenAI a las tools autorizadas y devuelve los
+resultados al historial antes de pedir la respuesta final. `OrderToolsRuntime`
+conserva ejecucion, proteccion contra duplicados y sanitizacion sin depender de
+un SDK de IA. STT sigue en Gemini; `STT_PROVIDER=openai` continua rechazado hasta
+implementar un adaptador de streaming separado.
+
+La cuenta consultada expone `gpt-4.1-mini`, `gpt-4.1`, `gpt-4o`, `gpt-4o-mini`,
+`gpt-5-mini`, `gpt-5` y otros. Se eligio `gpt-4.1-mini` como primer modelo de
+prueba por estar disponible y soportar function calling. El comando
+`python -m backend.ai.list_openai_models` consulta la lista de la cuenta sin
+revelar la clave.
+
+La conexion real alcanzo OpenAI, que respondio `429 credit_balance_exhausted`.
+La clave es valida pero la cuenta no posee creditos API: no hay prueba manual de
+tools aprobada hasta agregar saldo. Ese error se clasifica como
+`CREDIT_BALANCE_EXHAUSTED`, no como saturacion transitoria. Las simulaciones si
+verifican OpenAI -> tool -> OrderService.

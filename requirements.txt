@@ -2,3 +2,4 @@ google-genai==2.22.0
 python-dotenv==1.2.3
 fastapi==0.141.1
 uvicorn[standard]==0.52.4
+openai==3.14.1

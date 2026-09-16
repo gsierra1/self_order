@@ -82,15 +82,30 @@ Los nombres se configuran mediante `GEMINI_CHAT_MODEL` y
 `GEMINI_API_KEY` para las dos capas; sus modelos se configuran con
 `GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
 
-Hoy solo Gemini está implementado. Si se escribe `whisper`, `vosk`, `openai`,
-`anthropic`, `google-cloud`, `azure` u otro valor antes de agregar su adaptador,
-el backend lo informa claramente y no intenta usar una clave ajena. `.env.example`
-registra como referencias futuras `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` y
-`STT_MODEL_PATH`; no son requeridas mientras no se seleccione e implemente ese
-proveedor. Una combinación cloud necesitará únicamente las claves de sus
-proveedores seleccionados. Un motor STT local necesitará el modelo instalado y
-su ruta, sin clave cloud para la transcripción local.
+Gemini esta implementado para STT y LLM. OpenAI esta implementado solo para
+`LLM_PROVIDER=openai`; su STT sigue pendiente. Para probar OpenAI, conserva
+`STT_PROVIDER=gemini` y agrega en tu `.env` local:
 
+```dotenv
+LLM_PROVIDER=openai
+OPENAI_API_KEY=tu_clave_local
+OPENAI_CHAT_MODEL=gpt-4.1-mini
+```
+
+`whisper`, `vosk`, `anthropic`, `google-cloud`, `azure` u otro valor no
+implementado se informa claramente y no intenta usar una clave ajena.
+`.env.example` registra `OPENAI_API_KEY` y `OPENAI_CHAT_MODEL` para el
+interprete OpenAI. `OPENAI_TRANSCRIPTION_MODEL` sigue siendo una referencia
+hasta crear el adaptador de voz OpenAI.
+
+Para consultar modelos visibles para la cuenta OpenAI, sin imprimir la clave:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m backend.ai.list_openai_models
+```
+
+El listado indica disponibilidad de cuenta, no garantiza compatibilidad con tools ni saldo.
 El diseño está separado en `SpeechToText` para audio por streaming y
 `OrderInterpreter` para texto y tools. Gemini los implementa con
 `GeminiLiveTranscriber` y `GeminiOrderInterpreter`. Ningún adaptador puede

@@ -3,10 +3,11 @@
 import asyncio
 import os
 import unittest
-from unittest.mock import ANY, patch
+from unittest.mock import ANY, Mock, patch
 
 from backend.ai.contracts import OrderInterpreter, SpeechToText, VoiceEventPublisher
 from backend.ai.factories import create_order_interpreter, create_speech_to_text
+from backend.ai.openai_interpreter import OpenAIOrderInterpreter
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
 from backend.services.order_service import OrderService
@@ -148,6 +149,37 @@ class ProviderContractTests(unittest.IsolatedAsyncioTestCase):
 class ProviderFactoryTests(unittest.TestCase):
     """Comprueba selección de proveedor sin exigir credenciales no seleccionadas."""
 
+
+    def test_openai_interpreter_uses_the_same_tool_and_service(self) -> None:
+        """OpenAI simulado agrega mediante la tool sin acceder al dominio directo."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        first = type("Response", (), {"choices": [type("Choice", (), {
+            "message": type("Message", (), {
+                "content": None,
+                "tool_calls": [type("Call", (), {
+                    "id": "call_add",
+                    "function": type("Function", (), {
+                        "name": "add_item",
+                        "arguments": '{"product_id":"BURGER_CLASICA","selected_modifiers":{"drink":"WATER"}}',
+                    })(),
+                })()],
+            })(),
+        })()]})()
+        second = type("Response", (), {"choices": [type("Choice", (), {
+            "message": type("Message", (), {
+                "content": "Agregue tu Burger Clasica con Agua.",
+                "tool_calls": [],
+            })(),
+        })()]})()
+        client = Mock()
+        client.chat.completions.create.side_effect = [first, second]
+        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=client):
+            interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
+            response = interpreter.send_message("Quiero una Burger Clasica con Agua")
+        self.assertEqual(response, "Agregue tu Burger Clasica con Agua.")
+        self.assertEqual(service.get_cart().total, 8500)
+        self.assertEqual(client.chat.completions.create.call_count, 2)
+
     def test_default_providers_are_gemini(self) -> None:
         """La ausencia de variables conserva el comportamiento anterior con Gemini."""
         with patch.dict(os.environ, {"STT_PROVIDER": "", "LLM_PROVIDER": ""}, clear=False):
@@ -166,6 +198,29 @@ class ProviderFactoryTests(unittest.TestCase):
             self.assertIs(create_order_interpreter(service), interpreter_sentinel)
         stt_class.assert_called_once_with(session_id="session-test")
         llm_class.assert_called_once_with(service=service, model=ANY)
+
+    def test_openai_credit_balance_error_is_not_reported_as_temporary(self) -> None:
+        """Un 429 sin creditos explica facturacion y no recomienda reintentar."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=Mock()):
+            interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
+        error = type("CreditError", (Exception,), {
+            "status_code": 429,
+            "__str__": lambda self: "credit_balance_exhausted: no credits remaining",
+        })()
+        result = interpreter._classify_error(error, "OPENAI_INTERPRETATION", False, None)
+        self.assertEqual(result.error_type, "CREDIT_BALANCE_EXHAUSTED")
+        self.assertFalse(result.retryable)
+        self.assertIn("creditos", result.user_message)
+
+    def test_openai_factory_uses_only_the_openai_adapter(self) -> None:
+        """LLM_PROVIDER=openai selecciona el adaptador sin crear Gemini."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        sentinel = object()
+        with patch.dict(os.environ, {"LLM_PROVIDER": "openai"}, clear=False), \
+             patch("backend.ai.factories.OpenAIOrderInterpreter", return_value=sentinel) as adapter:
+            self.assertIs(create_order_interpreter(service), sentinel)
+        adapter.assert_called_once_with(service=service, model=ANY)
 
     def test_unimplemented_provider_fails_before_reading_its_credential(self) -> None:
         """Un proveedor futuro explica el límite sin requerir claves inexistentes."""

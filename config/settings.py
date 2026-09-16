@@ -55,6 +55,16 @@ def get_chat_model() -> str:
     return os.getenv("GEMINI_CHAT_MODEL", "gemini-3.5-flash-lite")
 
 
+def get_openai_chat_model() -> str:
+    """Obtiene el modelo OpenAI configurado para interpretar pedidos.
+
+    Returns:
+        Nombre del modelo usado unicamente cuando LLM_PROVIDER es openai.
+    """
+    load_dotenv()
+    return os.getenv("OPENAI_CHAT_MODEL", "gpt-4.1-mini")
+
+
 def get_gemini_api_key() -> str:
     """Obtiene la API key de Gemini desde las variables de entorno.
 
