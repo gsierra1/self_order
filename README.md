@@ -5,14 +5,12 @@ configurado interpreta el texto y el usuario también puede escribir. Un backend
 Python valida productos, modificadores y precios. El dashboard muestra la
 conversación y el carrito actualizado por WebSocket.
 
-Tocá **Hablar**, luego de que el indicador de **Estado** esté en "Listo" esperá la
-escucha y tocá **Enviar audio** al terminar; el texto definitivo usa el mismo
-intérprete LLM configurado que el chat. La respuesta puede leerse con la voz del navegador si el mismo está habilitado.
+Una vez que el indicador esté en "Listo", tocá **Hablar** y esperá la
+escucha. Procede a indicar tu pedido por voz y tocá **Enviar audio** al terminar; 
+el texto definitivo usa el mismo intérprete LLM configurado que el chat. 
+La respuesta puede leerse con la voz del navegador si el mismo está habilitado.
 La confirmación y el pago son demostraciones locales, sin integración POS ni
 procesamiento real de tarjetas. El QR es escaneable, pero contiene solo texto de demostracion sin URL ni pago real.
-
-Ver [la guía de voz](docs/voz.md) para funcionamiento, límites y pruebas. Todavía
-no se detectan silencios ni se agregan productos durante una frase en curso.
 
 ## Documentación
 
@@ -24,7 +22,8 @@ Las reglas de docstrings Google y actualización documental están en
 
 ## Ejecutar en Windows / PowerShell
 
-Desde la raíz del repositorio, con Python instalado (entorno revisado: 3.12.1) crea un entorno virtual de Python dentro de la carpeta .venv. Si ya existe `.venv`, reutilizarlo.
+Desde la raíz del repositorio, con Python instalado crea un entorno virtual de Python dentro de la carpeta .venv. 
+Si ya existe `.venv`, reutilizarlo.
 
 ```powershell
 python -m venv .venv
@@ -72,12 +71,6 @@ Abrir `http://127.0.0.1:8000/`. FastAPI sirve también el frontend, sin un servi
 adicional. `http://127.0.0.1:8000/docs` muestra los endpoints HTTP.
 `/api/health` verifica la API, no el acceso a los proveedores de IA.
 
-`GEMINI_TRANSCRIPTION_MODEL` requiere un modelo compatible con la modalidad
-Live Transcription: debe admitir `bidiGenerateContent`, aceptar
-`input_audio_transcription` y emitir el texto reconocido final. Que un modelo
-aparezca en el listado de Gemini o admita `bidiGenerateContent` no garantiza por
-sí solo que sirva para transcribir. El modelo actual verificado para esta ruta es
-`gemini-3.5-transcribe-live`.
 
 ## Proveedores de IA y adaptadores
 
@@ -89,12 +82,25 @@ Chat. Gemini usa una sola
 `GEMINI_API_KEY` para las dos capas; sus modelos se configuran con
 `GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
 
-Gemini esta implementado para STT y LLM. Groq y OpenAI están implementados solo
+Gemini está implementado para STT y LLM. Groq y OpenAI están implementados solo
 para LLM; su STT sigue pendiente. El `.env.example` selecciona Groq porque la
 cuenta gratuita de Groq permitió probar las tools del carrito. No se instala un
 modelo en la PC: Groq ejecuta `openai/gpt-oss-20b` en la nube mediante una API
 compatible con OpenAI. El nombre `openai/` identifica al modelo, no al servicio
 que procesa la solicitud: el proveedor configurado sigue siendo Groq.
+
+Para generar una clave de Gemini para la transcripción recomendada:
+
+1. Entrá a [Google AI Studio](https://aistudio.google.com/).
+2. Iniciá sesión con tu cuenta de Google y abrí [la sección de claves API](https://aistudio.google.com/app/apikey).
+3. Elegí **Create API key**, seleccioná un proyecto si la plataforma lo solicita,
+   copiala y guardala en tu `.env` como `GEMINI_API_KEY`.
+4. Conservá `STT_PROVIDER=gemini` y `GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live`.
+
+Google puede pedir aceptar sus condiciones o asociar la clave a un proyecto. La
+clave habilita las llamadas que permita tu cuenta; los límites y la disponibilidad
+del modelo dependen del proyecto y del nivel de uso. No la pegues en el código,
+README, logs ni Git.
 
 Para generar o volver a generar una clave de Groq:
 

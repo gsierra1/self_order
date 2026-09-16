@@ -17,6 +17,11 @@ verificacion registrada junto con su cambio.
 - **Prueba de microfono y parlantes fisicos:** verificar permisos, silencio,
   ruido, cancelacion, interrupcion, reconexion y calidad audible en el equipo
   de la demo. Las pruebas actuales usan audio y navegador simulados.
+- **Detección automática de silencio y turnos de voz:** incorporar detección de
+  fin de habla para no depender de que la persona pulse **Enviar audio**. La
+  interfaz debe cerrar el turno solo cuando haya silencio suficiente y enviar
+  una única transcripción final; mientras la persona continúa hablando, el
+  texto provisional no debe agregar productos al carrito.
 - **Estabilidad de IA:** medir por separado transcripcion y chat: latencia,
   errores 429/503 y tasa de exito para un conjunto de pedidos representativo.
   Definir ambos modelos y el plan de cuenta con evidencia, no solo por
