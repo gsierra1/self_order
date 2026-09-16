@@ -51,12 +51,6 @@ verificacion registrada junto con su cambio.
 - **Persistencia e idempotencia:** guardar pedidos y sesiones en almacenamiento
   durable y asociar operaciones a identificadores que eviten duplicados ante
   reintentos o reconexiones.
-- **Cambio conversacional de cantidad:** decidir si `change_quantity`, ya
-  disponible en `OrderService`, debe exponerse como tool para modificar una
-  línea existente por voz o texto. No bloquea la demostración: la cantidad
-  inicial ya puede indicarse al agregar un producto. Si se incorpora, definir
-  frases esperadas, ambigüedades entre líneas y pruebas. `clear_cart` ya está
-  expuesto como una única tool para evitar eliminaciones encadenadas.
 - **Catálogo y stock escalables:** la demo usa `config/menu.json` porque el menú
   actual es pequeño y el archivo resulta sencillo de leer, actualizar,
   versionar y probar sin depender de servicios externos. Antes de producción se

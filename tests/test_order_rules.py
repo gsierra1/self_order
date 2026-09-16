@@ -60,6 +60,39 @@ class OrderRulesTests(unittest.TestCase):
         self.assertEqual(asdict(item), previous)
         self.assertEqual(self.service.get_cart().total, 17000)
 
+    def test_identical_items_merge_into_one_line(self) -> None:
+        """Consolida altas con producto y modificadores idénticos."""
+        first = self.service.add_item("BURGER_DOBLE", 1, self.options)
+        merged = self.service.add_item("BURGER_DOBLE", 3, self.options)
+
+        self.assertIs(merged, first)
+        self.assertEqual(merged.quantity, 4)
+        self.assertEqual(len(self.service.get_cart().items), 1)
+        self.assertEqual(self.service.get_cart().total, 42000)
+
+    def test_different_configurations_remain_separate_lines(self) -> None:
+        """Conserva líneas distintas cuando cambia una bebida o un extra."""
+        self.service.add_item("BURGER_DOBLE", 1, self.options)
+        self.service.add_item("BURGER_DOBLE", 3, {"drink": "WATER"})
+
+        self.assertEqual(len(self.service.get_cart().items), 2)
+        self.assertEqual(
+            [item.quantity for item in self.service.get_cart().items],
+            [1, 3],
+        )
+
+    def test_relative_quantity_removes_one_unit_without_removing_line(self) -> None:
+        """Resta una unidad y rechaza un ajuste que borraría toda la línea."""
+        item = self.service.add_item("BURGER_DOBLE", 4, self.options)
+
+        updated = self.service.adjust_quantity(item.line_id, -1)
+
+        self.assertEqual(updated.quantity, 3)
+        self.assertEqual(len(self.service.get_cart().items), 1)
+        with self.assertRaises(ValueError):
+            self.service.adjust_quantity(item.line_id, -3)
+        self.assertEqual(updated.quantity, 3)
+
     def test_completed_payment_blocks_later_changes(self) -> None:
         """El pago completo exige carrito, metodo y bloquea cambios posteriores."""
         with self.assertRaises(ValueError):

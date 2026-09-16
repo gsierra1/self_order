@@ -12,6 +12,9 @@ para explorar pedidos por voz.
 - Si el producto no existe o está indisponible, el asistente lo informa.
 - Si faltan opciones obligatorias, pregunta antes de agregar la línea al carrito.
 - Se pueden corregir productos y opciones durante la conversación.
+- Altas repetidas con el mismo producto y configuración se agrupan en una sola
+  línea con su cantidad total. Pedir que se quite una unidad reduce esa cantidad;
+  solo una solicitud de eliminar el producto completo borra toda la línea.
 - El asistente puede responder por texto y por voz; la voz puede desactivarse.
 - La confirmación debe representar el estado real del pedido.
 

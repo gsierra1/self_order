@@ -247,3 +247,31 @@ presentar como capacidad productiva garantizada.
 mantengan el mismo comportamiento de tools. La prueba simulada protege el
 recorrido interno; la validacion manual debe confirmar autenticacion, cuota,
 latencia y operaciones del pedido.
+
+## 12. Consolidar configuraciones idénticas y ajustar cantidades
+
+**Estado:** adoptada e implementada el 16/09/2026.
+
+**Contexto comprobado:** una corrida agregó una Burger Doble y después tres más
+con la misma configuración. El backend creó dos líneas, con cantidades uno y
+tres. Ante «eliminá una», el LLM solo disponía de `remove_item` y eliminó la
+línea completa de tres unidades.
+
+**Alternativas consideradas:** conservar cada alta como línea independiente;
+exponer únicamente `change_quantity` con una cantidad absoluta; o consolidar
+configuraciones idénticas y ofrecer un ajuste relativo. Las líneas separadas
+vuelven ambiguas frases como «quitá una». Una cantidad absoluta obliga al LLM a
+calcular el nuevo valor y aumenta el riesgo de usar un estado desactualizado.
+
+**Decisión adoptada:** `OrderService.add_item()` suma cantidades cuando producto,
+modificadores y precio unitario coinciden. Productos con bebidas o extras
+distintos permanecen separados. La tool `adjust_quantity` recibe un `delta`:
+`-1` quita una unidad y un valor positivo agrega unidades. `remove_item` se usa
+solo para eliminar toda la línea; un ajuste que llevaría la cantidad a cero o
+menos se rechaza sin modificar el carrito.
+
+**Consecuencias:** el frontend muestra una única línea, por ejemplo «4 × Burger
+Doble», y calcula el total con la misma lógica existente. La regla vive en
+`OrderService`, por lo que se aplica igual a texto, voz y futuros canales. Si la
+persona tiene dos líneas con configuraciones diferentes, todavía debe indicar
+cuál desea ajustar o el intérprete debe pedir una aclaración.

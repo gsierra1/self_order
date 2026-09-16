@@ -318,6 +318,22 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertEqual(result["result"]["removed_count"], 2)
         self.assertEqual(service.get_cart().items, [])
 
+    def test_adjust_quantity_tool_applies_a_relative_change(self) -> None:
+        """Expone una resta relativa sin convertirla en eliminación de línea."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        item = service.add_item("BURGER_DOBLE", 4, {"drink": "WATER"})
+        runtime = OrderToolsRuntime(service)
+
+        result = runtime.execute(type("Call", (), {
+            "name": "adjust_quantity",
+            "args": {"line_id": item.line_id, "delta": -1},
+        })())
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["result"]["quantity"], 3)
+        self.assertEqual(len(service.get_cart().items), 1)
+        self.assertEqual(service.get_cart().total, 31500)
+
     def test_payment_method_aliases_are_normalized(self) -> None:
         """Acepta expresiones conversacionales para tarjeta, QR y caja."""
         service = OrderService(load_menu("config/menu.json"), Session())

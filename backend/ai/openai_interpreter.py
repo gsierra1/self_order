@@ -88,6 +88,10 @@ class OpenAIOrderInterpreter(OrderInterpreter):
                 "quantity": {"type": "integer", "minimum": 1},
                 "selected_modifiers": string_map,
             }, ["product_id"]),
+            self._function("adjust_quantity", "Suma o resta unidades de una línea sin eliminarla completa.", {
+                "line_id": {"type": "integer"},
+                "delta": {"type": "integer", "description": "Variación relativa; -1 quita una unidad."},
+            }, ["line_id", "delta"]),
             self._function("get_cart", "Consulta el carrito validado.", {}, []),
             self._function("change_modifier", "Cambia o quita un modificador de una linea.", {
                 "line_id": {"type": "integer"},

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 from backend.ai.tools import (
     create_add_item_tool,
+    create_adjust_quantity_tool,
     create_change_modifier_tool,
     create_clear_cart_tool,
     create_confirm_order_tool,
@@ -22,7 +23,7 @@ from backend.services.order_service import OrderService
 class OrderToolsRuntime:
     """Reune prompt, tools y validaciones sin depender de un proveedor LLM."""
 
-    MUTATING_TOOLS = {"add_item", "change_modifier", "replace_item", "remove_item", "clear_cart", "confirm_order", "select_payment_method", "return_to_order"}
+    MUTATING_TOOLS = {"add_item", "adjust_quantity", "change_modifier", "replace_item", "remove_item", "clear_cart", "confirm_order", "select_payment_method", "return_to_order"}
 
     def __init__(self, service: OrderService) -> None:
         """Crea las tools ligadas a una sesion y su servicio real.
@@ -33,6 +34,7 @@ class OrderToolsRuntime:
         self.service = service
         self.available_tools = {
             "add_item": create_add_item_tool(service),
+            "adjust_quantity": create_adjust_quantity_tool(service),
             "get_cart": create_get_cart_tool(service),
             "change_modifier": create_change_modifier_tool(service),
             "replace_item": create_replace_item_tool(service),
@@ -62,7 +64,8 @@ Interpreta al usuario y usa tools solo cuando corresponde.
 No inventes precios, descuentos, disponibilidad ni stock. OrderService y las tools son la autoridad.
 No agregues ni reemplaces productos con modificadores obligatorios faltantes: pregunta antes.
 No uses add_item para consultar precios o menu. Usa get_cart para consultar el pedido.
-Usa change_modifier para modificar o quitar un adicional opcional, replace_item para cambiar producto, remove_item para quitar una linea y clear_cart para vaciar todo el carrito de una sola vez.
+Usa change_modifier para modificar o quitar un adicional opcional y replace_item para cambiar producto.
+Usa adjust_quantity con delta=-1 si la persona pide quitar una unidad de una línea con varias unidades. Usa remove_item solamente si pide eliminar toda la línea y clear_cart para vaciar todo el carrito de una sola vez.
 confirm_order solo prepara pago. En PAYMENT_PENDING usa select_payment_method o return_to_order; no repitas confirm_order.
 Para CASH di siempre "En caja". Para CARD indica que debe ingresar el numero de tarjeta.
 No uses tablas Markdown ni numeres líneas o alternativas: presentá el carrito como una lista directa.

@@ -12,6 +12,7 @@ from backend.ai.errors import (
 from backend.ai.gemini_client import create_gemini_client
 from backend.ai.tools import (
     create_add_item_tool,
+    create_adjust_quantity_tool,
     create_change_modifier_tool,
     create_clear_cart_tool,
     create_confirm_order_tool,
@@ -40,9 +41,11 @@ class GeminiOrderInterpreter(OrderInterpreter):
 
     MUTATING_TOOLS = {
         "add_item",
+        "adjust_quantity",
         "change_modifier",
         "replace_item",
         "remove_item",
+        "clear_cart",
         "confirm_order",
         "select_payment_method",
         "return_to_order",
@@ -106,6 +109,7 @@ class GeminiOrderInterpreter(OrderInterpreter):
             Diccionario que relaciona nombres de tools con funciones Python.
         """
         add_item_tool = create_add_item_tool(self.service)
+        adjust_quantity_tool = create_adjust_quantity_tool(self.service)
         get_cart_tool = create_get_cart_tool(self.service)
         change_modifier_tool = create_change_modifier_tool(self.service)
         replace_item_tool = create_replace_item_tool(self.service)
@@ -117,6 +121,7 @@ class GeminiOrderInterpreter(OrderInterpreter):
 
         return {
             "add_item": add_item_tool,
+            "adjust_quantity": adjust_quantity_tool,
             "get_cart": get_cart_tool,
             "change_modifier": change_modifier_tool,
             "replace_item": replace_item_tool,
@@ -198,7 +203,10 @@ REGLAS TRANSACCIONALES:
 - Para cambiar o quitar una opción de cualquier grupo utilizá
   change_modifier. Para quitar una opción opcional usá option_id=null.
 - Para sustituir un producto utilizá replace_item.
-- Para eliminar una línea utilizá remove_item.
+- Si la persona pide sumar o quitar una cantidad de unidades de una línea,
+  utilizá adjust_quantity con una variación relativa. Por ejemplo, "eliminá
+  una" sobre una línea con cuatro unidades requiere delta=-1 y deja tres.
+- Utilizá remove_item solamente cuando pida eliminar toda la línea.
 - Para vaciar todo el carrito utilizá clear_cart una sola vez.
 - Para finalizar el pedido utilizá confirm_order.
 - confirm_order solo prepara el pago y devuelve las opciones; no cierres la

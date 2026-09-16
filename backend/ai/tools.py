@@ -225,6 +225,36 @@ def create_change_modifier_tool(service: OrderService):
     return change_modifier
 
 
+def create_adjust_quantity_tool(service: OrderService):
+    """Crea la tool que suma o resta unidades de una línea existente.
+
+    Args:
+        service: Servicio de pedidos asociado a la sesión actual.
+
+    Returns:
+        Función preparada para el intérprete LLM.
+    """
+
+    def adjust_quantity(line_id: int, delta: int) -> dict:
+        """Aplica una variación relativa sin eliminar la línea completa.
+
+        Args:
+            line_id: Identificador de la línea que se desea ajustar.
+            delta: Unidades que se suman o restan; por ejemplo, ``-1`` quita
+                una unidad y ``2`` agrega dos.
+
+        Returns:
+            Línea actualizada y total actual del carrito.
+
+        Raises:
+            ValueError: Si la línea o la variación no son válidas.
+        """
+        item = service.adjust_quantity(line_id, delta)
+        return _serialize_item_result(service, item)
+
+    return adjust_quantity
+
+
 def create_replace_item_tool(service: OrderService):
     """Crea la tool que reemplaza un producto sin perder la línea original.
 

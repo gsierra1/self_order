@@ -45,7 +45,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/domain/cart_item.py` | `CartItem`: una línea con producto, cantidad, configuración y precio unitario. |
 | `backend/domain/cart.py` | `Cart.total`: suma precio unitario por cantidad de cada línea. |
 | `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
-| `backend/services/order_service.py` | Validacion y mutacion mediante `add_item`, `remove_item`, `change_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
+| `backend/services/order_service.py` | Validación y mutación mediante `add_item`, `remove_item`, `change_quantity`, `adjust_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
 | `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para el LLM configurado. Incluye `clear_cart` para vaciar el carrito en una sola operación. |
 | `backend/ai/order_tools_runtime.py` | Comparte instrucciones, ejecución segura, detección de mutaciones y sanitización de respuestas entre proveedores; transforma tablas Markdown del carrito en listas legibles. |
 | `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |
@@ -91,11 +91,11 @@ streaming de tokens de respuesta ni procesamiento parcial de pedidos hablados.
 
 ## Tools y reglas
 
-Las nueve tools expuestas son `add_item`, `get_cart`, `change_modifier`,
-`replace_item`, `remove_item`, `clear_cart`, `confirm_order`,
-`select_payment_method` y `return_to_order`. `change_quantity` existe en el
-servicio pero todavía no tiene una tool expuesta: no debe anunciarse que el bot
-la ejecuta directamente por conversación.
+Las diez tools expuestas son `add_item`, `get_cart`, `adjust_quantity`,
+`change_modifier`, `replace_item`, `remove_item`, `clear_cart`, `confirm_order`,
+`select_payment_method` y `return_to_order`. `adjust_quantity` recibe una
+variación relativa: `-1` quita una unidad sin borrar la línea. `remove_item`
+queda reservado para quitar la línea completa.
 
 `add_item` devuelve `needs_clarification` si no recibe cualquier grupo marcado
 como obligatorio por el catálogo, sin modificar nada. Después el servicio verifica
@@ -166,8 +166,10 @@ total del carrito = suma de totales de línea
 
 Hoy los enteros representan pesos argentinos completos, según catálogo y renderizado.
 No hay convención de centavos ni soporte explícito de múltiples monedas.
-Una línea puede tener varias unidades solo si comparten configuración; dos
-hamburguesas con bebidas o extras diferentes deben representarse en líneas distintas.
+Una línea puede tener varias unidades solo si comparten configuración. Cuando
+`add_item` recibe nuevamente el mismo producto con los mismos modificadores,
+`OrderService` suma la cantidad sobre la línea existente. Dos hamburguesas con
+bebidas o extras diferentes se mantienen en líneas distintas.
 
 `line_id` usa `max(ids presentes) + 1`, por lo que puede reutilizar valores al
 eliminar líneas. `replace_item` conserva ID y cantidad, valida el destino y
@@ -472,7 +474,7 @@ no prueba que rindan bien para este menú, micrófono, ruido o cuenta.
 
 ### Validación de esta arquitectura
 
-El 16/09/2026 se ejecutaron 58 pruebas automáticas sin red ni credenciales: una
+El 16/09/2026 se ejecutaron 62 pruebas automáticas sin red ni credenciales: una
 simulación del SDK Live de Gemini, los flujos de WebSocket de voz, reglas del
 pedido y pago, y una prueba nueva que conecta `AlternateSpeechToText` y
 `AlternateOrderInterpreter` simulados con `OrderService` real. La última prueba

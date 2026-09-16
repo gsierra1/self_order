@@ -240,8 +240,9 @@ class OrderService:
         Agrega un producto validado al carrito de la sesión actual.
 
         Busca el producto en el menú, verifica su disponibilidad, valida los
-        modificadores seleccionados, calcula el precio unitario correspondiente
-        y crea un nuevo CartItem con un line_id único dentro del carrito.
+        modificadores seleccionados y calcula el precio unitario. Si ya existe
+        una línea con el mismo producto y configuración, suma la cantidad en esa
+        línea; en caso contrario crea un CartItem con un line_id nuevo.
 
         El carrito solo se modifica después de que todas las validaciones hayan
         finalizado correctamente.
@@ -255,7 +256,7 @@ class OrderService:
                 catálogo, por ejemplo ``{"drink": "COCA"}``.
 
         Returns:
-            El CartItem creado y agregado al carrito.
+            El CartItem creado o consolidado con una línea idéntica.
 
         Raises:
             ValueError: Si el producto no existe en el menú.
@@ -289,6 +290,25 @@ class OrderService:
             product,
             selected_modifiers,
         )
+
+        matching_item = next(
+            (
+                item
+                for item in self.session.cart.items
+                if item.product_id == product.id
+                and item.selected_modifiers == selected_modifiers
+                and item.unit_price == unit_price
+            ),
+            None,
+        )
+
+        if matching_item is not None:
+            matching_item.quantity += quantity
+            self._log_cart_updated(
+                "add_item",
+                line_id=matching_item.line_id,
+            )
+            return matching_item
 
         next_line_id = (
             max(
@@ -414,6 +434,55 @@ class OrderService:
             line_id=cart_item.line_id,
         )
 
+        return cart_item
+
+    def adjust_quantity(
+        self,
+        line_id: int,
+        delta: int,
+    ) -> CartItem:
+        """Suma o resta unidades de una línea sin eliminarla por accidente.
+
+        Args:
+            line_id: Identificador único de la línea que se desea ajustar.
+            delta: Variación relativa; un valor positivo suma unidades y uno
+                negativo las resta.
+
+        Returns:
+            El CartItem con su cantidad actualizada.
+
+        Raises:
+            ValueError: Si la variación es cero, la línea no existe o el
+                resultado sería menor o igual que cero.
+        """
+        self._ensure_active()
+
+        if delta == 0:
+            raise ValueError("Quantity adjustment cannot be zero")
+
+        cart_item = next(
+            (
+                item
+                for item in self.session.cart.items
+                if item.line_id == line_id
+            ),
+            None,
+        )
+
+        if cart_item is None:
+            raise ValueError(f"Cart item not found: {line_id}")
+
+        new_quantity = cart_item.quantity + delta
+        if new_quantity <= 0:
+            raise ValueError(
+                "The adjustment would remove the complete line; use remove_item"
+            )
+
+        cart_item.quantity = new_quantity
+        self._log_cart_updated(
+            "adjust_quantity",
+            line_id=cart_item.line_id,
+        )
         return cart_item
 
     def change_modifier(

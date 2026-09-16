@@ -161,6 +161,7 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           <tr><td>La persona toca QR o dice &laquo;Pago con QR&raquo;.</td><td>El frontend o la tool de selecci&oacute;n registra el m&eacute;todo de pago. La demo muestra un QR escaneable que contiene texto sin URL y, tras cinco segundos, completa el pago simulado.</td><td>Se muestra el n&uacute;mero de pedido para retirar en caja y una cuenta regresiva de quince segundos antes de abrir una sesi&oacute;n nueva.</td></tr>
         </tbody>
       </table>
+      <p>Si luego se agregan tres unidades con el mismo producto, bebida y extras que una l&iacute;nea existente, <code>OrderService.add_item()</code> las consolida: el carrito muestra una sola l&iacute;nea con cantidad cuatro. Si la persona dice &laquo;elimin&aacute; una&raquo;, el int&eacute;rprete debe proponer <code>adjust_quantity(delta=-1)</code> y quedan tres; <code>remove_item()</code> se reserva para eliminar la l&iacute;nea completa.</p>
     </section>
 
     <section class="notes">
