@@ -220,6 +220,9 @@ El frontend trata `payment.method_selected` como una actualización prioritaria:
 usa su `cart` validado para mostrar de inmediato el QR, el formulario de tarjeta
 o el número de pedido para caja. La respuesta textual del LLM puede llegar
 después y solo aporta la explicación conversacional.
+Ese snapshot incluye `payment_method` y `order_number`; así, aunque los eventos
+asíncronos lleguen muy próximos, ninguno puede reconstruir el panel con datos de
+pago incompletos.
 
 Durante `ACTIVE` o `PAYMENT_PENDING`, `conversation_socket.py` reconoce localmente
 una solicitud explícita de QR, tarjeta o caja y la delega a `OrderService`. Esto evita

@@ -625,7 +625,12 @@ function applyCart(cart) {
  */
 function handlePaymentMethodSelected(data) {
     if (!data?.cart) return;
-    applyCart(data.cart);
+    const paymentCart = {
+        ...data.cart,
+        payment_method: data.method ?? data.cart.payment_method,
+        order_number: data.order_number ?? data.cart.order_number,
+    };
+    applyCart(paymentCart);
     phase = "ready";
     if (data.method === "CASH") {
         setStatus("Pedido listo para retirar en caja");

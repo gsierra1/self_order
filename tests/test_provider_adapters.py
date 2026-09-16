@@ -338,6 +338,9 @@ class ProviderFactoryTests(unittest.TestCase):
 
         self.assertEqual(result["payment_method"], "CASH")
         self.assertEqual([event_type for event_type, _ in events], ["payment.method_selected"])
+        event_cart = events[0][1]["cart"]
+        self.assertEqual(event_cart["payment_method"], "CASH")
+        self.assertEqual(event_cart["order_number"], result["order_number"])
 
     def test_groq_interpreter_uses_the_same_tool_and_service(self) -> None:
         """Groq simulado ejecuta tools sin asumir precios ni estado del dominio."""

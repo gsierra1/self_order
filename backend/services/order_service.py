@@ -38,12 +38,11 @@ class OrderService:
         """
         Construye una representación estructurada del carrito actual.
 
-        El snapshot se utiliza exclusivamente para observabilidad y permite
-        reconstruir cómo quedó el pedido después de una operación exitosa.
+        El snapshot se publica hacia la interfaz y también permite reconstruir
+        cómo quedó el pedido después de una operación exitosa.
 
         Returns:
-            Diccionario con los productos actuales, el total y el estado de
-            la sesión.
+            Diccionario con productos, total, estado y datos de pago actuales.
         """
         cart = self.session.cart
 
@@ -72,6 +71,8 @@ class OrderService:
             ],
             "total": cart.total,
             "state": self.session.state.value,
+            "order_number": self.session.order_number,
+            "payment_method": self.session.payment_method,
         }
     
     def _emit_event(
