@@ -9,6 +9,7 @@ from backend.ai.contracts import OrderInterpreter, SpeechToText, VoiceEventPubli
 from backend.ai.factories import create_order_interpreter, create_speech_to_text
 from backend.ai.groq_interpreter import GroqOrderInterpreter
 from backend.ai.openai_interpreter import OpenAIOrderInterpreter
+from backend.ai.order_tools_runtime import OrderToolsRuntime
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
 from backend.services.order_service import OrderService
@@ -222,6 +223,17 @@ class ProviderFactoryTests(unittest.TestCase):
              patch("backend.ai.factories.OpenAIOrderInterpreter", return_value=sentinel) as adapter:
             self.assertIs(create_order_interpreter(service), sentinel)
         adapter.assert_called_once_with(service=service, model=ANY)
+
+    def test_runtime_normalizes_unicode_currency_separator(self) -> None:
+        """Un importe con espacio Unicode se muestra una sola vez y con punto."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        runtime = OrderToolsRuntime(service)
+
+        text = runtime.sanitize_user_text(
+            "El total es $9\u202f500 pesos argentinos."
+        )
+
+        self.assertEqual(text, "El total es 9.500 pesos argentinos.")
 
     def test_groq_interpreter_uses_the_same_tool_and_service(self) -> None:
         """Groq simulado ejecuta tools sin asumir precios ni estado del dominio."""

@@ -245,3 +245,10 @@ usar una tool. `openai/gpt-oss-20b` agrego una Burger Clasica con Agua mediante
 la tool en dos pruebas reales. Se adopta este ultimo como valor predeterminado
 para la demostracion. La validacion de todos los casos conversacionales y de la
 interfaz web sigue pendiente.
+
+**Correccion de salida monetaria:** una respuesta real de Groq utilizó
+`$9 500 pesos argentinos`, con un separador Unicode angosto. El sanitizador
+interpretaba solo `$9` y duplicaba el texto monetario. Se normalizan espacios
+Unicode entre dígitos a puntos antes de reemplazar `$` o `ARS`, y se cubre con
+una prueba automática. El precio real sigue siendo autoridad de `OrderService`;
+esta correccion afecta solo el texto conversacional.

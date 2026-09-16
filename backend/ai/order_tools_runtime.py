@@ -128,13 +128,15 @@ CATALOGO ACTUAL:
         return True
 
     def sanitize_user_text(self, text: str) -> str:
-        """Oculta IDs tecnicos y formatos monetarios no aptos para el usuario.
+        """Oculta IDs técnicos y normaliza moneda para el usuario.
 
         Args:
             text: Respuesta textual generada por el modelo.
 
         Returns:
-            Texto visible con nombres del menu y pesos argentinos.
+            Texto visible con nombres del menú, pesos argentinos y separadores
+            de miles uniformes, incluidos los separadores Unicode generados por
+            algunos modelos.
         """
         replacements = []
         for product in self.service.menu.products.values():
@@ -144,6 +146,12 @@ CATALOGO ACTUAL:
                 replacements.extend((option.id, option.name) for option in group.options)
         for pattern, replacement in sorted(replacements, key=lambda item: len(item[0]), reverse=True):
             text = re.sub(rf"\b{re.escape(pattern)}\b", replacement, text)
-        text = re.sub(r"\$\s*([0-9][0-9.]*)", r"\1 pesos argentinos", text)
+        text = re.sub(r"(?<=\d)[\u00a0\u202f ](?=\d)", ".", text)
+        text = re.sub(
+            r"(?:\$|\bARS\b)\s*([0-9][0-9.]*)\s*(?:pesos argentinos)?",
+            r"\1 pesos argentinos",
+            text,
+            flags=re.IGNORECASE,
+        )
         text = re.sub(r"\bUSD\b|\bdolares?\b", "pesos argentinos", text, flags=re.IGNORECASE)
         return re.sub(r"\befectivo\b", "en caja", text, flags=re.IGNORECASE)

@@ -470,3 +470,8 @@ conversación de terminal real agregó una Burger Clásica con Agua mediante
 posterior también aplicó el agregado y eliminación de tomate. La prueba fue
 contra la API real y no mide todavía el recorrido completo en navegador, voz,
 pago ni carga sostenida.
+
+Las respuestas conversacionales pasan por `OrderToolsRuntime.sanitize_user_text`
+antes de llegar al frontend. Además de ocultar IDs internos, normaliza separadores
+Unicode entre miles y formatos `$` o `ARS` a `pesos argentinos`; no calcula ni
+altera el total del carrito, que continúa saliendo de `OrderService`.
