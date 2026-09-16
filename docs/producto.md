@@ -50,7 +50,7 @@ Si se marca, por ejemplo, Coca-Cola con `"available": false`, el asistente debe
 explicar que existe pero esta agotada y ofrecer otra bebida, sin agregar una
 Coca-Cola al carrito. Si no queda ninguna alternativa en un grupo obligatorio
 como Bebida, la hamburguesa no se agrega porque no puede quedar incompleta.
-`OrderService` aplica esta regla para texto, voz y botones; Gemini recibe el
+`OrderService` aplica esta regla para texto, voz y botones; el LLM configurado recibe el
 catalogo como contexto, pero no decide el estado valido del pedido.
 
 Esta disponibilidad es local y manual para la demo. En una integracion real, el

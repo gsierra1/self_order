@@ -7,7 +7,7 @@ conversación y el carrito actualizado por WebSocket.
 
 Tocá **Hablar**, luego de que el indicador de **Estado** esté en "Listo" esperá la
 escucha y tocá **Enviar audio** al terminar; el texto definitivo usa el mismo
-orquestador del chat. La respuesta puede leerse con la voz del navegador si el mismo está habilitado.
+intérprete LLM configurado que el chat. La respuesta puede leerse con la voz del navegador si el mismo está habilitado.
 La confirmación y el pago son demostraciones locales, sin integración POS ni
 procesamiento real de tarjetas. El QR es escaneable, pero contiene solo texto de demostracion sin URL ni pago real.
 
@@ -70,7 +70,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
 
 Abrir `http://127.0.0.1:8000/`. FastAPI sirve también el frontend, sin un servidor
 adicional. `http://127.0.0.1:8000/docs` muestra los endpoints HTTP.
-`/api/health` verifica la API, no el acceso a Gemini.
+`/api/health` verifica la API, no el acceso a los proveedores de IA.
 
 `GEMINI_TRANSCRIPTION_MODEL` requiere un modelo compatible con la modalidad
 Live Transcription: debe admitir `bidiGenerateContent`, aceptar

@@ -5,14 +5,15 @@
 **Problema:** el lenguaje natural puede ser ambiguo y las respuestas del modelo
 no deben definir precios ni saltarse validaciones.
 
-**Decisión observada:** Gemini propone operaciones; las tools las adaptan;
+**Decisión observada:** el LLM configurado propone operaciones; las tools las adaptan;
 `OrderService` valida y cambia objetos de dominio, es la autoridad sobre el pedido.
 De esta manera no permitimos productos o precios inventados.
 
  «La IA entiende la intención; el backend decide si el pedido
 es válido y cuánto cuesta».
 
-El modelo de conversación ahora se configura en el .env con `GEMINI_CHAT_MODEL`. 
+El modelo de conversación se configura en el .env mediante la variable del
+proveedor elegido (`GEMINI_CHAT_MODEL`, `GROQ_CHAT_MODEL` u otra equivalente).
 No se cambia automáticamente porque los logs muestran
 que la latencia también puede venir de la red, cuota o la segunda llamada después
 de una tool. La configuración permite comparar modelos con el mismo flujo y
@@ -54,10 +55,10 @@ el carrito al cambiar y transportar mensajes y audio sobre una conexión abierta
 pero introduce espera y peticiones repetidas para saber si hubo cambios.
 
 **Consecuencia:** el callback desacopla el servicio del transporte; el puente entre
-threads permite usar el SDK síncrono. Faltan reconexión, sincronización del snapshot,
-control de envíos concurrentes y manejo completo de desconexión en la revisión
-inicial. En la etapa de voz se resolvieron limpieza, snapshot al conectar y
-serialización de envíos; sigue pendiente la reconexión automática del navegador.
+threads permite usar el SDK síncrono. La implementación actual sincroniza el
+snapshot, serializa envíos, libera recursos al desconectar y reintenta la
+conexión del navegador con el mismo identificador de sesión. La recuperación
+después de reiniciar el proceso sigue requiriendo persistencia.
 
 ## 06. Catálogo y precios locales estructurados
 
@@ -73,8 +74,8 @@ el frontend recibe nombres visibles desde el backend. Los extras se modelan como
 grupos opcionales independientes, lo que permite acumular tomate, lechuga, jamón
 y queso sin habilitar valores inventados.
 
-Se agregaron aliases conversacionales al catálogo. El
-orquestador los entrega a Gemini como equivalencias explícitas —por ejemplo,
+Se agregaron aliases conversacionales al catálogo. El intérprete LLM los entrega
+al proveedor configurado como equivalencias explícitas —por ejemplo,
 «hamburguesa simple» para Burger Clásica— sin convertirlos en precios o reglas
 duplicadas en código.
 
@@ -161,12 +162,13 @@ disponibilidad y estados. Se eligieron contratos pequeños de borde.
 con preparación implícita en el adaptador, `feed`, `finish`, `transcribe` con
 parciales/final, `cancel` y `close`. `OrderInterpreter` recibe texto final y
 administra la conversación y las tools de su proveedor. Las fábricas leen
-`STT_PROVIDER` y `LLM_PROVIDER`; hoy devuelven `GeminiLiveTranscriber` y
-`GeminiOrderInterpreter`. Las tools siguen delegando en `OrderService`, que
+`STT_PROVIDER` y `LLM_PROVIDER`; hoy la fábrica STT devuelve
+`GeminiLiveTranscriber` y la fábrica LLM puede devolver `GeminiOrderInterpreter`,
+`OpenAIOrderInterpreter` o `GroqOrderInterpreter`. Las tools siguen delegando en `OrderService`, que
 conserva la única autoridad transaccional.
 
-**Consecuencias:** Gemini mantiene el comportamiento visible de texto, voz,
-carrito, pago y reconexión. Una combinación futura requerirá solo el adaptador,
+**Consecuencias:** el proveedor configurado mantiene el comportamiento visible de
+texto, voz, carrito, pago y reconexión. Una combinación futura requerirá solo el adaptador,
 su configuración y pruebas; no cambios en `OrderService`, `Menu`, `Cart` ni
 pagos. Gemini puede usar una misma `GEMINI_API_KEY` para STT y LLM. Una
 combinación cloud necesita las credenciales de los proveedores seleccionados;

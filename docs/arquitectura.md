@@ -1,6 +1,7 @@
 # Arquitectura y contratos actuales
 
-Actualizada con [voz por turnos](voz.md) el 14/09/2026.
+Actualizada con [voz por turnos](voz.md) y adaptadores de proveedores el
+16/09/2026.
 
 La captura y la conexión Live se preparan en paralelo. El frontend no habilita
 el envío hasta recibir `voice.ready` y completar la preparación local, evitando
@@ -9,8 +10,9 @@ perder las primeras palabras por empezar a hablar durante el handshake.
 ## Visión general
 
 Es una aplicación Python modular con FastAPI, un frontend de HTML/CSS/JavaScript
-y Gemini como intérprete conversacional. No son microservicios: los módulos del
-backend comparten un proceso y las sesiones viven en memoria.
+y proveedores configurables para transcripción e interpretación. La demo usa
+Gemini Transcribe Live como STT y Groq como LLM. No son microservicios: los
+módulos del backend comparten un proceso y las sesiones viven en memoria.
 
 ```mermaid
 flowchart LR
@@ -18,7 +20,7 @@ flowchart LR
     F -->|HTTP: crear sesión| A[FastAPI]
     F -->|WebSocket: user.text| A
     A --> O[Orquestador]
-    O <-->|Mensajes y function calls| G[Gemini]
+    O <-->|Mensajes y function calls| G[LLM configurado]
     O --> T[Tools autorizadas]
     T --> S[OrderService]
     M[menu.json / Menu] --> S
@@ -30,9 +32,9 @@ flowchart LR
     S --> L
 ```
 
-El texto del asistente y el carrito tienen orígenes diferentes: Gemini redacta
-el primero; el servicio construye el segundo. Una respuesta verbal nunca es, por
-sí sola, evidencia de que un pedido se haya modificado.
+El texto del asistente y el carrito tienen orígenes diferentes: el LLM configurado
+redacta el primero; el servicio construye el segundo. Una respuesta verbal nunca
+es, por sí sola, evidencia de que un pedido se haya modificado.
 
 ## Mapa de módulos y funciones
 
@@ -44,21 +46,23 @@ sí sola, evidencia de que un pedido se haya modificado.
 | `backend/domain/cart.py` | `Cart.total`: suma precio unitario por cantidad de cada línea. |
 | `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
 | `backend/services/order_service.py` | Validacion y mutacion mediante `add_item`, `remove_item`, `change_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
-| `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para Gemini. |
+| `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para el LLM configurado. |
 | `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |
 | `backend/ai/live_transcriber.py` | `GeminiLiveTranscriber`: implementación Gemini del contrato STT; `LiveTranscriber` es alias temporal. |
-| `backend/ai/orchestrator.py` | `GeminiOrderInterpreter`: implementación Gemini de `OrderInterpreter`, tools e historial. |
+| `backend/ai/orchestrator.py` | `GeminiOrderInterpreter`: implementación Gemini de `OrderInterpreter`, conservada para `LLM_PROVIDER=gemini`. |
+| `backend/ai/openai_interpreter.py` | `OpenAIOrderInterpreter`: implementación OpenAI de `OrderInterpreter`; requiere saldo de API. |
+| `backend/ai/groq_interpreter.py` | `GroqOrderInterpreter`: implementación Groq de `OrderInterpreter`, usada por la demo. |
 | `backend/ai/errors.py` | `AIProviderError` y clasificadores de errores HTTP/transporte; conservan etapa y si el pedido ya cambió. |
 | `backend/ai/factories.py` | `create_speech_to_text()` y `create_order_interpreter()` seleccionan el adaptador configurado. |
 | `backend/api/app.py` | Sirve frontend, crea `SessionRuntime` con `OrderInterpreter`, expone HTTP y WebSocket y serializa estado. |
 | `backend/api/websocket_manager.py` | Registra una conexión por sesión y publica eventos, incluso desde código en otro thread. |
 | `backend/logging/event_logger.py` | `log_event()`, formatters y handlers: JSONL detallado, texto legible y consola, con rotación. |
-| `config/settings.py` | `get_gemini_api_key()`: carga `.env` y obtiene la clave del entorno. |
+| `config/settings.py` | Carga `.env`, selecciona proveedores y obtiene la credencial/modelo de cada capa. |
 | `config/menu.json` | Catálogo local cargado al importar la API; editarlo requiere recargar el proceso. |
 | `frontend/index.html` | Panel conversacional, formulario, controles de micrófono/voz y carrito. |
 | `frontend/app.js` | `createSession`, `connectWebSocket`, `sendMessage`, `renderCart`; captura y conversión de audio, estados visuales. |
 | `frontend/styles.css` | Distribución de paneles, mensajes, carrito y adaptación a pantallas pequeñas. |
-| `backend/ai/test_chat.py` | Chat manual de terminal usando el mismo orquestador y servicio. |
+| `backend/ai/test_chat.py` | Chat manual de terminal usando el intérprete elegido por `LLM_PROVIDER` y el servicio real. |
 
 El dominio no importa Gemini, FastAPI ni el frontend. El servicio sí depende del
 logger y de un callback opcional; la separación es útil pero no constituye una
@@ -71,15 +75,15 @@ arquitectura hexagonal completa con todos sus puertos formalizados.
    guarda en `sessions[session_id]`. Cada orquestador tiene su propio chat.
 3. El navegador conecta `/ws/sessions/{session_id}` y envía `user.text`.
 4. La API ejecuta `assistant.send_message()` mediante `asyncio.to_thread()` para
-   no ejecutar la llamada síncrona a Gemini en el event loop del WebSocket.
-5. Gemini recibe reglas y catálogo. Puede responder directamente o pedir una tool.
+   no ejecutar la llamada síncrona al LLM configurado en el event loop del WebSocket.
+5. El LLM recibe reglas y catálogo. Puede responder directamente o pedir una tool.
 6. El orquestador verifica el nombre, ejecuta la función autorizada y devuelve
-   su resultado a Gemini. `ValueError` de validación se convierte en un resultado
+   su resultado al LLM. `ValueError` de validación se convierte en un resultado
    estructurado que permite al modelo explicar el problema.
 7. Una mutación válida llama a `_log_cart_updated()` y a `_emit_event()`.
    El callback programa la publicación del snapshot por WebSocket.
 8. `renderCart()` actualiza productos e importe a partir de ese snapshot. La
-   respuesta completa de Gemini llega aparte como `assistant.text`.
+   respuesta completa del LLM llega aparte como `assistant.text`.
 
 El cambio de carrito puede llegar antes de la respuesta textual final. No hay
 streaming de tokens de respuesta ni procesamiento parcial de pedidos hablados.
@@ -120,7 +124,7 @@ Mientras el pago esta pendiente, `return_to_order` permite volver al carrito y
 eliminar lineas sigue pasando por `OrderService`. Tras finalizar, la interfaz
 muestra el numero de pedido, cuenta cinco segundos y crea otra sesion.
 La confirmacion tambien puede iniciarse desde el boton del carrito sin pasar por
-Gemini; las consultas de precios usan la informacion del catalogo y no mutan el
+el LLM configurado; las consultas de precios usan la informacion del catalogo y no mutan el
 pedido.
 
 ### Estados de una sesion
@@ -180,7 +184,7 @@ identificadores tecnicos ni duplicar el catalogo.
 | Canal | Entrada / respuesta |
 | --- | --- |
 | `GET /` y `/static/*` | HTML y recursos del frontend. |
-| `GET /api/health` | Estado del proceso; no verifica Gemini. |
+| `GET /api/health` | Estado del proceso; no verifica disponibilidad de los proveedores de IA. |
 | `POST /api/sessions` | Devuelve `session_id`, `state`, `cart`. |
 | `GET /api/sessions/{id}/cart` | Snapshot `{items, total, state}`. |
 | `POST /api/sessions/{id}/messages` | Recibe `{message}`; devuelve texto, carrito, estado de cierre o error estructurado. El frontend actual usa WebSocket para el chat. |
@@ -216,7 +220,7 @@ flowchart LR
     MIC[Micrófono navegador] --> PCM[voice.js / pcm-worklet.js: PCM16 / 16 kHz]
     PCM --> WS[WebSocket binario]
     WS --> T[LiveTranscriber]
-    T <--> LIVE[Gemini Transcribe Live]
+    T <--> LIVE[Modelo STT Gemini configurado]
     T -->|Texto definitivo| O[Orquestador de pedidos]
     O --> S[OrderService]
 ```
@@ -240,7 +244,7 @@ todo un pedido de varias operaciones se haya completado. El HTTP devuelve
 además el carrito actual; el WebSocket también incluye snapshot en la respuesta
 final y los errores de interpretación, además de publicar eventos de estado.
 
-Los fallos de Gemini durante voz pasan por la misma clasificación antes de
+Los fallos del proveedor STT durante voz pasan por la misma clasificación antes de
 emitir `voice.error`. Un 404 informa el nombre del modelo configurado y aclara
 si falló la transcripción en vivo; los detalles técnicos completos permanecen en
 los logs. Así la persona puede corregir la configuración sin interpretar un
@@ -254,8 +258,8 @@ La guía de Adrián describe una arquitectura de producción para un kiosco fís
 | --- | --- | --- |
 | Hardware y captura | Micrófono del navegador con `echoCancellation` y `noiseSuppression`; audio PCM mono a 16 kHz. | Adecuado para validar el flujo. Falta mic array con beamforming/AEC real, equipo industrial, pantalla táctil, pinpad y ticketeadora. |
 | Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo kiosco/PWA, indicador de volumen, detección de silencio, interrupciones y empaquetado de dispositivo. |
-| STT | `SpeechToText` desacopla el WebSocket; `GeminiLiveTranscriber` es el adaptador actual hacia Gemini Transcribe Live. | Es el enfoque cloud de la gu?a, configurable y ?til para avanzar r?pido. Permite evaluar otro proveedor o motor local sin tocar el dominio, pero siguen pendientes mediciones reales de red y latencia. |
-| NLU y extracción | Gemini Chat recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
+| STT | `SpeechToText` desacopla el WebSocket; `GeminiLiveTranscriber` es el adaptador actual hacia Gemini Transcribe Live. | Es el enfoque cloud de la guía, configurable y útil para avanzar rápido. Permite evaluar otro proveedor o motor local sin tocar el dominio, pero siguen pendientes mediciones reales de red y latencia. |
+| NLU y extracción | El LLM seleccionado recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM configurado propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
 | Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR escaneable de texto, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisión de ticket. |
 
 ### Qué conservar
@@ -280,9 +284,9 @@ El proyecto no debe incorporar hardware Edge, una PWA, un POS real o una pasarel
 
 La guía propone un kiosco físico completo. El repositorio se encuentra en una etapa de validación del núcleo de software, por lo que cada decisión prioriza comprobar el recorrido de pedido antes de incorporar infraestructura externa.
 
-### Por qué Gemini se usa con tools y no como generador de JSON final
+### Por qué el LLM usa tools y no genera el JSON final
 
-Gemini se utiliza como intérprete de lenguaje y no como autoridad del pedido. Recibe el catálogo y solicita operaciones estructuradas mediante function calls. Cada operación es ejecutada por una tool adaptadora y validada por `OrderService`.
+El LLM configurado se utiliza como intérprete de lenguaje y no como autoridad del pedido. Recibe el catálogo y solicita operaciones estructuradas mediante function calls. Cada operación es ejecutada por una tool adaptadora y validada por `OrderService`.
 
 Esta elección se tomó porque un JSON generado libremente por el modelo todavía puede contener productos inexistentes, precios inventados, modificadores inválidos o cantidades ambiguas. Con tools, el modelo expresa una intención y el backend decide si esa intención es válida. El mismo servicio puede ser utilizado por texto, voz, botones y futuras integraciones, sin duplicar reglas.
 
@@ -308,7 +312,7 @@ Una integración real depende del proveedor, del país, de certificaciones, del 
 `OrderService` rechaza una opcion agotada antes de crear, cambiar o reemplazar
 una linea. Si un grupo obligatorio queda sin opciones disponibles, las tools
 devuelven `unavailable_required_modifier` y no piden una seleccion imposible.
-Gemini recibe el estado del catalogo para explicarlo, pero la autoridad final
+El LLM recibe el estado del catalogo para explicarlo, pero la autoridad final
 sigue en el servicio.
 
 Los grupos compartidos se declaran una sola vez en `modifier_groups` de
@@ -348,8 +352,8 @@ flowchart LR
     C1 --> T[Texto final]
     T --> F2[create_order_interpreter]
     F2 --> C2[OrderInterpreter]
-    C2 --> G2[GeminiOrderInterpreter]
-    G2 --> GC[Gemini Chat + function calls]
+    C2 --> G2[LLMOrderInterpreter configurado]
+    G2 --> GC[Proveedor LLM + function calls]
     G2 --> TO[tools autorizadas]
     TO --> OS[OrderService]
     OS --> CA[Menu, Cart y Session]

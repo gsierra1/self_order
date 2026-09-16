@@ -9,10 +9,10 @@ flowchart LR
     M[Micrófono] --> V[voice.js / pcm-worklet.js]
     V -->|PCM16| W[conversation_socket.py]
     W --> T[SpeechToText]
-    T --> GT[GeminiLiveTranscriber]
-    GT <--> G[Gemini Transcribe Live]
+    T --> GT[Adaptador STT configurado]
+    GT <--> G[Modelo STT configurado]
     T -->|Hipótesis provisional| UI[Pantalla]
-    T -->|Texto final al enviar turno| O[Orquestador existente]
+    T -->|Texto final al enviar turno| O[Intérprete LLM configurado]
     O --> S[OrderService]
     S -->|Snapshot validado| UI
     O -->|Respuesta final| UI
@@ -25,18 +25,21 @@ little-endian mono a 16 kHz de 100 ms y vacía el último bloque antes de cerrar
 El contexto solicita 16 kHz y comprueba la frecuencia. No reproduce el micrófono
 por los parlantes. Al hablar se cancela la lectura del asistente.
 
-`backend/ai/contracts.py` define `SpeechToText`; su adaptador Gemini en `backend/ai/live_transcriber.py` no tiene tools ni acceso al carrito. Publica
+`backend/ai/contracts.py` define `SpeechToText`; el adaptador actual
+`GeminiLiveTranscriber` en `backend/ai/live_transcriber.py` no tiene tools ni
+acceso al carrito. Publica
 hipótesis, acumula segmentos definitivos y devuelve texto al cerrar el turno.
-`backend/api/conversation_socket.py` valida eventos y entrega ese texto al mismo
-orquestador del chat. Las reglas del servicio se conservan.
+`backend/api/conversation_socket.py` valida eventos y entrega ese texto al
+`OrderInterpreter` elegido por `LLM_PROVIDER`. Las reglas del servicio se conservan.
 
 `SessionRuntime.turn_lock` reserva un turno entre voz, texto WebSocket y mensajes
 HTTP; una segunda entrada simultánea se rechaza. `WebSocketManager` serializa
 envíos, rechaza una segunda conexión por sesión (4409) y permite recuperar el
-snapshot real en `connection.ready`. El navegador todavía no reconecta solo.
+snapshot real en `connection.ready` y reintenta la conexión con espera progresiva
+si el canal se interrumpe.
 
 La pantalla muestra transcripción provisional debajo del chat. No se agregan
-productos durante una frase: solo el texto definitivo enviado llega al orquestador.
+productos durante una frase: solo el texto definitivo enviado llega al intérprete LLM.
 El estado visual recorre conexión, preparación, escucha y procesamiento. El texto
 vuelve a habilitarse al terminar, salvo si el pedido quedó confirmado.
 
@@ -49,9 +52,9 @@ vuelve a habilitarse al terminar, salvo si el pedido quedó confirmado.
 | Frames binarios | Navegador → backend: PCM16 mono a 16 kHz. |
 | `voice.transcript` | Backend → navegador: `{text, final}`; una hipótesis solo se muestra. |
 | `audio.stop` | Navegador → backend: finaliza; repetirlo no ejecuta nuevamente el pedido. |
-| `audio.cancel` | Navegador → backend: descarta transcripción que aún no llegó al orquestador. |
+| `audio.cancel` | Navegador → backend: descarta transcripción que aún no llegó al intérprete LLM. |
 | `voice.cancelled` | Backend → navegador: cancelación atendida. |
-| `voice.error` | Backend → navegador: falla de transcripción; el audio no ejecutó un pedido. Para fallas de Gemini incluye tipo, código, etapa y si se puede reintentar. |
+| `voice.error` | Backend → navegador: falla de transcripción; el audio no ejecutó un pedido. Si el proveedor informa detalles, incluye tipo, código, etapa y si se puede reintentar. |
 
 Se conservan eventos escritos, carrito, confirmación y errores de IA.
 `assistant.text` y errores de interpretación incluyen snapshot del carrito.
@@ -85,9 +88,10 @@ cancela la lectura, manteniendo el texto disponible.
 ## Configuración y decisión
 
 `GEMINI_TRANSCRIPTION_MODEL` usa `gemini-3.5-transcribe-live` en la
-configuración recomendada. El chat usa `GEMINI_CHAT_MODEL`, recomendado como
-`gemini-3.7-flash` para la cuenta consultada el 15/09/2026. Ambos se pueden
-cambiar en `.env` sin modificar el código. Las credenciales quedan en backend.
+configuración recomendada. La demo usa Groq para el chat mediante
+`GROQ_CHAT_MODEL=openai/gpt-oss-20b`; también se puede elegir Gemini u OpenAI
+con sus variables propias. Los nombres se pueden cambiar en `.env` sin modificar
+el código y las credenciales quedan en backend.
 Para consultar los modelos habilitados para la cuenta local, ejecutar
 `python -m backend.ai.list_models` con el entorno virtual activo. La salida es
 informativa y muestra todos los modelos junto con sus acciones: `generateContent`
@@ -103,7 +107,7 @@ transcripción de entrada usada por este adaptador. En la prueba del 15/09/2026,
 `gemini-3.5-live-translate-preview` abrió la conexión pero agotó la espera sin
 texto final; no debe sustituir a `gemini-3.5-transcribe-live` sin otra prueba.
 
-Para este `LiveTranscriber`, un candidato necesita cuatro condiciones: aparecer
+Para este adaptador STT, un candidato necesita cuatro condiciones: aparecer
 con `bidiGenerateContent` en la cuenta, estar documentado como **Live
 Transcription**, aceptar `response_modalities=["TEXT"]` e
 `input_audio_transcription`, y emitir `server_content.input_transcription` final
@@ -111,7 +115,7 @@ después de `activity_end`. El listado local solo demuestra la primera condició
 la documentación del proveedor y una prueba con audio real validan las restantes.
 Google documenta explícitamente ese contrato para `gemini-3.5-transcribe-live`.
 
-Se eligió transcribir y reutilizar el orquestador para mantener un solo historial
+Se eligió transcribir y reutilizar el intérprete LLM para mantener un solo historial
 de pedidos para ambos canales. Un agente Live con tools es una alternativa futura,
 pero requiere adaptar conversación, interrupciones y ejecución de operaciones.
 La primera versión usa clic para hablar y clic para enviar; aún faltan silencios
@@ -142,8 +146,8 @@ y localhost o HTTPS. Si PowerShell bloquea la activacion, usar la solucion tempo
 
 Mientras aparece «Preparando micrófono y conexión...» el botón queda bloqueado:
 ese estado evita hablar antes de que la captura esté conectada. Solo hay que
-comenzar cuando aparezca «Escuchando». La preparación del micrófono y de Gemini
-se inicia en paralelo para no sumar sus esperas.
+comenzar cuando aparezca «Escuchando». La preparación del micrófono y del
+proveedor STT configurado se inicia en paralelo para no sumar sus esperas.
 
 Estas pruebas manuales consumen cuota. El timbre, ruido y tu micrófono físico
 deben evaluarse en tu equipo: las pruebas automáticas no sustituyen esa evaluación.
