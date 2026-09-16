@@ -213,4 +213,7 @@ interrupciones; esta arquitectura permite esa comparación sin reescribir
 OpenAI y Groq estan implementados solo como interpretes LLM.
 `STT_PROVIDER=openai` o `STT_PROVIDER=groq` no son validos todavia: cada
 transcripcion por streaming requerira otro adaptador que implemente el contrato
-completo de voz.
+completo de voz. Groq ofrece actualmente un endpoint de transcripción por
+archivo para Whisper, pero no es equivalente al canal de fragmentos Live usado
+por esta demo; integrarlo requeriría acumular el audio hasta `audio.stop` y
+perdería las hipótesis parciales mientras se habla.

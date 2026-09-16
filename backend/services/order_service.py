@@ -682,7 +682,19 @@ class OrderService:
         """
         if self.session.state != SessionState.PAYMENT_PENDING:
             raise ValueError("The order is not waiting for payment")
-        normalized = method.upper()
+        method_aliases = {
+            "TARJETA": "CARD",
+            "CARD": "CARD",
+            "CREDITO": "CARD",
+            "CRÉDITO": "CARD",
+            "EFECTIVO": "CASH",
+            "CAJA": "CASH",
+            "EN CAJA": "CASH",
+            "CASH": "CASH",
+            "QR": "QR",
+        }
+        normalized_input = method.strip().upper().replace("PAGO CON ", "")
+        normalized = method_aliases.get(normalized_input, normalized_input)
         if normalized not in {"QR", "CARD", "CASH"}:
             raise ValueError("Unsupported payment method")
         self.session.payment_method = normalized

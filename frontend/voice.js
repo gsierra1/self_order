@@ -112,6 +112,7 @@ export function speak(text, onError) {
 function prepareSpeechText(text) {
     return text
         .replace(/\b(\d{1,3}(?:\.\d{3})+)\b/g, (_, amount) => amount.replace(/\./g, " "))
+        .replace(/\betc\.?\b/gi, "etcétera")
         .replace(/[|*_`]/g, " ")
         .replace(/\s{2,}/g, " ")
         .trim();

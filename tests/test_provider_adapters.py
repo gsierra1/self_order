@@ -252,6 +252,20 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertIn("Burger Doble (cantidad: 1; modificadores: Agua, queso;", text)
         self.assertIn("11.500 pesos argentinos", text)
 
+    def test_runtime_removes_numbered_choices_and_expands_etcetera(self) -> None:
+        """Evita leer numeración de alternativas y abreviaturas técnicas."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        runtime = OrderToolsRuntime(service)
+
+        text = runtime.sanitize_user_text(
+            "Elegí: 1. Burger Clásica; 2. Burger Doble. También hay etc."
+        )
+
+        self.assertNotIn("1.", text)
+        self.assertNotIn("2.", text)
+        self.assertNotIn("etc.", text)
+        self.assertIn("etcétera", text)
+
     def test_clear_cart_tool_removes_all_lines_in_one_operation(self) -> None:
         """La tool clear_cart vacía varias líneas sin encadenar eliminaciones."""
         service = OrderService(load_menu("config/menu.json"), Session())
@@ -263,6 +277,16 @@ class ProviderFactoryTests(unittest.TestCase):
 
         self.assertEqual(result["result"]["removed_count"], 2)
         self.assertEqual(service.get_cart().items, [])
+
+    def test_payment_method_aliases_are_normalized(self) -> None:
+        """Acepta expresiones conversacionales para tarjeta, QR y caja."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+        service.prepare_payment()
+
+        result = service.select_payment_method("pago con tarjeta")
+
+        self.assertEqual(result["payment_method"], "CARD")
 
     def test_groq_interpreter_uses_the_same_tool_and_service(self) -> None:
         """Groq simulado ejecuta tools sin asumir precios ni estado del dominio."""

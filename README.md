@@ -83,7 +83,9 @@ Chat. Gemini usa una sola
 `GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
 
 Gemini está implementado para STT y LLM. Groq y OpenAI están implementados solo
-para LLM; su STT sigue pendiente. El `.env.example` selecciona Groq porque la
+para LLM; su STT sigue pendiente. Groq ofrece Whisper mediante un endpoint de
+archivo, pero no el streaming de fragmentos que necesita esta interfaz; por eso
+no se puede cambiar solo una variable sin crear otro adaptador. El `.env.example` selecciona Groq porque la
 cuenta gratuita de Groq permitió probar las tools del carrito. No se instala un
 modelo en la PC: Groq ejecuta `openai/gpt-oss-20b` en la nube mediante una API
 compatible con OpenAI. El nombre `openai/` identifica al modelo, no al servicio

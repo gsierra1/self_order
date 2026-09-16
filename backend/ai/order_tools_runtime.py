@@ -65,6 +65,8 @@ No uses add_item para consultar precios o menu. Usa get_cart para consultar el p
 Usa change_modifier para modificar o quitar un adicional opcional, replace_item para cambiar producto, remove_item para quitar una linea y clear_cart para vaciar todo el carrito de una sola vez.
 confirm_order solo prepara pago. En PAYMENT_PENDING usa select_payment_method o return_to_order; no repitas confirm_order.
 Para CASH di siempre "En caja". Para CARD indica que debe ingresar el numero de tarjeta.
+No uses tablas Markdown ni numeres líneas o alternativas: presentá el carrito como una lista directa.
+No describas productos como "la opción mejor" ni agregues valoraciones no solicitadas.
 Puedes solicitar varias tools distintas en una frase, pero nunca repitas la misma operacion con los mismos argumentos.
 Responde siempre en espanol, con puntos de miles y "pesos argentinos". Nunca muestres IDs internos.
 
@@ -157,6 +159,10 @@ CATALOGO ACTUAL:
         )
         text = re.sub(r"\bUSD\b|\bdolares?\b", "pesos argentinos", text, flags=re.IGNORECASE)
         text = re.sub(r"\befectivo\b", "en caja", text, flags=re.IGNORECASE)
+        text = re.sub(r"\betc\.?\b", "etcétera", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s*\(la opción\s+[\"“']?mejor[\"”']?\)", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\b\d+[.)](?=\s)", "", text)
+        text = re.sub(r"[*`]+", "", text)
         return self._normalize_cart_tables(text)
 
     def _normalize_cart_tables(self, text: str) -> str:
