@@ -55,8 +55,13 @@ python -m uvicorn backend.api.app:app --reload
 
 Activar el entorno en cada terminal PowerShell nueva desde la raíz del proyecto.
 Debería aparecer `(.venv)` en el prompt. Para salir del entorno, usar `deactivate`.
-Si PowerShell bloquea el script, consultar la solución limitada a la terminal
-actual en [la guía de seguimiento](docs/seguimiento.md).
+Si PowerShell bloquea el script, permitirlo solo para la terminal actual y
+volver a activar el entorno:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+.\.venv\Scripts\Activate.ps1
+```
 
 Abrir `http://127.0.0.1:8000/`. FastAPI sirve también el frontend, sin un servidor
 adicional. `http://127.0.0.1:8000/docs` muestra los endpoints HTTP.

@@ -129,7 +129,7 @@ python -m uvicorn backend.api.app:app --reload
 ```
 
 Abrir `http://127.0.0.1:8000/` y recargar con `Ctrl+F5`. La captura requiere permiso
-y localhost o HTTPS. Si falla activar el entorno, consultar [seguimiento](seguimiento.md).
+y localhost o HTTPS. Si PowerShell bloquea la activacion, usar la solucion temporal indicada en el README principal.
 
 1. Tocar **Hablar**, permitir micrófono y esperar **Escuchando**.
 2. Decir «Quiero una Burger Clásica» y tocar **Enviar audio**. Debe preguntar la bebida;
