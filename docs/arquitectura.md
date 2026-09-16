@@ -221,6 +221,10 @@ solicitud explícita de QR, tarjeta o caja y la delega a `OrderService`. Esto ev
 una llamada innecesaria al LLM para una selección cerrada y reduce la latencia;
 las frases ambiguas siguen el flujo normal del intérprete.
 
+Mientras un turno de voz está en curso, `frontend/app.js` reemplaza los botones
+de pago por un aviso de procesamiento. Así se evita que la persona duplique la
+selección con un clic antes de recibir el resultado del turno.
+
 El callback de eventos evita importar WebSocket desde el servicio.
 `send_event_threadsafe()` usa `asyncio.run_coroutine_threadsafe()`. El envío es
 asíncrono y no se espera su resultado; no hay entrega garantizada ni replay.
