@@ -626,11 +626,15 @@ class OrderService:
         """
         return self.session.cart
 
-    def prepare_payment(self) -> dict:
+    def prepare_payment(self, publish_event: bool = True) -> dict:
         """Prepara el pedido para seleccionar un método de pago.
 
         Genera el número de pedido en backend y bloquea nuevas modificaciones
         mientras la persona elige cómo pagar.
+
+        Args:
+            publish_event: Indica si debe publicarse la pantalla intermedia con
+                todos los métodos. Se desactiva cuando el usuario ya eligió uno.
 
         Returns:
             Estado de pago pendiente, número de pedido y métodos disponibles.
@@ -653,14 +657,15 @@ class OrderService:
             order_number=self.session.order_number,
             total=self.session.cart.total,
         )
-        self._emit_event(
-            "payment.pending",
-            {
-                "cart": snapshot,
-                "order_number": self.session.order_number,
-                "payment_methods": ["QR", "CARD", "CASH"],
-            },
-        )
+        if publish_event:
+            self._emit_event(
+                "payment.pending",
+                {
+                    "cart": snapshot,
+                    "order_number": self.session.order_number,
+                    "payment_methods": ["QR", "CARD", "CASH"],
+                },
+            )
         return {
             "status": "payment_pending",
             "order_number": self.session.order_number,
@@ -678,10 +683,9 @@ class OrderService:
             Método seleccionado y número de pedido.
 
         Raises:
-            ValueError: Si la sesión no espera pago o el método no es válido.
+            ValueError: Si el método no es válido o la sesión no puede iniciar
+                ni continuar el flujo de pago.
         """
-        if self.session.state != SessionState.PAYMENT_PENDING:
-            raise ValueError("The order is not waiting for payment")
         method_aliases = {
             "TARJETA": "CARD",
             "CARD": "CARD",
@@ -697,6 +701,10 @@ class OrderService:
         normalized = method_aliases.get(normalized_input, normalized_input)
         if normalized not in {"QR", "CARD", "CASH"}:
             raise ValueError("Unsupported payment method")
+        if self.session.state == SessionState.ACTIVE:
+            self.prepare_payment(publish_event=False)
+        elif self.session.state != SessionState.PAYMENT_PENDING:
+            raise ValueError("The order is not waiting for payment")
         self.session.payment_method = normalized
         log_event(
             "INFO",

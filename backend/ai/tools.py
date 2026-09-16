@@ -409,8 +409,6 @@ def create_select_payment_method_tool(service: OrderService):
         Raises:
             ValueError: Si el estado o método no son válidos.
         """
-        if service.session.state == SessionState.ACTIVE:
-            service.prepare_payment()
         return service.select_payment_method(method)
 
     return select_payment_method

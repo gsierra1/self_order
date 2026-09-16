@@ -124,7 +124,8 @@ entonces la sesion pasa a `CONFIRMED`. El QR es un codigo escaneable de demo que
 sin URL, datos de pago ni destino real; la tarjeta tampoco se envia ni se almacena.
 Mientras el pago esta pendiente, `return_to_order` permite volver al carrito y
 eliminar lineas sigue pasando por `OrderService`. Tras finalizar, la interfaz
-muestra el numero de pedido, cuenta cinco segundos y crea otra sesion.
+muestra el numero de pedido y crea otra sesion al terminar la cuenta regresiva.
+Para QR y caja esa espera es de quince segundos; tarjeta conserva cinco.
 La confirmacion tambien puede iniciarse desde el boton del carrito sin pasar por
 el LLM configurado; las consultas de precios usan la informacion del catalogo y no mutan el
 pedido.
@@ -141,6 +142,10 @@ El flujo expuesto por el dashboard y las tools usa siempre
 `ACTIVE -> PAYMENT_PENDING -> CONFIRMED`. No existe una operacion del servicio
 que confirme directamente desde `ACTIVE`: todo pedido debe pasar por la eleccion
 de pago, aunque la pasarela sea simulada en esta demo.
+Cuando una frase en `ACTIVE` ya contiene un método inequívoco,
+`select_payment_method()` atraviesa `PAYMENT_PENDING` sin publicar el selector
+intermedio; la regla de estados se conserva y la pantalla muestra directamente
+el método que la persona pidió.
 
 ## Modelo de datos y precios
 
@@ -216,8 +221,8 @@ usa su `cart` validado para mostrar de inmediato el QR, el formulario de tarjeta
 o el número de pedido para caja. La respuesta textual del LLM puede llegar
 después y solo aporta la explicación conversacional.
 
-Durante `PAYMENT_PENDING`, `conversation_socket.py` reconoce localmente una
-solicitud explícita de QR, tarjeta o caja y la delega a `OrderService`. Esto evita
+Durante `ACTIVE` o `PAYMENT_PENDING`, `conversation_socket.py` reconoce localmente
+una solicitud explícita de QR, tarjeta o caja y la delega a `OrderService`. Esto evita
 una llamada innecesaria al LLM para una selección cerrada y reduce la latencia;
 las frases ambiguas siguen el flujo normal del intérprete.
 

@@ -408,10 +408,10 @@ function renderPayment(cart) {
             <p>Pago en caja seleccionado.</p>
             <p>Tu número de pedido es <strong>${cart.order_number}</strong>.</p>
             <p>Acercate a caja, indicá ese número y realizá el pago.</p>
-            <p id="cash-countdown">Esta sesión finalizará en 5.</p>
+            <p id="cash-countdown">Esta sesión finalizará en 15.</p>
             <button type="button" class="payment-action" id="payment-back">ATRÁS</button>`;
         document.getElementById("payment-back").addEventListener("click", returnToOrder);
-        let remaining = 5;
+        let remaining = 15;
         paymentTimer = setInterval(() => {
             remaining -= 1;
             const element = document.getElementById("cash-countdown");
@@ -496,7 +496,11 @@ async function startPaymentFromCart() {
 }
 
 /** Completa el pago demo y muestra el número para retirar en caja.
- * @returns {Promise<void>} Finaliza el pedido o muestra el error recibido. */
+ * @param {Object} options Opciones de cierre de la sesión.
+ * @param {boolean} [options.resetImmediately=false] Reinicia al completar el pago.
+ * @returns {Promise<void>} Finaliza el pedido o muestra el error recibido.
+ * @effects Para QR conserva la pantalla final durante quince segundos; para
+ * caja, el contador previo ya controla el reinicio. */
 async function completePayment(options = {}) {
     clearTimeout(paymentTimer);
     try {
@@ -509,16 +513,17 @@ async function completePayment(options = {}) {
         }
         sessionClosed = true;
         voice.dispose();
+        const resetSeconds = data.payment_method === "QR" ? 15 : 5;
         paymentPanel.hidden = false;
         paymentContent.innerHTML = `
             <p class="payment-success">Pago confirmado.</p>
             <p>Tu número de pedido es <strong>${data.order_number}</strong>.</p>
             <p>Acercate a caja para retirarlo.</p>
-            <p id="session-countdown">Esta sesión finalizará en 5.</p>`;
+            <p id="session-countdown">Esta sesión finalizará en ${resetSeconds}.</p>`;
         sessionState.textContent = "CONFIRMED";
         setStatus("Pago confirmado");
         updateControls();
-        let remaining = 5;
+        let remaining = resetSeconds;
         countdownTimer = setInterval(() => {
             remaining -= 1;
             const element = document.getElementById("session-countdown");

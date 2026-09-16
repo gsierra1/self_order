@@ -71,6 +71,23 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(_detect_payment_method("pago por QR"), "QR")
         self.assertIsNone(_detect_payment_method("quiero pagar"))
 
+    def test_direct_payment_from_active_skips_llm_and_selector(self) -> None:
+        """Elige caja desde ACTIVE sin mostrar ni delegar la lista al LLM."""
+        self.runtime.service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+
+        with self.client.websocket_connect(self.url) as ws:
+            self.assertEqual(ws.receive_json()["type"], "connection.ready")
+            ws.send_json({
+                "type": "user.text",
+                "data": {"message": "quiero pagar en caja"},
+            })
+            response = ws.receive_json()
+
+        self.assertEqual(response["type"], "assistant.text")
+        self.assertEqual(response["data"]["cart"]["payment_method"], "CASH")
+        self.assertEqual(response["data"]["cart"]["state"], "PAYMENT_PENDING")
+        self.assistant.send_message.assert_not_called()
+
     def start_voice(self, ws) -> None:
         """Inicia voz y verifica que la hipótesis todavía no ejecuta el pedido.
 

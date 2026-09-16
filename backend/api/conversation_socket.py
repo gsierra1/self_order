@@ -64,7 +64,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
             text: Mensaje escrito o transcripción definitiva del usuario.
         """
         started_at = time.perf_counter()
-        if runtime.service.session.state == SessionState.PAYMENT_PENDING:
+        if runtime.service.session.state in {SessionState.ACTIVE, SessionState.PAYMENT_PENDING}:
             payment_method = _detect_payment_method(text)
             if payment_method is not None:
                 try:

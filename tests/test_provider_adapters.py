@@ -323,6 +323,22 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertEqual(result["result"]["payment_method"], "QR")
         self.assertEqual(service.session.state.value, "PAYMENT_PENDING")
 
+    def test_direct_payment_choice_skips_intermediate_selector_event(self) -> None:
+        """Una elección explícita desde ACTIVE publica solo el método elegido."""
+        events = []
+        service = OrderService(
+            load_menu("config/menu.json"),
+            Session(),
+            event_callback=lambda event_type, data: events.append((event_type, data)),
+        )
+        service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+        events.clear()
+
+        result = service.select_payment_method("en caja")
+
+        self.assertEqual(result["payment_method"], "CASH")
+        self.assertEqual([event_type for event_type, _ in events], ["payment.method_selected"])
+
     def test_groq_interpreter_uses_the_same_tool_and_service(self) -> None:
         """Groq simulado ejecuta tools sin asumir precios ni estado del dominio."""
         service = OrderService(load_menu("config/menu.json"), Session())
