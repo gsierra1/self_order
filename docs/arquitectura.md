@@ -211,6 +211,11 @@ Ejemplo de entrada WebSocket:
 | `ai.error` | Tipo, código, etapa, `retryable`, `transaction_applied`, última tool y mensaje. |
 | `client.error`, `backend.error` | Mensaje y, según el caso, tipo/origen. |
 
+El frontend trata `payment.method_selected` como una actualización prioritaria:
+usa su `cart` validado para mostrar de inmediato el QR, el formulario de tarjeta
+o el número de pedido para caja. La respuesta textual del LLM puede llegar
+después y solo aporta la explicación conversacional.
+
 El callback de eventos evita importar WebSocket desde el servicio.
 `send_event_threadsafe()` usa `asyncio.run_coroutine_threadsafe()`. El envío es
 asíncrono y no se espera su resultado; no hay entrega garantizada ni replay.

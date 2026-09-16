@@ -588,6 +588,27 @@ function applyCart(cart) {
 }
 
 /**
+ * Muestra inmediatamente el método de pago confirmado por el backend.
+ *
+ * El evento contiene un snapshot validado por OrderService y puede llegar antes
+ * que la respuesta narrativa del intérprete LLM. Procesarlo por separado evita
+ * que la interfaz espere esa respuesta para mostrar caja, QR o tarjeta.
+ *
+ * @param {Object} data Datos del evento `payment.method_selected`.
+ * @returns {void} Actualiza el carrito y los controles de pago.
+ * @effects Para `CASH`, inicia inmediatamente la cuenta regresiva visible.
+ */
+function handlePaymentMethodSelected(data) {
+    if (!data?.cart) return;
+    applyCart(data.cart);
+    phase = "ready";
+    if (data.method === "CASH") {
+        setStatus("Pedido listo para retirar en caja");
+    }
+    updateControls();
+}
+
+/**
  * Maneja eventos de transcripcion, carrito, respuestas y errores.
  * @param {MessageEvent} event Mensaje JSON del backend.
  * @returns {void}
@@ -595,7 +616,11 @@ function applyCart(cart) {
  */
 function onServerMessage(event) {
     const { type, data } = JSON.parse(event.data);
-    if (data.cart) applyCart(data.cart);
+    if (type === "payment.method_selected") {
+        handlePaymentMethodSelected(data);
+    } else if (data.cart) {
+        applyCart(data.cart);
+    }
     if (type === "connection.ready") {
         const restored = phase === "reconnecting";
         reconnectAttempts = 0;
