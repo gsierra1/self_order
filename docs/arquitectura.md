@@ -117,8 +117,9 @@ repetidas legítimas; no es una garantía general contra duplicados entre mensaj
 o reconexiones.
 
 La confirmacion conversacional pasa primero la sesion a `PAYMENT_PENDING` y
-genera el numero de pedido en backend. `select_payment_method` acepta `QR`,
-`CARD` o `CASH`; el frontend completa la demo mediante un endpoint y recien
+genera el numero de pedido en backend. Si la persona indica directamente un
+método desde `ACTIVE`, `select_payment_method` prepara ese estado antes de
+registrarlo. La tool acepta `QR`, `CARD` o `CASH`; el frontend completa la demo mediante un endpoint y recien
 entonces la sesion pasa a `CONFIRMED`. El QR es un codigo escaneable de demo que contiene solo texto,
 sin URL, datos de pago ni destino real; la tarjeta tampoco se envia ni se almacena.
 Mientras el pago esta pendiente, `return_to_order` permite volver al carrito y

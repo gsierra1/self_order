@@ -217,3 +217,8 @@ completo de voz. Groq ofrece actualmente un endpoint de transcripción por
 archivo para Whisper, pero no es equivalente al canal de fragmentos Live usado
 por esta demo; integrarlo requeriría acumular el audio hasta `audio.stop` y
 perdería las hipótesis parciales mientras se habla.
+
+Si la persona dice directamente «quiero pagar con QR», «tarjeta» o «en caja»,
+la tool de selección prepara el estado `PAYMENT_PENDING` cuando todavía estaba
+`ACTIVE` y registra el método en el mismo turno. Esto evita depender de dos
+frases separadas (confirmar primero y elegir después).
