@@ -43,7 +43,7 @@ sí sola, evidencia de que un pedido se haya modificado.
 | `backend/domain/cart_item.py` | `CartItem`: una línea con producto, cantidad, configuración y precio unitario. |
 | `backend/domain/cart.py` | `Cart.total`: suma precio unitario por cantidad de cada línea. |
 | `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
-| `backend/services/order_service.py` | Validación y mutación mediante `add_item`, `remove_item`, `change_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `confirm_order`; consulta mediante `get_cart`. |
+| `backend/services/order_service.py` | Validacion y mutacion mediante `add_item`, `remove_item`, `change_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
 | `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para Gemini. |
 | `backend/ai/orchestrator.py` | `OrderConversationOrchestrator`: instrucciones, catálogo, historial conversacional del chat, control y ejecución manual de tools. |
 | `backend/ai/gemini_client.py` | `create_gemini_client()`: construye el cliente autenticado del SDK. |
@@ -130,12 +130,9 @@ pedido.
 | `CONFIRMED` | El pago demo se completo. | Es el estado final: el pedido no admite texto, voz ni cambios de carrito. El frontend inicia una sesion nueva luego de la cuenta regresiva. |
 
 El flujo expuesto por el dashboard y las tools usa siempre
-`ACTIVE -> PAYMENT_PENDING -> CONFIRMED`. Sin embargo, `OrderService.confirm_order()`
-permanece como una operacion heredada usada por pruebas previas y puede pasar de
-`ACTIVE` a `CONFIRMED` de forma directa. No participa en el recorrido normal de
-pago; conservar ambas rutas explica la diferencia historica, pero es deuda de
-mantenimiento a retirar o unificar antes de presentar el servicio como contrato
-estable.
+`ACTIVE -> PAYMENT_PENDING -> CONFIRMED`. No existe una operacion del servicio
+que confirme directamente desde `ACTIVE`: todo pedido debe pasar por la eleccion
+de pago, aunque la pasarela sea simulada en esta demo.
 
 ## Modelo de datos y precios
 
@@ -163,12 +160,10 @@ hamburguesas con bebidas o extras diferentes deben representarse en líneas dist
 eliminar líneas. `replace_item` conserva ID y cantidad, valida el destino y
 recién después modifica producto, opciones y precio.
 
-El recorrido vigente del dashboard usa `prepare_payment()` y
-`complete_payment()` para pasar por los tres estados de pago. El metodo
-`confirm_order()` todavia rechaza carrito vacio y cambia directamente a
-`CONFIRMED`, pero es una ruta heredada de pruebas y no debe usarse para incorporar
-nuevas integraciones de pago. Despues de `CONFIRMED` las mutaciones estan
+El recorrido vigente usa `prepare_payment()` y `complete_payment()` para pasar
+por los tres estados de pago. Despues de `CONFIRMED` las mutaciones estan
 bloqueadas; la confirmacion sigue siendo local, sin una aceptacion externa.
+
 
 `Menu.get_modifier_details()` no determina que modificadores debe pedir el bot ni
 valida una seleccion nueva. Recibe el producto y las opciones que ya quedaron

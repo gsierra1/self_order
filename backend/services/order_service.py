@@ -626,67 +626,6 @@ class OrderService:
         """
         return self.session.cart
 
-    def confirm_order(self) -> dict:
-        """
-        Confirma el pedido correspondiente a la sesión actual.
-
-        Verifica que la sesión esté activa y que el carrito contenga al menos
-        un producto. Después de una confirmación exitosa, la sesión pasa a
-        CONFIRMED y deja de admitir modificaciones.
-
-        En esta prueba de concepto la confirmación es local. En producción,
-        DEX/POS deberá aceptar definitivamente el pedido antes de cambiar el
-        estado local a CONFIRMED.
-
-        Returns:
-            Diccionario con estado, identificador de sesión y total confirmado.
-
-        Raises:
-            ValueError: Si la sesión ya fue confirmada.
-            ValueError: Si el carrito está vacío.
-        """
-        self._ensure_active()
-
-        cart = self.session.cart
-
-        if not cart.items:
-            raise ValueError(
-                "Cannot confirm an empty cart"
-            )
-
-        self.session.state = (
-            SessionState.CONFIRMED
-        )
-
-        snapshot = self._get_cart_snapshot()
-
-        log_event(
-            "INFO",
-            "session.confirmed",
-            session_id=self.session.session_id,
-            total=cart.total,
-            cart=snapshot,
-        )
-
-        self._emit_event(
-            "order.confirmed",
-            {
-                "cart": {
-                    "items": snapshot["items"],
-                    "total": snapshot["total"],
-                    "state": snapshot["session_state"],
-                },
-            },
-        )
-
-        return {
-            "status": "confirmed",
-            "session_id": (
-                self.session.session_id
-            ),
-            "total": cart.total,
-        }
-
     def prepare_payment(self) -> dict:
         """Prepara el pedido para seleccionar un método de pago.
 

@@ -381,13 +381,12 @@ Coca-Cola agotada se rechaza tambien al pedir Burger Doble.
 
 ### Estados de sesion y representacion de modificadores (16/09/2026)
 
-Se completo la documentacion de `SessionState`: el flujo vigente del dashboard
-es `ACTIVE` -> `PAYMENT_PENDING` -> `CONFIRMED`. Mientras el pago esta pendiente,
-la persona puede elegir metodo o usar atras para volver a `ACTIVE` y editar el
-mismo carrito. Se identifico una ruta heredada: `OrderService.confirm_order()`
-pasa directamente a `CONFIRMED` y continua utilizada por pruebas antiguas, pero
-no por el recorrido normal de frontend ni por las tools. Queda pendiente unificar
-o retirar esa ruta antes de estabilizar el contrato de pagos.
+El flujo de pago se unifico en `ACTIVE` -> `PAYMENT_PENDING` -> `CONFIRMED`.
+Se elimino `OrderService.confirm_order()`, que confirmaba de forma directa y ya
+no representaba la experiencia del dashboard. Las pruebas que lo usaban ahora
+preparan el pago, eligen un metodo y lo completan mediante los metodos reales del
+servicio. Mientras el pago esta pendiente, la persona puede elegir metodo o usar
+atras para volver a `ACTIVE` y editar el mismo carrito.
 
 Tambien se documento `Menu.get_modifier_details()`: no infiere ni valida
 modificadores. Traduce IDs ya validados del carrito a nombres, obligatoriedad y

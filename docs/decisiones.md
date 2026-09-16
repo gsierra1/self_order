@@ -115,3 +115,25 @@ herramientas y formatos propios.
 adaptador traduce su proveedor a esos contratos; `OrderService` permanece como
 autoridad de menú, precios y estado. Esto permite usar un proveedor alternativo
 o hacer failover sin reescribir las reglas del pedido.
+
+
+## 08. Confirmar siempre mediante el flujo de pago
+
+**Contexto comprobado:** al incorporar el pago se definio el recorrido
+`ACTIVE -> PAYMENT_PENDING -> CONFIRMED`, con la posibilidad de volver a editar.
+El servicio aun conservaba `confirm_order()`, una operacion anterior que saltaba
+directamente a `CONFIRMED`; algunas pruebas la seguian usando.
+
+**Alternativa descartada:** mantener ambas transiciones por compatibilidad. Eso
+permite confirmar sin metodo de pago y obliga a cada integracion futura a decidir
+cual contrato usar.
+
+**Decision adoptada:** eliminar la transicion directa y actualizar las pruebas
+para usar `prepare_payment()`, `select_payment_method()` y `complete_payment()`.
+
+**Consecuencia:** toda confirmacion del servicio respeta los mismos estados que
+el dashboard. La pasarela sigue siendo una simulacion, pero podra reemplazarse
+por una integracion real sin introducir una ruta paralela de cierre.
+
+**Estado:** implementada y cubierta por pruebas automatizadas del servicio,
+WebSocket y navegador simulado.

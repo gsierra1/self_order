@@ -60,12 +60,14 @@ class OrderRulesTests(unittest.TestCase):
         self.assertEqual(asdict(item), previous)
         self.assertEqual(self.service.get_cart().total, 17000)
 
-    def test_confirmation_blocks_later_changes(self) -> None:
-        """Confirmar exige carrito no vacío y bloquea operaciones posteriores."""
+    def test_completed_payment_blocks_later_changes(self) -> None:
+        """El pago completo exige carrito, metodo y bloquea cambios posteriores."""
         with self.assertRaises(ValueError):
-            self.service.confirm_order()
+            self.service.prepare_payment()
         self.service.add_item("BURGER_CLASICA", 1, self.options)
-        self.service.confirm_order()
+        self.service.prepare_payment()
+        self.service.select_payment_method("CASH")
+        self.service.complete_payment()
         with self.assertRaises(ValueError):
             self.service.remove_item(1)
 

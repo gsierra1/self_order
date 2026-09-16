@@ -64,7 +64,9 @@ class BrowserAssistant:
             Respuesta de prueba para pantalla y síntesis.
         """
         if message == "confirmar":
-            self.service.confirm_order()
+            self.service.prepare_payment()
+            self.service.select_payment_method("CASH")
+            self.service.complete_payment()
             return "Pedido confirmado"
         self.service.add_item(
             "BURGER_CLASICA",

@@ -224,7 +224,9 @@ class ConversationTests(unittest.TestCase):
     def test_confirmed_order_rejects_voice(self) -> None:
         """Un pedido confirmado no permite iniciar una nueva transcripción."""
         self.runtime.service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
-        self.runtime.service.confirm_order()
+        self.runtime.service.prepare_payment()
+        self.runtime.service.select_payment_method("CASH")
+        self.runtime.service.complete_payment()
         with self.client.websocket_connect(self.url) as ws:
             ws.receive_json()
             ws.send_json({"type": "audio.start"})
