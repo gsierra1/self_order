@@ -28,12 +28,16 @@ verificacion registrada junto con su cambio.
 ## Para un piloto de kiosco
 
 - **Evaluación de proveedores ya desacoplados:** los contratos `SpeechToText` y
-  `OrderInterpreter`, las fábricas y Gemini ya están implementados. Falta crear
-  un adaptador real por cada candidato que se quiera comparar (por ejemplo,
-  Whisper, Vosk, Anthropic, Google Cloud o Azure), configurar solamente
-  sus credenciales o modelos correspondientes y ejecutar la misma matriz de
-  pruebas con audio real. No seleccionar un nombre futuro en `.env` hasta que su
-  adaptador y sus pruebas existan.
+  `OrderInterpreter`, las fábricas y los adaptadores Gemini, OpenAI y Groq ya
+  están implementados. Para sumar **Anthropic u otro LLM**, crear cliente y
+  lectura segura de su clave, configuración de modelo, clase `OrderInterpreter`
+  que traduzca tool use a las tools existentes, rama en `backend/ai/factories.py`,
+  manejo de errores y pruebas simuladas; luego ejecutar la matriz manual real.
+  Para sumar **otro STT**, crear cliente y autenticación local del proveedor,
+  adaptador `SpeechToText` con conexión, fragmentos, parciales, final,
+  cancelación y cierre, configuración y rama en la fábrica STT; después validar
+  audio real, latencia, ruido y reconexión. No seleccionar un proveedor futuro
+  en `.env` hasta que su adaptador y pruebas existan.
 - **Evaluacion Edge/STT local:** comparar latencia total, transcripcion con
   ruido, costo, hardware disponible y funcionamiento sin internet.
 - **Persistencia e idempotencia:** guardar pedidos y sesiones en almacenamiento

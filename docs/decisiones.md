@@ -208,9 +208,10 @@ creditos y no recomienda reintentar; OpenAI STT no se considera implementado.
 de matriz manual completa desde el navegador y por voz.
 
 **Contexto comprobado:** OpenAI autentico la clave, pero la cuenta no tiene
-creditos API. Groq publica un plan gratuito con limites y una API compatible con
-Chat Completions. El modelo `qwen/qwen3.8-27b` figura en sus limites gratuitos
-al 16/09/2026.
+creditos API. Groq publica un nivel de uso gratuito y una API compatible con
+Chat Completions. Se probaron `qwen/qwen3.8-27b` y `openai/gpt-oss-20b`; el
+segundo resultó más consistente para las tools básicas del menú y quedó como
+predeterminado.
 
 **Alternativas consideradas:** instalar Ollama y ejecutar un modelo local;
 usar un router gratuito que cambie de modelo; o integrar Groq. Ollama elimina la

@@ -393,10 +393,11 @@ implementada.
 | Ambos futuros | Solo credenciales o archivos de los proveedores seleccionados | Variables propias de los adaptadores |
 | STT local | No necesita clave cloud para STT; sí `STT_MODEL_PATH` y el modelo instalado | Ruta, idioma y parámetros del motor local |
 
-`.env.example` nombra, sin activar, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` y
-`STT_MODEL_PATH` como referencias futuras. No se leen mientras los proveedores
-no están implementados ni seleccionados. Las claves reales continúan fuera de
-Git.
+`.env.example` presenta la combinación activa recomendada Gemini STT + Groq LLM
+y anota cómo cambiar a Gemini Chat u OpenAI. Las claves reales continúan fuera
+de Git. Anthropic, `STT_MODEL_PATH` y otros proveedores futuros se documentan en
+el README y en `docs/pendientes.md`, pero todavía no son configuraciones que el
+código acepte.
 
 ### Candidatos investigados, no implementados
 

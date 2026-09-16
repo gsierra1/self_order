@@ -1,8 +1,9 @@
 # Self Order Voice
 
-Prueba de un autoservicio conversacional: Gemini interpreta pedidos ya sean mediante voz o texto y
-un backend Python valida productos, modificadores y precios. El dashboard muestra
-la conversación y el carrito actualizado por WebSocket.
+Prueba de un autoservicio conversacional: Gemini transcribe la voz; el LLM
+configurado interpreta el texto y el usuario también puede escribir. Un backend
+Python valida productos, modificadores y precios. El dashboard muestra la
+conversación y el carrito actualizado por WebSocket.
 
 Tocá **Hablar**, luego de que el indicador de **Estado** esté en "Listo" esperá la
 escucha y tocá **Enviar audio** al terminar; el texto definitivo usa el mismo
@@ -34,15 +35,17 @@ En la carpeta .venv instalá ahi las dependencias del proyecto sin mezclarlas co
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
- Crear `.env` a partir de `.env.example`
-solo si todavía no existe y configurar una API key de Gemini:
+Crear `.env` a partir de `.env.example` solo si todavía no existe. La
+configuración recomendada para esta demo usa Gemini para transcribir la voz y
+Groq para interpretar el pedido:
 
 ```dotenv
 STT_PROVIDER=gemini
-LLM_PROVIDER=gemini
-GEMINI_API_KEY=tu_api_key
+LLM_PROVIDER=groq
+GEMINI_API_KEY=tu_clave_de_google_ai_studio
 GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live
-GEMINI_CHAT_MODEL=gemini-3.7-flash
+GROQ_API_KEY=tu_clave_de_groq
+GROQ_CHAT_MODEL=openai/gpt-oss-20b
 ```
 
 Las credenciales locales no deben versionarse. El SDK carga la clave desde el
@@ -69,22 +72,54 @@ Abrir `http://127.0.0.1:8000/`. FastAPI sirve también el frontend, sin un servi
 adicional. `http://127.0.0.1:8000/docs` muestra los endpoints HTTP.
 `/api/health` verifica la API, no el acceso a Gemini.
 
-La configuración recomendada para la cuenta revisada el 15/09/2026 usa
-`gemini-3.7-flash` para chat y `gemini-3.5-transcribe-live` para transcripción.
-Los nombres se configuran mediante `GEMINI_CHAT_MODEL` y
-`GEMINI_TRANSCRIPTION_MODEL` en `.env` cuando ambos proveedores son Gemini.
+`GEMINI_TRANSCRIPTION_MODEL` requiere un modelo compatible con la modalidad
+Live Transcription: debe admitir `bidiGenerateContent`, aceptar
+`input_audio_transcription` y emitir el texto reconocido final. Que un modelo
+aparezca en el listado de Gemini o admita `bidiGenerateContent` no garantiza por
+sí solo que sirva para transcribir. El modelo actual verificado para esta ruta es
+`gemini-3.5-transcribe-live`.
 
 ## Proveedores de IA y adaptadores
 
 `STT_PROVIDER` decide el proveedor que transforma audio en texto y
-`LLM_PROVIDER` el que interpreta el pedido. La configuración predeterminada es
-`gemini` para ambos y conserva el recorrido actual. Gemini usa una sola
+`LLM_PROVIDER` el que interpreta el pedido. Si se omiten, el código usa Gemini
+para ambas capas. La configuración recomendada del `.env.example` usa Groq para
+el chat debido al saldo agotado de OpenAI y a la saturación observada en Gemini
+Chat. Gemini usa una sola
 `GEMINI_API_KEY` para las dos capas; sus modelos se configuran con
 `GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
 
-Gemini esta implementado para STT y LLM. OpenAI y Groq estan implementados solo
-para LLM; su STT sigue pendiente. Para probar cualquiera de los dos, conserva
-`STT_PROVIDER=gemini` y configura solo la credencial y modelo del LLM elegido:
+Gemini esta implementado para STT y LLM. Groq y OpenAI están implementados solo
+para LLM; su STT sigue pendiente. El `.env.example` selecciona Groq porque la
+cuenta gratuita de Groq permitió probar las tools del carrito. No se instala un
+modelo en la PC: Groq ejecuta `openai/gpt-oss-20b` en la nube mediante una API
+compatible con OpenAI. El nombre `openai/` identifica al modelo, no al servicio
+que procesa la solicitud: el proveedor configurado sigue siendo Groq.
+
+Para generar o volver a generar una clave de Groq:
+
+1. Entrá a [Groq Console](https://console.groq.com/).
+2. Iniciá sesión y abrí [API Keys](https://console.groq.com/keys).
+3. Creá una clave, copiala y guardala en tu `.env` como `GROQ_API_KEY`.
+4. Configurá `LLM_PROVIDER=groq` y `GROQ_CHAT_MODEL=openai/gpt-oss-20b`.
+
+La clave se muestra como secreto: no la pegues en el código, README, logs ni Git.
+El plan gratuito tiene límites de solicitudes y tokens que pueden cambiar; sirve
+para desarrollo y una demo acotada, pero no garantiza disponibilidad productiva.
+Groq publica los modelos y límites actuales en [su catálogo](https://console.groq.com/docs/models)
+y [la tabla de límites](https://console.groq.com/docs/rate-limits).
+
+Gemini puede usarse también como LLM. En ese caso, conserva
+`STT_PROVIDER=gemini`, configura `LLM_PROVIDER=gemini` y agrega
+`GEMINI_CHAT_MODEL` con un modelo que admita `generateContent` y function calling.
+Una sola `GEMINI_API_KEY` autentica ambas capas.
+
+OpenAI también cuenta con un adaptador implementado para LLM. Su API se factura
+por separado de ChatGPT y necesita una cuenta API con saldo o facturación
+habilitada; una suscripción de ChatGPT no cubre llamadas a la API, según la
+[documentación de facturación de OpenAI](https://help.openai.com/en/articles/9039756-managing-your-work-in-the-api-platform-with-projects).
+Por eso la configuración recomendada utiliza Groq. Para probarlo,
+conserva `STT_PROVIDER=gemini` y configura:
 
 ```dotenv
 LLM_PROVIDER=openai
@@ -92,34 +127,29 @@ OPENAI_API_KEY=tu_clave_local
 OPENAI_CHAT_MODEL=gpt-4.1-mini
 ```
 
-```dotenv
-LLM_PROVIDER=groq
-GROQ_API_KEY=tu_clave_local
-GROQ_CHAT_MODEL=openai/gpt-oss-20b
-```
-
-Groq ejecuta ese modelo en la nube: no se instala un modelo en la computadora.
-Su plan gratuito aplica límites de solicitudes y tokens; por eso es apto para
-desarrollo y demostraciones acotadas, no una garantía de capacidad productiva.
-La integración usa su API compatible con Chat Completions y mantiene el mismo
-camino tools → `OrderService` que Gemini y OpenAI.
-El adaptador limita cada respuesta a 800 tokens, para respetar el límite gratuito
-de salida conocido de esos modelos y mantener respuestas breves para el kiosco.
+`OPENAI_CHAT_MODEL` debe admitir function calling. El comando para listar modelos
+de la cuenta ayuda a revisar acceso, pero la compatibilidad con tools y el saldo
+se confirman mediante una solicitud real.
 
 `whisper`, `vosk`, `anthropic`, `google-cloud`, `azure` u otro valor no
 implementado se informa claramente y no intenta usar una clave ajena.
-`.env.example` registra `OPENAI_API_KEY` y `OPENAI_CHAT_MODEL` para el
-interprete OpenAI. `OPENAI_TRANSCRIPTION_MODEL` sigue siendo una referencia
-hasta crear el adaptador de voz OpenAI.
 
-Para consultar modelos visibles para la cuenta OpenAI, sin imprimir la clave:
+Los proveedores se seleccionan mediante `STT_PROVIDER` y `LLM_PROVIDER`. Hoy
+STT admite `gemini`; LLM admite `gemini`, `groq` y `openai`. Cada proveedor
+requiere sus propias variables: Gemini usa `GEMINI_API_KEY`, Groq usa
+`GROQ_API_KEY` y OpenAI usa `OPENAI_API_KEY`. Solo se exige la credencial del
+proveedor elegido para esa capa. No compartas ni subas `.env` al repositorio.
+
+Para consultar los modelos visibles para la cuenta OpenAI, sin imprimir la
+clave (sólo aplica a `LLM_PROVIDER=openai`):
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python -m backend.ai.list_openai_models
 ```
 
-El listado indica disponibilidad de cuenta, no garantiza compatibilidad con tools ni saldo.
+El listado indica disponibilidad de cuenta, pero no garantiza compatibilidad con
+tools ni saldo de API.
 El diseño está separado en `SpeechToText` para audio por streaming y
 `OrderInterpreter` para texto y tools. Gemini los implementa con
 `GeminiLiveTranscriber` y `GeminiOrderInterpreter`. Ningún adaptador puede
@@ -130,7 +160,7 @@ siguen delegando esas decisiones en `OrderService`. Ver
 Si se configura un nombre inexistente o incompatible, el chat o la voz muestran
 el nombre concreto del modelo y la etapa que falló, sin modificar el carrito.
 
-Un modelo de chat necesita la acción `generateContent`. Para voz,
+Un modelo de chat Gemini necesita la acción `generateContent`. Para voz,
 `bidiGenerateContent` es necesario, pero no suficiente: el modelo también debe
 estar documentado para **Live Transcription**, aceptar
 `response_modalities=["TEXT"]` e `input_audio_transcription`, y emitir
@@ -139,30 +169,48 @@ de modelos solo confirma la primera condición; las demás se validan con la
 documentación oficial y una prueba de audio real. La disponibilidad futura depende
 del proveedor y de la cuenta.
 
-Para consultar todos los modelos visibles para la API key configurada, tanto los
-de chat como los de transcripción, ejecutar:
+Para consultar los modelos Gemini visibles para la API key, tanto de chat como
+de Live, ejecutar desde la raíz:
 
 ```powershell
+.\.venv\Scripts\Activate.ps1
 python -m backend.ai.list_models
 ```
 
-El comando requiere red y credenciales, y solo muestra nombres y acciones del
-proveedor. Las acciones permiten elegir: `generateContent` corresponde al chat y
-`bidiGenerateContent` a transcripción/conversación en vivo. La lista puede
-cambiar según la cuenta y la fecha; no es fija dentro del proyecto.
+El comando requiere red y `GEMINI_API_KEY`; consulta únicamente los modelos de
+Gemini y muestra sus nombres y acciones. `generateContent` corresponde al chat;
+`bidiGenerateContent` es un requisito parcial para voz, que además necesita
+compatibilidad real con Live Transcription. La lista cambia según cuenta y fecha.
+
+## Incorporar otros proveedores
+
+La arquitectura permite agregar proveedores en los bordes de IA sin cambiar
+`OrderService`, que sigue siendo la autoridad para menú, disponibilidad,
+modificadores, precios, carrito y pagos. Sin embargo, elegir un nombre nuevo en
+`.env` no lo implementa automáticamente. Para sumar un LLM como Anthropic se
+debe crear un cliente que lea `ANTHROPIC_API_KEY`, agregar la variable de modelo,
+implementar `OrderInterpreter` traduciendo su protocolo de tool use a las tools
+autorizadas, registrar el adaptador en `backend/ai/factories.py`, clasificar sus
+errores y agregar pruebas simuladas y manuales. Para sumar STT se requiere
+`SpeechToText` completo: conexión/preparación, audio por fragmentos, parciales,
+texto final, cancelación y cierre; luego se configura proveedor, credencial o
+modelo y se añade a la fábrica de STT. Los pasos por etapa y otros candidatos
+están en [pendientes](docs/pendientes.md); los contratos y responsabilidades se
+explican en [arquitectura](docs/arquitectura.md).
 
 ## Diagnóstico manual disponible
 
-Requieren credenciales, red y acceso al modelo; pueden consumir cuota de Gemini.
-Ejecutar desde la raíz:
+Requiere credenciales, red y acceso al proveedor seleccionado; puede consumir
+cuota del proveedor cloud configurado. Ejecutar desde la raíz:
 
 ```powershell
+.\.venv\Scripts\Activate.ps1
 .\.venv\Scripts\python.exe -m backend.ai.test_chat
 ```
 
-El script permite conversar por terminal usando el mismo orquestador y las
-validaciones del dashboard. Requiere credenciales, red y acceso al modelo, por
-lo que puede consumir cuota de Gemini. Las pruebas de voz se mantienen como
+El script permite conversar por terminal usando el mismo intérprete de pedidos y
+las validaciones del dashboard. Requiere credenciales, red y acceso al modelo.
+Las pruebas de voz se mantienen como
 regresiones en `tests/`; no se conservan experimentos aislados con modelos Live
 anteriores ni archivos de audio de muestra.
 
