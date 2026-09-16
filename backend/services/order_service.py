@@ -11,8 +11,8 @@ class OrderService:
     Gestiona las operaciones transaccionales asociadas a un pedido.
 
     El servicio mantiene la lógica de validación y modificación del carrito.
-    Gemini y las interfaces externas pueden solicitar operaciones, pero este
-    servicio constituye la autoridad sobre el estado real del pedido.
+    El intérprete LLM y las interfaces externas pueden solicitar operaciones,
+    pero este servicio constituye la autoridad sobre el estado real del pedido.
     """
 
     def __init__(

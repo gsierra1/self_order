@@ -33,8 +33,9 @@ Hay dos estados distintos que la interfaz debe representar:
 ## Alcance actual y futuro
 
 La implementación actual es una prueba de concepto local. El pedido vive en memoria
-y la confirmación es local. No existen pagos, envío a cocina, persistencia de pedidos 
-ni integración real con un sistema de ventas. DEX/POS deberá manejar eso en el futuro.
+y dispone de un flujo de pago simulado con QR, tarjeta o caja. No existe cobro real,
+envío a cocina, persistencia de pedidos ni integración con un sistema de ventas.
+DEX/POS deberá manejar esas responsabilidades en una etapa futura.
 
 La prioridad fue completar el pedido por voz manteniendo el canal escrito. Ampliar el
 menú y mejorar la estética quedan para después. 

@@ -6,17 +6,23 @@ verificacion registrada junto con su cambio.
 
 ## Antes de una demostracion formal
 
-- **Prueba manual con proveedor real:** completar la matriz de texto y voz con
-  Gemini configurado y repetir texto con `LLM_PROVIDER=groq`, incluyendo
-  producto incompleto, producto agotado,
-  reemplazo, varios extras, pago QR/tarjeta/caja, vuelta desde pago y errores
-  temporales del proveedor. Registrar modelo, fecha, latencias y resultado
-  observado. Ya se verificaron manualmente el alta de una Burger Clásica con
-  Agua y el cambio de extra con `openai/gpt-oss-20b`; aún falta ejecutar la
-  matriz completa desde el navegador y por voz.
-- **Prueba de microfono y parlantes fisicos:** verificar permisos, silencio,
-  ruido, cancelacion, interrupcion, reconexion y calidad audible en el equipo
-  de la demo. Las pruebas actuales usan audio y navegador simulados.
+- **Cierre formal de la matriz con proveedores reales:** las corridas del
+  16/09/2026 ya comprobaron en navegador y con micrófono físico la
+  transcripción Gemini, interpretación Groq, altas y eliminaciones, vuelta
+  desde pago, selección por voz de QR, tarjeta y caja, cierre del pedido y
+  creación de una sesión nueva. También se escuchó la síntesis del navegador.
+  Antes de la demostración falta repetir y registrar en una sola corrida, con
+  la configuración recomendada `openai/gpt-oss-20b`, producto incompleto,
+  producto agotado, reemplazo, varios extras y los tres pagos. Los últimos
+  registros extensos usan `qwen/qwen3.8-27b`, modelo que mostró respuestas
+  incompletas y mayor variación de latencia; por eso no sustituyen esa corrida
+  final. Registrar modelo, fecha, resultado y latencia de cada caso.
+- **Prueba ambiental en el equipo de la demo:** el funcionamiento básico del
+  micrófono y los parlantes físicos ya fue comprobado. Falta evaluar ruido de
+  fondo representativo, distancia al micrófono, cancelación durante una frase,
+  pérdida y recuperación de red y calidad audible en el equipo concreto de la
+  presentación. Las pruebas automáticas cubren cancelación y reconexión con
+  simulaciones, pero no reproducen el ambiente físico.
 - **Detección automática de silencio y turnos de voz:** incorporar detección de
   fin de habla para no depender de que la persona pulse **Enviar audio**. La
   interfaz debe cerrar el turno solo cuando haya silencio suficiente y enviar
@@ -26,10 +32,6 @@ verificacion registrada junto con su cambio.
   errores 429/503 y tasa de exito para un conjunto de pedidos representativo.
   Definir ambos modelos y el plan de cuenta con evidencia, no solo por
   disponibilidad declarada.
-- **Capacidades conversacionales futuras:** decidir si `change_quantity`, ya
-  disponible en `OrderService`, debe exponerse al usuario por voz y texto. Si se
-  incorpora, definir frases esperadas y pruebas. `clear_cart` ya está expuesto
-  como una única tool para evitar encadenar eliminaciones individuales.
 
 ## Para un piloto de kiosco
 
@@ -49,6 +51,12 @@ verificacion registrada junto con su cambio.
 - **Persistencia e idempotencia:** guardar pedidos y sesiones en almacenamiento
   durable y asociar operaciones a identificadores que eviten duplicados ante
   reintentos o reconexiones.
+- **Cambio conversacional de cantidad:** decidir si `change_quantity`, ya
+  disponible en `OrderService`, debe exponerse como tool para modificar una
+  línea existente por voz o texto. No bloquea la demostración: la cantidad
+  inicial ya puede indicarse al agregar un producto. Si se incorpora, definir
+  frases esperadas, ambigüedades entre líneas y pruebas. `clear_cart` ya está
+  expuesto como una única tool para evitar eliminaciones encadenadas.
 - **Catálogo y stock escalables:** la demo usa `config/menu.json` porque el menú
   actual es pequeño y el archivo resulta sencillo de leer, actualizar,
   versionar y probar sin depender de servicios externos. Antes de producción se

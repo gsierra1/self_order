@@ -1,4 +1,4 @@
-"""Adaptadores entre las tools de Gemini y las reglas de OrderService."""
+"""Adaptadores entre las tools del intérprete LLM y las reglas de OrderService."""
 
 from backend.services.order_service import OrderService
 from backend.domain.session import SessionState
@@ -73,7 +73,7 @@ def _serialize_item_result(
         status: Estado semántico opcional de la operación.
 
     Returns:
-        Datos de la línea y total actual aptos para devolver a Gemini.
+        Datos de la línea y total actual aptos para devolver al intérprete LLM.
     """
     result = {
         "line_id": item.line_id,
@@ -98,7 +98,7 @@ def create_add_item_tool(service: OrderService):
         service: Servicio de pedidos asociado a la sesión actual.
 
     Returns:
-        Función preparada para Gemini que no agrega una línea incompleta.
+        Función preparada para el intérprete LLM que no agrega una línea incompleta.
     """
 
     def add_item(
@@ -170,7 +170,7 @@ def create_get_cart_tool(service: OrderService):
         service: Servicio de pedidos asociado a la sesión actual.
 
     Returns:
-        Función preparada para Gemini.
+        Función preparada para el intérprete LLM.
     """
 
     def get_cart() -> dict:
@@ -198,7 +198,7 @@ def create_change_modifier_tool(service: OrderService):
         service: Servicio de pedidos asociado a la sesión actual.
 
     Returns:
-        Función preparada para Gemini.
+        Función preparada para el intérprete LLM.
     """
 
     def change_modifier(
@@ -232,7 +232,7 @@ def create_replace_item_tool(service: OrderService):
         service: Servicio de pedidos asociado a la sesión actual.
 
     Returns:
-        Función preparada para Gemini.
+        Función preparada para el intérprete LLM.
     """
 
     def replace_item(
@@ -301,7 +301,7 @@ def create_remove_item_tool(service: OrderService):
         service: Servicio de pedidos asociado a la sesión actual.
 
     Returns:
-        Función preparada para Gemini.
+        Función preparada para el intérprete LLM.
     """
 
     def remove_item(line_id: int) -> dict:
@@ -360,7 +360,7 @@ def create_confirm_order_tool(service: OrderService):
         service: Servicio de pedidos asociado a la sesión actual.
 
     Returns:
-        Función preparada para Gemini.
+        Función preparada para el intérprete LLM.
     """
 
     def confirm_order() -> dict:
@@ -394,7 +394,7 @@ def create_select_payment_method_tool(service: OrderService):
         service: Servicio de pedidos asociado a la sesión actual.
 
     Returns:
-        Función preparada para Gemini.
+        Función preparada para el intérprete LLM.
     """
 
     def select_payment_method(method: str) -> dict:
@@ -421,7 +421,7 @@ def create_return_to_order_tool(service: OrderService):
         service: Servicio de pedidos asociado a la sesión actual.
 
     Returns:
-        Función preparada para Gemini.
+        Función preparada para el intérprete LLM.
     """
 
     def return_to_order() -> dict:

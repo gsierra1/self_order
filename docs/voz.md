@@ -102,8 +102,8 @@ para el chat y `bidiGenerateContent` para transcripción en vivo. La disponibili
 y los nombres pueden cambiar por cuenta o fecha, por lo que no son valores fijos.
 Si el modelo configurado no existe o no admite Live, el error visible nombra el
 modelo y recomienda este comando; el detalle original queda únicamente en los
-logs locales. Los scripts Live anteriores se conservan como experimentos
-independientes.
+logs locales. Los experimentos Live anteriores que dejaron de aportar valor no
+se conservan como scripts de uso del proyecto.
 
 Un modelo con `bidiGenerateContent` requiere además comprobar que entregue la
 transcripción de entrada usada por este adaptador. En la prueba del 15/09/2026,
@@ -145,7 +145,10 @@ y localhost o HTTPS. Si PowerShell bloquea la activacion, usar la solucion tempo
 3. Hablar otra vez: «Con Coca y queso», y enviar. Debe aparecer una unidad por ARS 9.500.
 4. Pedir una pizza: debe informar que no está disponible, sin agregarla.
 5. Apagar **Voz ON** y continuar escribiendo en la misma sesión.
-6. Confirmar el pedido. Deben bloquearse micrófono y escritura.
+6. Confirmar el pedido. Deben bloquearse micrófono y escritura mientras se
+   elige QR, tarjeta o caja; **Atrás** debe devolver el mismo carrito a edición.
+7. Completar cada pago simulado. Debe mostrarse el número de pedido y luego
+   comenzar automáticamente una sesión nueva.
 
 Mientras aparece «Preparando micrófono y conexión...» el botón queda bloqueado:
 ese estado evita hablar antes de que la captura esté conectada. Solo hay que

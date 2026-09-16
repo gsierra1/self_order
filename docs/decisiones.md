@@ -160,8 +160,9 @@ WebSocket y navegador simulado.
 
 ## 09. Adaptadores de proveedores de voz e interpretación
 
-**Estado:** adoptada e implementada el 16/09/2026 para Gemini; los demás
-adaptadores continúan pendientes.
+**Estado:** adoptada e implementada el 16/09/2026 con Gemini para STT y con
+Gemini, OpenAI o Groq para interpretación LLM. Otros adaptadores continúan
+pendientes.
 
 **Contexto comprobado:** `conversation_socket.py` construía directamente
 `LiveTranscriber` y `app.py` construía directamente

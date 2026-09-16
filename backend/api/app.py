@@ -84,7 +84,7 @@ def serialize_cart(
     Convierte el carrito actual en una representación serializable.
 
     La información corresponde siempre al estado real mantenido por
-    OrderService y no al contenido textual generado por Gemini.
+    OrderService y no al contenido textual generado por el intérprete LLM.
 
     Args:
         service: Servicio de pedidos cuya sesión se desea consultar.
@@ -424,7 +424,7 @@ def send_message(
     """
     Procesa un mensaje textual dentro de una sesión de pedido.
 
-    Gemini interpreta la intención del usuario y puede solicitar tools,
+    El proveedor LLM configurado interpreta la intención y puede solicitar tools,
     mientras que OrderService conserva la autoridad sobre las modificaciones
     reales del carrito.
 

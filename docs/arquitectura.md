@@ -258,7 +258,7 @@ asíncrono y no se espera su resultado; no hay entrega garantizada ni replay.
 flowchart LR
     MIC[Micrófono navegador] --> PCM[voice.js / pcm-worklet.js: PCM16 / 16 kHz]
     PCM --> WS[WebSocket binario]
-    WS --> T[LiveTranscriber]
+    WS --> T[SpeechToText configurado]
     T <--> LIVE[Modelo STT Gemini configurado]
     T -->|Texto definitivo| O[Orquestador de pedidos]
     O --> S[OrderService]
@@ -266,16 +266,20 @@ flowchart LR
 
 La API delega el WebSocket en `conversation_socket.py`. La sesión reserva un turno
 con `turn_lock`; la transcripción final sigue el mismo historial y tools que el
-texto escrito. Los scripts Live anteriores siguen siendo experimentos separados.
+texto escrito. Los experimentos Live temporales que ya no aportaban cobertura
+se eliminaron; la regresión útil permanece en `tests/test_voice.py`.
 El frontend lee la respuesta final con `speechSynthesis`; `toggleAssistantAudio()`
 permite apagar y cancelar esa lectura. Detalles, límites y pruebas en [voz](voz.md).
 
 ## Observabilidad y errores
 
-`events.jsonl` conserva eventos desde DEBUG, incluyendo texto, argumentos,
-snapshots y errores. `runtime.log` y la consola muestran una selección más
-compacta desde INFO. Los archivos rotan a 5 MB con tres respaldos por destino.
-Los logs no son almacenamiento transaccional ni permiten restaurar sesiones.
+`events.jsonl` conserva eventos estructurados desde DEBUG, incluidos snapshots
+de carrito y detalles de errores cuando el evento los aporta. Las corridas
+actuales registran longitudes y duraciones de voz y conversación, pero no el
+contenido de cada transcripción. `runtime.log` y la consola muestran una
+selección más compacta desde INFO. Los archivos rotan a 5 MB con tres respaldos
+por destino. Los logs no son almacenamiento transaccional ni permiten restaurar
+sesiones.
 
 `AIProviderError.transaction_applied` informa si alguna tool ya modificó el
 pedido antes de una falla del proveedor. No revierte cambios ni indica que
@@ -451,7 +455,7 @@ código acepte.
 | STT cloud | Azure Speech | Clave o identidad de Azure, región y cliente de reconocimiento continuo | Investigado; sin código ni prueba real. |
 | STT local | Whisper o faster-whisper | `STT_MODEL_PATH`, modelo descargado, CPU/GPU y segmentación de audio | Investigado; sin código ni prueba real. |
 | STT local | Vosk | `STT_MODEL_PATH`, modelo Vosk e integración de parciales locales | Investigado; sin código ni prueba real. |
-| LLM cloud | OpenAI | `OPENAI_API_KEY`, mapeo de function calling a las mismas tools autorizadas | Investigado; sin código ni prueba real. |
+| LLM cloud | OpenAI | `OPENAI_API_KEY`, mapeo de function calling a las mismas tools autorizadas | Adaptador implementado y probado con simulaciones; la prueba real quedó bloqueada por falta de saldo API. |
 | LLM cloud | Anthropic | `ANTHROPIC_API_KEY`, mapeo de tool use a las mismas tools autorizadas | Investigado; sin código ni prueba real. |
 | LLM local | Ollama con un modelo compatible | Servicio/modelo local y adaptación de tool calling; no API key cloud por defecto | Investigado; sin código ni prueba real. |
 
@@ -468,14 +472,16 @@ no prueba que rindan bien para este menú, micrófono, ruido o cuenta.
 
 ### Validación de esta arquitectura
 
-El 16/09/2026 se ejecutaron pruebas automáticas sin red ni credenciales: una
+El 16/09/2026 se ejecutaron 58 pruebas automáticas sin red ni credenciales: una
 simulación del SDK Live de Gemini, los flujos de WebSocket de voz, reglas del
 pedido y pago, y una prueba nueva que conecta `AlternateSpeechToText` y
 `AlternateOrderInterpreter` simulados con `OrderService` real. La última prueba
 comprueba que el cambio de adaptador conserva el cálculo real de ARS 8.500 y que
-un parcial no muta el carrito. No llama a Gemini, OpenAI, Anthropic, Whisper,
-Vosk ni a otro proveedor; por lo tanto no mide disponibilidad, 503, latencia,
-costo ni precisión de reconocimiento.
+un parcial no muta el carrito. La suite también cubre consultas de medios de
+pago sin selección automática y recuperación de respuestas LLM incompletas sin
+duplicar una mutación. No llama a Gemini, OpenAI, Groq, Anthropic, Whisper, Vosk
+ni a otro proveedor; por lo tanto no mide disponibilidad, 503, latencia, costo
+ni precisión de reconocimiento.
 
 
 ### OpenAI LLM: implementacion y evidencia
@@ -505,15 +511,25 @@ La primera llamada real del 16/09/2026 autentico la cuenta Groq, pero recibio
 429 antes de ejecutar tools: el valor predeterminado del SDK esperaba hasta
 2.048 tokens de salida y el límite gratuito del modelo era 1.000. El adaptador
 `GroqOrderInterpreter` establece `max_tokens=800`; la correccion conserva el
-mismo contrato y las mismas tools. Falta repetir la conversación real para
-validar el flujo completo.
+mismo contrato y las mismas tools. Las corridas posteriores comprobaron la
+conexión real y el recorrido del pedido.
 
 **Evidencia manual de Groq (16/09/2026):** con `openai/gpt-oss-20b`, una
 conversación de terminal real agregó una Burger Clásica con Agua mediante
 `add_item`; `OrderService` devolvió una línea por ARS 8.500. Una secuencia
 posterior también aplicó el agregado y eliminación de tomate. La prueba fue
-contra la API real y no mide todavía el recorrido completo en navegador, voz,
-pago ni carga sostenida.
+contra la API real.
+
+Con `qwen/qwen3.8-27b`, las corridas de navegador y micrófono físico del mismo
+día comprobaron transcripción Gemini, altas y eliminación de líneas, vuelta
+desde pago, QR, tarjeta y caja, cierre y creación de una sesión nueva. Los logs
+registran turnos de voz completos entre aproximadamente 3,4 y 8,6 segundos,
+incluyendo el tiempo durante el cual habló la persona. La interpretación varió
+desde cerca de 1 segundo en altas simples hasta 21 segundos en una eliminación
+y 56 segundos en una consulta que el modelo interpretó incorrectamente como
+pago QR. Es evidencia funcional, pero no un benchmark controlado; confirma la
+necesidad de repetir la matriz formal con `openai/gpt-oss-20b` y medir una serie
+representativa antes de la demostración.
 
 Las respuestas conversacionales pasan por `OrderToolsRuntime.sanitize_user_text`
 antes de llegar al frontend. Además de ocultar IDs internos, normaliza separadores
