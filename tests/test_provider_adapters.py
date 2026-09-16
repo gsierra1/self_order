@@ -215,6 +215,24 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertFalse(result.retryable)
         self.assertIn("creditos", result.user_message)
 
+    def test_rate_limit_error_exposes_provider_retry_time(self) -> None:
+        """Muestra el tiempo de espera que Groq u OpenAI devuelven en headers."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=Mock()):
+            interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
+        error = type("RateLimitError", (Exception,), {
+            "status_code": 429,
+            "response": type("Response", (), {
+                "headers": {"retry-after": "12"},
+            })(),
+            "__str__": lambda self: "rate limit",
+        })()
+
+        result = interpreter._classify_error(error, "OPENAI_INTERPRETATION", False, None)
+
+        self.assertEqual(result.retry_after, "12")
+        self.assertIn("12", result.user_message)
+
     def test_openai_factory_uses_only_the_openai_adapter(self) -> None:
         """LLM_PROVIDER=openai selecciona el adaptador sin crear Gemini."""
         service = OrderService(load_menu("config/menu.json"), Session())

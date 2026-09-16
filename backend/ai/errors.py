@@ -37,6 +37,7 @@ class AIProviderError(RuntimeError):
         status_code: int | None = None,
         api_status: str | None = None,
         last_tool: str | None = None,
+        retry_after: str | None = None,
     ):
         """
         Inicializa un error estructurado del proveedor de IA.
@@ -53,6 +54,7 @@ class AIProviderError(RuntimeError):
             status_code: Código HTTP, si está disponible.
             api_status: Estado textual de la API, si está disponible.
             last_tool: Última tool ejecutada, si corresponde.
+            retry_after: Tiempo indicado por el proveedor antes de reintentar.
         """
         super().__init__(user_message)
 
@@ -65,6 +67,7 @@ class AIProviderError(RuntimeError):
         self.retryable = retryable
         self.transaction_applied = transaction_applied
         self.last_tool = last_tool
+        self.retry_after = retry_after
         self.technical_message = technical_message
         self.user_message = user_message
 
@@ -85,6 +88,7 @@ class AIProviderError(RuntimeError):
             "retryable": self.retryable,
             "transaction_applied": self.transaction_applied,
             "last_tool": self.last_tool,
+            "retry_after": self.retry_after,
             "technical_message": self.technical_message,
             "user_message": self.user_message,
         }

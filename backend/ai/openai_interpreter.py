@@ -194,6 +194,9 @@ class OpenAIOrderInterpreter(OrderInterpreter):
             Error estructurado y apto para publicar al navegador.
         """
         status_code = getattr(exc, "status_code", None)
+        response = getattr(exc, "response", None)
+        headers = getattr(response, "headers", {}) or {}
+        retry_after = headers.get("retry-after") or headers.get("x-ratelimit-reset-tokens")
         if status_code == 401:
             error_type, retryable = "AUTHENTICATION_ERROR", False
             message = f"{self.provider_label} rechazo la autenticacion de la aplicacion (401)."
@@ -211,6 +214,8 @@ class OpenAIOrderInterpreter(OrderInterpreter):
             else:
                 error_type, retryable = "RATE_LIMIT", True
                 message = f"{self.provider_label} alcanzo temporalmente un limite de uso (429)."
+                if retry_after:
+                    message += f" La API indica esperar aproximadamente {retry_after}."
         elif status_code in {500, 502, 503, 504}:
             error_type, retryable = "SERVICE_UNAVAILABLE", True
             message = f"{self.provider_label} no esta disponible temporalmente ({status_code})."
@@ -230,7 +235,7 @@ class OpenAIOrderInterpreter(OrderInterpreter):
             status_code=status_code, api_status=None, stage=stage,
             retryable=retryable, transaction_applied=transaction_applied,
             last_tool=last_tool, technical_message=str(exc),
-            user_message=message + suffix,
+            user_message=message + suffix, retry_after=retry_after,
         )
 
     def send_message(self, message: str) -> str:

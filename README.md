@@ -45,6 +45,7 @@ GEMINI_API_KEY=tu_clave_de_google_ai_studio
 GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live
 GROQ_API_KEY=tu_clave_de_groq
 GROQ_CHAT_MODEL=openai/gpt-oss-20b
+# Alternativa probada: qwen/qwen3.8-27b (menos consistente en algunas tools).
 ```
 
 Las credenciales locales no deben versionarse. El SDK carga la clave desde el
@@ -111,11 +112,18 @@ Para generar o volver a generar una clave de Groq:
 3. Creá una clave, copiala y guardala en tu `.env` como `GROQ_API_KEY`.
 4. Configurá `LLM_PROVIDER=groq` y `GROQ_CHAT_MODEL=openai/gpt-oss-20b`.
 
+También se probó `qwen/qwen3.8-27b` como alternativa. Para esta demo se
+recomienda mantener `openai/gpt-oss-20b`, porque fue más consistente al ejecutar
+las tools del carrito.
+
 La clave se muestra como secreto: no la pegues en el código, README, logs ni Git.
 El plan gratuito tiene límites de solicitudes y tokens que pueden cambiar; sirve
 para desarrollo y una demo acotada, pero no garantiza disponibilidad productiva.
 Groq publica los modelos y límites actuales en [su catálogo](https://console.groq.com/docs/models)
 y [la tabla de límites](https://console.groq.com/docs/rate-limits).
+Cuando Groq responde `429`, el backend muestra el tiempo de espera que la API
+devuelve en sus cabeceras, si está disponible. Si no llega ese dato, consultá la
+sección **Limits** de la [consola de Groq](https://console.groq.com/).
 
 Gemini puede usarse también como LLM. En ese caso, conserva
 `STT_PROVIDER=gemini`, configura `LLM_PROVIDER=gemini` y agrega
