@@ -90,8 +90,8 @@ class BrowserVoiceTests(unittest.TestCase):
         server = uvicorn.Server(uvicorn.Config(api.app, log_level="error"))
         previous = set(api.sessions)
         with patch("backend.logging.event_logger.LOGGER.disabled", True), \
-             patch.object(api, "OrderConversationOrchestrator", BrowserAssistant), \
-             patch("backend.api.conversation_socket.LiveTranscriber", BrowserTranscriber):
+             patch("backend.ai.factories.GeminiOrderInterpreter", BrowserAssistant), \
+             patch("backend.api.conversation_socket.create_speech_to_text", BrowserTranscriber):
             thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
             thread.start()
             try:

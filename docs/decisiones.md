@@ -137,3 +137,46 @@ por una integracion real sin introducir una ruta paralela de cierre.
 
 **Estado:** implementada y cubierta por pruebas automatizadas del servicio,
 WebSocket y navegador simulado.
+
+
+## 09. Adaptadores de proveedores de voz e interpretación
+
+**Estado:** adoptada e implementada el 16/09/2026 para Gemini; los demás
+adaptadores continúan pendientes.
+
+**Contexto comprobado:** `conversation_socket.py` construía directamente
+`LiveTranscriber` y `app.py` construía directamente
+`OrderConversationOrchestrator`, ambos basados en Gemini. Cambiar de proveedor
+requería editar esos bordes y podía mezclar detalles de autenticación o protocolo
+con el flujo del pedido. Los logs históricos también muestran que un `503` del
+chat puede impedir una demostración aun cuando el STT haya terminado bien.
+
+**Alternativas consideradas:** mantener Gemini acoplado y cambiar solo nombres
+de modelo; reescribir el dominio para que cada proveedor devuelva un JSON libre;
+o introducir interfaces genéricas. La primera no habilita comparación real de
+proveedores. La segunda daría al modelo autoridad indebida sobre precios,
+disponibilidad y estados. Se eligieron contratos pequeños de borde.
+
+**Decisión adoptada:** `SpeechToText` representa un turno de audio por streaming
+con preparación implícita en el adaptador, `feed`, `finish`, `transcribe` con
+parciales/final, `cancel` y `close`. `OrderInterpreter` recibe texto final y
+administra la conversación y las tools de su proveedor. Las fábricas leen
+`STT_PROVIDER` y `LLM_PROVIDER`; hoy devuelven `GeminiLiveTranscriber` y
+`GeminiOrderInterpreter`. Las tools siguen delegando en `OrderService`, que
+conserva la única autoridad transaccional.
+
+**Consecuencias:** Gemini mantiene el comportamiento visible de texto, voz,
+carrito, pago y reconexión. Una combinación futura requerirá solo el adaptador,
+su configuración y pruebas; no cambios en `OrderService`, `Menu`, `Cart` ni
+pagos. Gemini puede usar una misma `GEMINI_API_KEY` para STT y LLM. Una
+combinación cloud necesita las credenciales de los proveedores seleccionados;
+un STT local necesita modelo instalado y ruta, no una API key cloud para ese
+tramo.
+
+**Límites:** una interfaz no hace interoperables los protocolos por sí sola.
+OpenAI, Anthropic, Google Cloud, Azure, Whisper, Vosk y Ollama no están
+implementados ni probados contra el sistema. La simulación confirma la unión
+interna y la protección de `OrderService`, pero no resuelve los 503 ni demuestra
+latencia, costo, disponibilidad, exactitud con ruido o seguridad de una cuenta
+productiva. Cada adaptador futuro deberá convertir sus tools o resultados al
+mismo límite autorizado y someterse a pruebas manuales y de regresión.

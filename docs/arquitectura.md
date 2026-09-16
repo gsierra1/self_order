@@ -45,10 +45,12 @@ sí sola, evidencia de que un pedido se haya modificado.
 | `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
 | `backend/services/order_service.py` | Validacion y mutacion mediante `add_item`, `remove_item`, `change_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
 | `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para Gemini. |
-| `backend/ai/orchestrator.py` | `OrderConversationOrchestrator`: instrucciones, catálogo, historial conversacional del chat, control y ejecución manual de tools. |
-| `backend/ai/gemini_client.py` | `create_gemini_client()`: construye el cliente autenticado del SDK. |
+| `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |
+| `backend/ai/live_transcriber.py` | `GeminiLiveTranscriber`: implementación Gemini del contrato STT; `LiveTranscriber` es alias temporal. |
+| `backend/ai/orchestrator.py` | `GeminiOrderInterpreter`: implementación Gemini de `OrderInterpreter`, tools e historial. |
 | `backend/ai/errors.py` | `AIProviderError` y clasificadores de errores HTTP/transporte; conservan etapa y si el pedido ya cambió. |
-| `backend/api/app.py` | Sirve frontend, crea `SessionRuntime`, expone HTTP y WebSocket, serializa estado y traduce errores. Es el punto de ensamblado. |
+| `backend/ai/factories.py` | `create_speech_to_text()` y `create_order_interpreter()` seleccionan el adaptador configurado. |
+| `backend/api/app.py` | Sirve frontend, crea `SessionRuntime` con `OrderInterpreter`, expone HTTP y WebSocket y serializa estado. |
 | `backend/api/websocket_manager.py` | Registra una conexión por sesión y publica eventos, incluso desde código en otro thread. |
 | `backend/logging/event_logger.py` | `log_event()`, formatters y handlers: JSONL detallado, texto legible y consola, con rotación. |
 | `config/settings.py` | `get_gemini_api_key()`: carga `.env` y obtiene la clave del entorno. |
@@ -65,7 +67,7 @@ arquitectura hexagonal completa con todos sus puertos formalizados.
 ## Recorrido de un pedido escrito
 
 1. Al cargar la página, `createSession()` llama a `POST /api/sessions`.
-2. La API crea `Session`, `OrderService` y `OrderConversationOrchestrator` y los
+2. La API crea `Session`, `OrderService` y un `OrderInterpreter` desde fábrica y los
    guarda en `sessions[session_id]`. Cada orquestador tiene su propio chat.
 3. El navegador conecta `/ws/sessions/{session_id}` y envía `user.text`.
 4. La API ejecuta `assistant.send_message()` mediante `asyncio.to_thread()` para
@@ -252,9 +254,9 @@ La guía de Adrián describe una arquitectura de producción para un kiosco fís
 | --- | --- | --- |
 | Hardware y captura | Micrófono del navegador con `echoCancellation` y `noiseSuppression`; audio PCM mono a 16 kHz. | Adecuado para validar el flujo. Falta mic array con beamforming/AEC real, equipo industrial, pantalla táctil, pinpad y ticketeadora. |
 | Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo kiosco/PWA, indicador de volumen, detección de silencio, interrupciones y empaquetado de dispositivo. |
-| STT | `LiveTranscriber` envía audio por WebSocket a Gemini Transcribe Live. | Es el enfoque cloud de la guía, configurable y útil para avanzar rápido. Introduce dependencia de red y latencia; todavía no se justifica reemplazarlo por Edge sin medir calidad, costo y hardware. |
+| STT | `SpeechToText` desacopla el WebSocket; `GeminiLiveTranscriber` es el adaptador actual hacia Gemini Transcribe Live. | Es el enfoque cloud de la gu?a, configurable y ?til para avanzar r?pido. Permite evaluar otro proveedor o motor local sin tocar el dominio, pero siguen pendientes mediciones reales de red y latencia. |
 | NLU y extracción | Gemini Chat recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
-| Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR escaneable de texto, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisi?n de ticket. |
+| Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR escaneable de texto, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisión de ticket. |
 
 ### Qué conservar
 
@@ -328,3 +330,101 @@ Si el backend responde 4404 porque ya no conserva esa sesion, por ejemplo despue
 de reiniciarse, el frontend inicia una nueva de forma controlada. Las sesiones
 siguen en memoria, por lo que una reconexion no recupera pedidos tras reiniciar el
 proceso; esa garantia requiere persistencia.
+
+
+## Adaptadores de IA implementados
+
+La IA dejó de ser una dependencia directa de los bordes de la aplicación. Esta
+separación se implementó el 16/09/2026 y no modifica `OrderService`,
+`Menu`, `Cart`, precios, disponibilidad ni estados de pago.
+
+```mermaid
+flowchart LR
+    A[Audio PCM] --> CS[conversation_socket.py]
+    CS --> F1[create_speech_to_text]
+    F1 --> C1[SpeechToText]
+    C1 --> G1[GeminiLiveTranscriber]
+    G1 --> GT[Gemini Live Transcribe]
+    C1 --> T[Texto final]
+    T --> F2[create_order_interpreter]
+    F2 --> C2[OrderInterpreter]
+    C2 --> G2[GeminiOrderInterpreter]
+    G2 --> GC[Gemini Chat + function calls]
+    G2 --> TO[tools autorizadas]
+    TO --> OS[OrderService]
+    OS --> CA[Menu, Cart y Session]
+```
+
+`backend/ai/contracts.py` contiene dos contratos formales:
+
+- `SpeechToText`: `feed()`, `finish()`, `cancel()`, `transcribe()` y `close()`.
+  Por eso el WebSocket puede manejar audio por fragmentos, parciales, texto final,
+  cancelación y liberación de recursos sin saber si el proveedor es Gemini, un
+  servicio cloud u otro motor.
+- `OrderInterpreter`: `send_message()` y `close()`. El intérprete puede traducir
+  el lenguaje natural y administrar el protocolo de tools de su proveedor, pero
+  no valida ni aplica reglas por cuenta propia: las tools autorizadas delegan en
+  `OrderService`.
+
+`backend/ai/factories.py` lee `STT_PROVIDER` y `LLM_PROVIDER` mediante
+`config/settings.py`. Hoy ambas fábricas implementan solamente `gemini` y
+construyen `GeminiLiveTranscriber` y `GeminiOrderInterpreter` respectivamente.
+Los nombres anteriores, `LiveTranscriber` y `OrderConversationOrchestrator`, se
+conservan como alias transitorios para que imports de pruebas o diagnósticos
+existentes no rompan durante la transición. El código nuevo depende de los
+contratos, no de esos alias.
+
+Si se configura un proveedor futuro antes de agregar su adaptador, la fábrica
+muestra un error explícito y no intenta leer claves de otro proveedor. Así una
+combinación no queda aparentemente activa cuando en realidad no fue
+implementada.
+
+### Configuración y credenciales por combinación
+
+| Selección | Variables que se exigen hoy | Variables de modelo |
+| --- | --- | --- |
+| `STT_PROVIDER=gemini`, `LLM_PROVIDER=gemini` | `GEMINI_API_KEY` una sola vez | `GEMINI_TRANSCRIPTION_MODEL`, `GEMINI_CHAT_MODEL` |
+| Gemini + LLM futuro | `GEMINI_API_KEY` y la clave del LLM elegido al implementar su adaptador | Modelo Gemini STT y variable del LLM futuro |
+| STT futuro + Gemini | Credencial o modelo local del STT y `GEMINI_API_KEY` | Variable STT futura y `GEMINI_CHAT_MODEL` |
+| Ambos futuros | Solo credenciales o archivos de los proveedores seleccionados | Variables propias de los adaptadores |
+| STT local | No necesita clave cloud para STT; sí `STT_MODEL_PATH` y el modelo instalado | Ruta, idioma y parámetros del motor local |
+
+`.env.example` nombra, sin activar, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` y
+`STT_MODEL_PATH` como referencias futuras. No se leen mientras los proveedores
+no están implementados ni seleccionados. Las claves reales continúan fuera de
+Git.
+
+### Candidatos investigados, no implementados
+
+| Capa | Candidato | Qué requeriría el adaptador | Estado |
+| --- | --- | --- | --- |
+| STT cloud | OpenAI Realtime o transcripción | `OPENAI_API_KEY`, elegir protocolo de streaming, convertir parciales/finales a `SpeechToText` | Investigado; sin código ni prueba real. |
+| STT cloud | Google Cloud Speech-to-Text | Credenciales de Google Cloud y cliente de streaming, distinto de la clave Gemini | Investigado; sin código ni prueba real. |
+| STT cloud | Azure Speech | Clave o identidad de Azure, región y cliente de reconocimiento continuo | Investigado; sin código ni prueba real. |
+| STT local | Whisper o faster-whisper | `STT_MODEL_PATH`, modelo descargado, CPU/GPU y segmentación de audio | Investigado; sin código ni prueba real. |
+| STT local | Vosk | `STT_MODEL_PATH`, modelo Vosk e integración de parciales locales | Investigado; sin código ni prueba real. |
+| LLM cloud | OpenAI | `OPENAI_API_KEY`, mapeo de function calling a las mismas tools autorizadas | Investigado; sin código ni prueba real. |
+| LLM cloud | Anthropic | `ANTHROPIC_API_KEY`, mapeo de tool use a las mismas tools autorizadas | Investigado; sin código ni prueba real. |
+| LLM local | Ollama con un modelo compatible | Servicio/modelo local y adaptación de tool calling; no API key cloud por defecto | Investigado; sin código ni prueba real. |
+
+Las fuentes de cada candidato son la documentación oficial de
+[OpenAI STT](https://developers.openai.com/api/docs/guides/speech-to-text),
+[OpenAI Realtime](https://developers.openai.com/api/docs/guides/realtime),
+[Google Cloud STT](https://cloud.google.com/speech-to-text/docs),
+[Azure Speech](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-to-text),
+[Whisper](https://github.com/openai/whisper), [Vosk](https://alphacephei.com/vosk/),
+[Anthropic tool use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview)
+y [Ollama tool calling](https://docs.ollama.com/capabilities/tool-calling).
+La documentación prueba que esas tecnologías existen y describe sus protocolos;
+no prueba que rindan bien para este menú, micrófono, ruido o cuenta.
+
+### Validación de esta arquitectura
+
+El 16/09/2026 se ejecutaron pruebas automáticas sin red ni credenciales: una
+simulación del SDK Live de Gemini, los flujos de WebSocket de voz, reglas del
+pedido y pago, y una prueba nueva que conecta `AlternateSpeechToText` y
+`AlternateOrderInterpreter` simulados con `OrderService` real. La última prueba
+comprueba que el cambio de adaptador conserva el cálculo real de ARS 8.500 y que
+un parcial no muta el carrito. No llama a Gemini, OpenAI, Anthropic, Whisper,
+Vosk ni a otro proveedor; por lo tanto no mide disponibilidad, 503, latencia,
+costo ni precisión de reconocimiento.

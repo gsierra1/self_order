@@ -38,6 +38,8 @@ En la carpeta .venv instalá ahi las dependencias del proyecto sin mezclarlas co
 solo si todavía no existe y configurar una API key de Gemini:
 
 ```dotenv
+STT_PROVIDER=gemini
+LLM_PROVIDER=gemini
 GEMINI_API_KEY=tu_api_key
 GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live
 GEMINI_CHAT_MODEL=gemini-3.7-flash
@@ -70,7 +72,31 @@ adicional. `http://127.0.0.1:8000/docs` muestra los endpoints HTTP.
 La configuración recomendada para la cuenta revisada el 15/09/2026 usa
 `gemini-3.7-flash` para chat y `gemini-3.5-transcribe-live` para transcripción.
 Los nombres se configuran mediante `GEMINI_CHAT_MODEL` y
-`GEMINI_TRANSCRIPTION_MODEL` en `.env`.
+`GEMINI_TRANSCRIPTION_MODEL` en `.env` cuando ambos proveedores son Gemini.
+
+## Proveedores de IA y adaptadores
+
+`STT_PROVIDER` decide el proveedor que transforma audio en texto y
+`LLM_PROVIDER` el que interpreta el pedido. La configuración predeterminada es
+`gemini` para ambos y conserva el recorrido actual. Gemini usa una sola
+`GEMINI_API_KEY` para las dos capas; sus modelos se configuran con
+`GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
+
+Hoy solo Gemini está implementado. Si se escribe `whisper`, `vosk`, `openai`,
+`anthropic`, `google-cloud`, `azure` u otro valor antes de agregar su adaptador,
+el backend lo informa claramente y no intenta usar una clave ajena. `.env.example`
+registra como referencias futuras `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` y
+`STT_MODEL_PATH`; no son requeridas mientras no se seleccione e implemente ese
+proveedor. Una combinación cloud necesitará únicamente las claves de sus
+proveedores seleccionados. Un motor STT local necesitará el modelo instalado y
+su ruta, sin clave cloud para la transcripción local.
+
+El diseño está separado en `SpeechToText` para audio por streaming y
+`OrderInterpreter` para texto y tools. Gemini los implementa con
+`GeminiLiveTranscriber` y `GeminiOrderInterpreter`. Ningún adaptador puede
+validar precios, disponibilidad, modificadores, carrito o pagos: las tools
+siguen delegando esas decisiones en `OrderService`. Ver
+[arquitectura](docs/arquitectura.md) y [decisión 09](docs/decisiones.md).
 
 Si se configura un nombre inexistente o incompatible, el chat o la voz muestran
 el nombre concreto del modelo y la etapa que falló, sin modificar el carrito.

@@ -3,6 +3,7 @@ import re
 
 from google.genai import errors, types
 
+from backend.ai.contracts import OrderInterpreter
 from backend.ai.errors import (
     AIProviderError,
     classify_gemini_api_error,
@@ -23,7 +24,7 @@ from backend.logging.event_logger import log_event
 from backend.services.order_service import OrderService
 
 
-class OrderConversationOrchestrator:
+class GeminiOrderInterpreter(OrderInterpreter):
     """
     Orquesta la conversación entre el usuario, Gemini y OrderService.
 
@@ -346,7 +347,7 @@ CATÁLOGO ACTUAL:
                 "internal.error",
                 exception=exc,
                 session_id=self.service.session.session_id,
-                component="OrderConversationOrchestrator",
+                component="GeminiOrderInterpreter",
                 stage="TOOL_EXECUTION",
                 tool=function_call.name,
                 arguments=arguments,
@@ -616,13 +617,23 @@ CATÁLOGO ACTUAL:
                 "internal.error",
                 exception=exc,
                 session_id=session_id,
-                component="OrderConversationOrchestrator",
+                component="GeminiOrderInterpreter",
                 stage=stage,
                 exception_type=type(exc).__name__,
                 exception_message=str(exc),
             )
 
             raise
+
+    provider_name = "gemini"
+
+    def close(self) -> None:
+        """Cierra el cliente Gemini asociado a esta conversación si está disponible.
+
+        El cierre es idempotente para permitir liberar una sesión desde distintos
+        bordes de transporte sin cambiar el estado validado del pedido.
+        """
+        self.client.close()
 
     def send_message(self, message: str) -> str:
         """
@@ -724,3 +735,8 @@ CATÁLOGO ACTUAL:
         )
 
         return final_text
+
+
+# Alias transitorio para el nombre usado antes de introducir el contrato.
+# Las nuevas fábricas deben depender de GeminiOrderInterpreter o OrderInterpreter.
+OrderConversationOrchestrator = GeminiOrderInterpreter

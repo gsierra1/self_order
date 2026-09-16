@@ -8,7 +8,8 @@ from contextlib import suppress
 from fastapi import WebSocket, WebSocketDisconnect
 
 from backend.ai.errors import AIProviderError
-from backend.ai.live_transcriber import LiveTranscriber
+from backend.ai.contracts import SpeechToText
+from backend.ai.factories import create_speech_to_text
 from backend.domain.session import SessionState
 from backend.logging.event_logger import log_event
 
@@ -68,7 +69,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 "type": exc.error_type,
                 "transaction_applied": exc.transaction_applied,
                 "stage": exc.stage,
-                "source": "gemini",
+                "source": runtime.assistant.provider_name,
                 "status_code": exc.status_code,
                 "retryable": exc.retryable,
                 "last_tool": exc.last_tool,
@@ -82,7 +83,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 "cart": snapshot(runtime.service),
             })
 
-    async def process_turn(text: str | None, audio: LiveTranscriber | None) -> None:
+    async def process_turn(text: str | None, audio: SpeechToText | None) -> None:
         """Procesa una sola entrada y libera la reserva incluso ante errores.
 
         Args:
@@ -104,7 +105,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 await publish("voice.error", {
                     "message": exc.user_message,
                     "type": exc.error_type,
-                    "source": "gemini",
+                    "source": audio.provider_name,
                     "status_code": exc.status_code,
                     "retryable": exc.retryable,
                     "stage": exc.stage,
@@ -177,9 +178,11 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     if transcriber is not None and turn_task is not None and not turn_task.done():
                         if transcriber.processing_order:
                             raise ValueError("El pedido ya se está procesando; esperá la respuesta.")
+                        transcriber.cancel()
                         turn_task.cancel()
                         with suppress(asyncio.CancelledError):
                             await turn_task
+                        await transcriber.close()
                     transcriber = None
                     await publish("voice.cancelled", {})
                     continue
@@ -203,7 +206,14 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     raise ValueError("El mensaje debe contener texto.")
                 if not runtime.turn_lock.acquire(blocking=False):
                     raise ValueError("Hay un turno en curso. Esperá su respuesta.")
-                transcriber = LiveTranscriber(session_id=session_id) if event_type == "audio.start" else None
+                try:
+                    transcriber = (
+                        create_speech_to_text(session_id=session_id)
+                        if event_type == "audio.start" else None
+                    )
+                except RuntimeError as exc:
+                    runtime.turn_lock.release()
+                    raise ValueError(str(exc)) from exc
                 turn_task = asyncio.create_task(process_turn(
                     text.strip() if text is not None else None, transcriber,
                 ))
@@ -218,7 +228,11 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
             # Una transcripción se puede cancelar; una mutación en un thread no.
             # Si ya comenzó la interpretación, esperamos para conservar la reserva.
             if transcriber is not None and not transcriber.processing_order:
+                transcriber.cancel()
                 turn_task.cancel()
             with suppress(asyncio.CancelledError, Exception):
                 await turn_task
+        if transcriber is not None:
+            with suppress(Exception):
+                await transcriber.close()
         log_event("INFO", "websocket.disconnected", session_id=session_id)

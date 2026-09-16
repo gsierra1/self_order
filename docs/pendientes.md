@@ -24,9 +24,13 @@ verificacion registrada junto con su cambio.
 
 ## Para un piloto de kiosco
 
-- **Contrato de proveedores:** definir adaptadores para STT y LLM de modo que se
-  pueda evaluar Gemini, otro proveedor cloud o un motor local sin modificar
-  `OrderService`.
+- **Evaluación de proveedores ya desacoplados:** los contratos `SpeechToText` y
+  `OrderInterpreter`, las fábricas y Gemini ya están implementados. Falta crear
+  un adaptador real por cada candidato que se quiera comparar (por ejemplo,
+  Whisper, Vosk, OpenAI, Anthropic, Google Cloud o Azure), configurar solamente
+  sus credenciales o modelos correspondientes y ejecutar la misma matriz de
+  pruebas con audio real. No seleccionar un nombre futuro en `.env` hasta que su
+  adaptador y sus pruebas existan.
 - **Evaluacion Edge/STT local:** comparar latencia total, transcripcion con
   ruido, costo, hardware disponible y funcionamiento sin internet.
 - **Persistencia e idempotencia:** guardar pedidos y sesiones en almacenamiento

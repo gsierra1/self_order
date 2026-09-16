@@ -2,11 +2,11 @@
 
 import asyncio
 import time
-from collections.abc import Awaitable, Callable
 from contextlib import suppress
 
 from google.genai import errors, types
 
+from backend.ai.contracts import SpeechToText, VoiceEventPublisher
 from backend.ai.errors import (
     AIProviderError,
     classify_gemini_api_error,
@@ -17,8 +17,10 @@ from backend.logging.event_logger import log_event
 from config.settings import get_transcription_model
 
 
-class LiveTranscriber:
-    """Transcribe un único turno explícito y limita audio, espera y recursos."""
+class GeminiLiveTranscriber(SpeechToText):
+    """Implementa SpeechToText con Gemini Live para un único turno explícito y limita audio, espera y recursos."""
+
+    provider_name = "gemini"
 
     def __init__(self, session_id: str | None = None) -> None:
         """Inicializa la cola acotada y el estado de un turno de hasta 60 segundos.
@@ -30,7 +32,38 @@ class LiveTranscriber:
         self.chunks: asyncio.Queue[bytes | None] = asyncio.Queue(maxsize=128)
         self.ended = False
         self.byte_count = 0
-        self.processing_order = False
+        self._processing_order = False
+
+    @property
+    def processing_order(self) -> bool:
+        """Indica si el texto final ya ingresí al intérprete del pedido.
+
+        Returns:
+            True cuando la cancelación no debe interrumpir la interpretación.
+        """
+        return self._processing_order
+
+    @processing_order.setter
+    def processing_order(self, value: bool) -> None:
+        """Registra que el texto final comenzó o terminó de interpretarse.
+
+        Args:
+            value: Estado de procesamiento que debe conservar el turno.
+        """
+        self._processing_order = value
+
+    def cancel(self) -> None:
+        """Descarta el audio pendiente cuando todavía no se interpreta un pedido.
+
+        El WebSocket cancela además la tarea asíncrona; este método deja el
+        estado del adaptador cerrado para evitar que acepte otro fragmento.
+        """
+        if not self.processing_order:
+            self.ended = True
+
+    async def close(self) -> None:
+        """Marca el turno como cerrado; transcribe libera el cliente en su finally."""
+        self.cancel()
 
     def feed(self, chunk: bytes) -> None:
         """Encola PCM16 mono a 16 kHz sin bloquear el WebSocket.
@@ -66,7 +99,7 @@ class LiveTranscriber:
             raise ValueError("No se pudo finalizar el audio; volvé a intentar.") from exc
 
     async def transcribe(
-        self, publish: Callable[[str, dict], Awaitable[None]],
+        self, publish: VoiceEventPublisher,
     ) -> str:
         """Abre Live, publica avances y devuelve solo la transcripción final.
 
@@ -198,3 +231,8 @@ class LiveTranscriber:
                     await receiver
             await client.aio.aclose()
             client.close()
+
+
+# Alias transitorio para imports de pruebas o integraciones anteriores.
+# El nombre canónico para nuevas dependencias es GeminiLiveTranscriber.
+LiveTranscriber = GeminiLiveTranscriber

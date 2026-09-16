@@ -10,14 +10,14 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.ai.errors import AIProviderError
-from backend.ai.orchestrator import OrderConversationOrchestrator
+from backend.ai.contracts import OrderInterpreter
+from backend.ai.factories import create_order_interpreter
 from backend.api.websocket_manager import WebSocketManager
 from backend.api.conversation_socket import handle_conversation
 from backend.domain.menu import load_menu
 from backend.domain.session import Session, SessionState
 from backend.logging.event_logger import log_event
 from backend.services.order_service import OrderService
-from config.settings import get_chat_model
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -63,12 +63,12 @@ class SessionRuntime:
 
     Attributes:
         service: Servicio que administra el estado real del pedido.
-        assistant: Orquestador conversacional conectado a Gemini.
+        assistant: Intérprete conversacional seleccionado por LLM_PROVIDER.
         turn_lock: Reserva compartida entre HTTP, texto WebSocket y voz.
     """
 
     service: OrderService
-    assistant: OrderConversationOrchestrator
+    assistant: OrderInterpreter
     turn_lock: Lock = field(default_factory=Lock)
 
 
@@ -218,10 +218,7 @@ def create_session() -> dict:
         event_callback=publish_session_event,
     )
 
-    assistant = OrderConversationOrchestrator(
-        service=service,
-        model=get_chat_model(),
-    )
+    assistant = create_order_interpreter(service)
 
     runtime = SessionRuntime(
         service=service,

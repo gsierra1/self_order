@@ -8,8 +8,9 @@ Implementación inicial: 14/09/2026. Texto y voz comparten conversación y carri
 flowchart LR
     M[Micrófono] --> V[voice.js / pcm-worklet.js]
     V -->|PCM16| W[conversation_socket.py]
-    W --> T[LiveTranscriber]
-    T <--> G[Gemini Transcribe Live]
+    W --> T[SpeechToText]
+    T --> GT[GeminiLiveTranscriber]
+    GT <--> G[Gemini Transcribe Live]
     T -->|Hipótesis provisional| UI[Pantalla]
     T -->|Texto final al enviar turno| O[Orquestador existente]
     O --> S[OrderService]
@@ -24,7 +25,7 @@ little-endian mono a 16 kHz de 100 ms y vacía el último bloque antes de cerrar
 El contexto solicita 16 kHz y comprueba la frecuencia. No reproduce el micrófono
 por los parlantes. Al hablar se cancela la lectura del asistente.
 
-`backend/ai/live_transcriber.py` no tiene tools ni acceso al carrito. Publica
+`backend/ai/contracts.py` define `SpeechToText`; su adaptador Gemini en `backend/ai/live_transcriber.py` no tiene tools ni acceso al carrito. Publica
 hipótesis, acumula segmentos definitivos y devuelve texto al cerrar el turno.
 `backend/api/conversation_socket.py` valida eventos y entrega ese texto al mismo
 orquestador del chat. Las reglas del servicio se conservan.
@@ -174,3 +175,29 @@ La reconexion usa espera progresiva hasta quince segundos entre intentos. Si la
 sesion ya no existe en memoria, el backend cierra con 4404 y la interfaz comienza
 un pedido nuevo. La recuperacion despues de reiniciar el proceso requiere una
 base de datos y queda fuera de la demo actual.
+
+
+## Adaptador de transcripción y selección de proveedor
+
+Desde el 16/09/2026, `conversation_socket.py` depende de `SpeechToText`, no de
+una clase Gemini. Al recibir `audio.start` pide el adaptador a
+`create_speech_to_text()`. El contrato recibe PCM con `feed()`, anuncia el fin
+con `finish()`, publica parciales y devuelve el texto definitivo con
+`transcribe()`, y permite `cancel()` y `close()` al abandonar el turno o el
+WebSocket.
+
+La implementación efectiva sigue siendo `GeminiLiveTranscriber` en
+`backend/ai/live_transcriber.py`; `LiveTranscriber` permanece como alias de
+compatibilidad. `STT_PROVIDER=gemini` es el único valor implementado. Configurar
+por ahora `whisper`, `vosk`, `openai`, `google-cloud` o `azure` devuelve un error
+claro antes de abrir el turno: sus nombres están reservados como posibilidades,
+no son implementaciones listas para usar.
+
+Un futuro adaptador debe conservar el contrato completo: preparar su conexión,
+aceptar fragmentos, publicar hipótesis separadas del final, no entregar texto
+incompleto al pedido, cancelar sin mutar y cerrar sus recursos. Whisper y Vosk
+requerirían además el modelo local definido en `STT_MODEL_PATH`; los servicios
+cloud requerirían la credencial del proveedor seleccionado. La elección se debe
+hacer con una matriz de prueba real de latencia, ruido, costo, hardware e
+interrupciones; esta arquitectura permite esa comparación sin reescribir
+`OrderService`.

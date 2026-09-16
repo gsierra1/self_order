@@ -95,7 +95,7 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         <article class="step backend">
           <h3>3. Backend crea el pedido vac&iacute;o</h3>
           <a href="../backend/api/app.py"><code>backend/api/app.py</code></a>
-          <small>La ruta <code>@app.post(&quot;/api/sessions&quot;)</code> ejecuta <code>create_session()</code>, que ensambla <code>Session</code>, <code>OrderService</code> y <code>OrderConversationOrchestrator</code>. La ruta WebSocket de este archivo recibe despu&eacute;s la conexi&oacute;n abierta en el paso 2.</small>
+          <small>La ruta <code>@app.post(&quot;/api/sessions&quot;)</code> ejecuta <code>create_session()</code>, que ensambla <code>Session</code>, <code>OrderService</code> y <code>OrderInterpreter / GeminiOrderInterpreter</code>. La ruta WebSocket de este archivo recibe despu&eacute;s la conexi&oacute;n abierta en el paso 2.</small>
         </article>
         <article class="step frontend">
           <h3>4. La persona toca Hablar</h3>
@@ -110,7 +110,7 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         <article class="step ai">
           <h3>6. STT: voz a texto</h3>
           <a href="../backend/ai/live_transcriber.py"><code>backend/ai/live_transcriber.py</code></a>
-          <small><code>LiveTranscriber.transcribe()</code> usa Gemini Transcribe Live, publica hip&oacute;tesis y devuelve el texto final.</small>
+          <small><code>SpeechToText / GeminiLiveTranscriber.transcribe()</code> usa Gemini Transcribe Live, publica hip&oacute;tesis y devuelve el texto final.</small>
         </article>
         <article class="step backend">
           <h3>7. El texto entra al mismo flujo que escritura</h3>
@@ -170,8 +170,8 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         <tbody>
           <tr><td><code>createSession()</code> en <code>frontend/app.js</code></td><td><code>fetch</code> env&iacute;a <code>POST /api/sessions</code></td><td><code>create_session()</code> en <code>backend/api/app.py</code>, que devuelve <code>session_id</code> y el carrito.</td></tr>
           <tr><td><code>connectWebSocket()</code> en <code>frontend/app.js</code></td><td><code>new WebSocket(.../ws/sessions/{session_id})</code></td><td><code>session_websocket()</code> en <code>backend/api/app.py</code>, que entrega mensajes a <code>handle_conversation()</code> de <code>conversation_socket.py</code>.</td></tr>
-          <tr><td><code>toggleMicrophone()</code> en <code>frontend/app.js</code></td><td><code>VoiceInput</code> y <code>sendAudio()</code> env&iacute;an PCM por el WebSocket</td><td><code>LiveTranscriber.transcribe()</code> en <code>backend/ai/live_transcriber.py</code>; su texto final vuelve a <code>process_turn()</code>.</td></tr>
-          <tr><td><code>process_turn()</code> en <code>conversation_socket.py</code></td><td><code>OrderConversationOrchestrator.send_message()</code></td><td>Gemini propone una tool de <code>backend/ai/tools.py</code>.</td></tr>
+          <tr><td><code>toggleMicrophone()</code> en <code>frontend/app.js</code></td><td><code>VoiceInput</code> y <code>sendAudio()</code> env&iacute;an PCM por el WebSocket</td><td><code>SpeechToText / GeminiLiveTranscriber.transcribe()</code> en <code>backend/ai/live_transcriber.py</code>; su texto final vuelve a <code>process_turn()</code>.</td></tr>
+          <tr><td><code>process_turn()</code> en <code>conversation_socket.py</code></td><td><code>OrderInterpreter / GeminiOrderInterpreter.send_message()</code></td><td>Gemini propone una tool de <code>backend/ai/tools.py</code>.</td></tr>
           <tr><td>Una tool de <code>tools.py</code></td><td>llama a un m&eacute;todo de <code>OrderService</code></td><td><code>Cart</code> se actualiza y el evento <code>cart.updated</code> regresa por WebSocket a <code>onServerMessage()</code> y <code>renderCart()</code> en <code>frontend/app.js</code>.</td></tr>
         </tbody>
       </table>

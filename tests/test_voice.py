@@ -51,7 +51,7 @@ class ConversationTests(unittest.TestCase):
         )
         api.sessions[self.session.session_id] = self.runtime
         self.client = TestClient(api.app)
-        self.fake = patch("backend.api.conversation_socket.LiveTranscriber", FakeTranscriber)
+        self.fake = patch("backend.api.conversation_socket.create_speech_to_text", FakeTranscriber)
         self.fake.start()
         self.url = f"/ws/sessions/{self.session.session_id}"
 
