@@ -1,9 +1,16 @@
 # Decisiones de arquitectura
 
+En cada decisión, **Origen** indica de dónde surge el criterio; **Problema**
+describe la necesidad; **Motivo técnico** explica el razonamiento; **Decisión**
+indica la solución elegida; y **Consecuencia** resume sus efectos y límites.
+
 ## 01. Separar IA, servicio de pedidos y dominio
 
 **Problema:** el lenguaje natural puede ser ambiguo y las respuestas del modelo
 no deben definir precios ni saltarse validaciones.
+
+**Origen:** necesidad funcional del self-order y revisión de la separación entre
+las reglas del negocio y los proveedores de IA.
 
 **Decisión observada:** el LLM configurado propone operaciones; las tools las adaptan;
 `OrderService` valida y cambia objetos de dominio, es la autoridad sobre el pedido.
@@ -24,6 +31,8 @@ mediciones antes de tomar una decisión.
 **Problema:** «Cambiame el Big Mac por un Cuarto de Libra» es una sola intención.
 Con `remove` seguido de `add`, el alta podría fallar después de borrar el original.
 
+**Origen:** análisis de atomicidad de las operaciones del carrito.
+
 **Decisión:** `replace_item` valida el nuevo producto y configuración, conserva
 cantidad e identidad de línea y recién entonces modifica. Emite un único evento
 de actualización con la acción semántica correcta.
@@ -33,7 +42,10 @@ significa que un error de validación no deja la línea a medio cambiar.
 
 ## 03. Tools autorizadas y ejecución manual
 
-**Interpretación:** controlar el punto donde una sugerencia del modelo produce
+**Origen:** revisión de los riesgos de ejecutar automáticamente function calls
+del proveedor.
+
+**Motivo técnico:** controlar el punto donde una sugerencia del modelo produce
 un efecto permite validar, observar y limitar la ejecución.
 
 **Alternativa:** delegar la ejecución automática al SDK. Reduce código propio,
@@ -48,7 +60,10 @@ al SDK a describir las tools; Python no valida esos tipos en ejecución por sí 
 
 ## 05. HTTP para inicio y consulta, WebSocket para interacción
 
-**Interpretación:** HTTP resuelve creación/consulta y WebSocket permite publicar
+**Origen:** análisis de los canales necesarios para iniciar sesiones y mantener
+una interacción en tiempo real.
+
+**Motivo técnico:** HTTP resuelve creación/consulta y WebSocket permite publicar
 el carrito al cambiar y transportar mensajes y audio sobre una conexión abierta.
 
 **Alternativa:** consultar periódicamente el carrito por HTTP. Es más simple,
@@ -62,7 +77,10 @@ después de reiniciar el proceso sigue requiriendo persistencia.
 
 ## 06. Catálogo y precios locales estructurados
 
-**Interpretación:** un JSON permite comprobar reglas sin depender de un
+**Origen:** necesidad de ampliar el menú sin introducir reglas duplicadas en
+código ni depender inicialmente de un POS.
+
+**Motivo técnico:** un JSON permite comprobar reglas sin depender de un
 sistema de ventas y ampliar el menu siguiendo las mismas. 
 Los modificadores modelados como grupos evitan que el precio
 se deduzca de frases del usuario.
