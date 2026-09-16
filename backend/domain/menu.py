@@ -59,7 +59,18 @@ class Menu:
         product_id: str,
         selected_modifiers: dict[str, str],
     ) -> list[dict[str, str | int | bool]]:
-        """Traduce los modificadores internos a textos aptos para la interfaz.
+        """Traduce los IDs internos de los modificadores a textos aptos para mostrar en 
+        el frontend. Por ejemplo:
+         {
+            "drink": "COCA",
+            "extra_tomato": "ADD_TOMATO"
+        }
+        pasa a algo como:
+
+        Bebida: Coca-Cola
+        Tomate · + ARS 1.000
+
+        Así el frontend no necesita saber qué significa COCA ni repetir precios o nombres del menú.
 
         Args:
             product_id: Identificador del producto asociado al carrito.

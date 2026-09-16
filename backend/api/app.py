@@ -37,7 +37,7 @@ FRONTEND_DIR = (
 app = FastAPI(
     title="SIA Self Order API",
     description=(
-        "Backend de la prueba de concepto del sistema "
+        "Backend de la prueba del sistema "
         "conversacional de autoservicio."
     ),
     version="0.1.0",
