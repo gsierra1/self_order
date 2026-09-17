@@ -111,7 +111,7 @@ class OrderRulesTests(unittest.TestCase):
         )
         orchestrator.service = self.service
         text = orchestrator._sanitize_user_text(
-            "Elegiste ADD_CHEESE ($9.500) en BURGER_CLASICA; no es USD."
+            "Elegiste ADD_CHEESE ($9,500) en BURGER_CLASICA; no es USD."
         )
         self.assertEqual(
             text,

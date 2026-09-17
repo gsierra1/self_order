@@ -257,16 +257,19 @@ class ProviderFactoryTests(unittest.TestCase):
             self.assertIs(create_order_interpreter(service), sentinel)
         adapter.assert_called_once_with(service=service, model=ANY)
 
-    def test_runtime_normalizes_unicode_currency_separator(self) -> None:
-        """Un importe con espacio Unicode se muestra una sola vez y con punto."""
+    def test_runtime_normalizes_currency_thousands_separators(self) -> None:
+        """Uniforma comas y espacios Unicode de miles antes de leer importes."""
         service = OrderService(load_menu("config/menu.json"), Session())
         runtime = OrderToolsRuntime(service)
 
         text = runtime.sanitize_user_text(
-            "El total es $9\u202f500 pesos argentinos."
+            "El total es $9\u202f500 pesos argentinos y el precio base 8,500 pesos argentinos."
         )
 
-        self.assertEqual(text, "El total es 9.500 pesos argentinos.")
+        self.assertEqual(
+            text,
+            "El total es 9.500 pesos argentinos y el precio base 8.500 pesos argentinos.",
+        )
 
     def test_runtime_converts_cart_table_to_readable_list(self) -> None:
         """Convierte una tabla del carrito en una lista apta para pantalla y voz."""

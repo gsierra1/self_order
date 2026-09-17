@@ -295,6 +295,7 @@ CATÁLOGO ACTUAL:
                 replacement,
                 text,
             )
+        text = re.sub(r"(?<=\d),(?=\d{3}\b)", ".", text)
         text = re.sub(
             r"\$\s*([0-9][0-9.]*)",
             r"\1 pesos argentinos",

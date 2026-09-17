@@ -151,8 +151,8 @@ CATALOGO ACTUAL:
 
         Returns:
             Texto visible con nombres del menú, pesos argentinos y separadores
-            de miles uniformes, incluidos los separadores Unicode generados por
-            algunos modelos.
+            de miles uniformes, incluidas las comas y los separadores Unicode
+            generados por algunos modelos.
         """
         replacements = []
         for product in self.service.menu.products.values():
@@ -163,6 +163,7 @@ CATALOGO ACTUAL:
         for pattern, replacement in sorted(replacements, key=lambda item: len(item[0]), reverse=True):
             text = re.sub(rf"\b{re.escape(pattern)}\b", replacement, text)
         text = re.sub(r"(?<=\d)[\u00a0\u202f ](?=\d)", ".", text)
+        text = re.sub(r"(?<=\d),(?=\d{3}\b)", ".", text)
         text = re.sub(
             r"(?:\$|\bARS\b)\s*([0-9][0-9.]*)\s*(?:pesos argentinos)?",
             r"\1 pesos argentinos",

@@ -15,7 +15,7 @@ registrar la corrida final.
   Gemini, interpretación Groq, altas y eliminaciones, cantidades agrupadas,
   vuelta desde un método al selector, selección de QR, tarjeta y caja, cierre
   del pedido y creación de una sesión nueva. También se escuchó la síntesis del
-  navegador. Las 65 pruebas automáticas cubren reglas, adaptadores, transporte,
+  navegador. Las 66 pruebas automáticas cubren reglas, adaptadores, transporte,
   caché del frontend y pago mediante simulaciones. Antes de la demostración
   falta registrar en una sola corrida real, con el modelo elegido para exponer,
   producto incompleto, producto agotado, reemplazo, varios extras y finalización
@@ -26,6 +26,13 @@ registrar la corrida final.
   habla continua, pausas naturales y una persona que duda antes de decidir si
   el intervalo se conserva o se aumenta. El botón de envío manual debe seguir
   disponible durante la evaluación.
+- **Inicio de escucha y privacidad:** evaluar si una experiencia manos libres
+  puede evitar que la persona pulse «Hablar» en cada turno. El botón actual
+  puede resultar incómodo en una conversación larga, pero también hace visible
+  cuándo se enciende el micrófono y evita que el kiosco escuche continuamente.
+  Antes de cambiarlo se debe diseñar una activación clara —por toque inicial,
+  palabra de activación o ventana acotada de conversación— con indicador visual,
+  cancelación accesible y descarte del audio fuera del turno.
 
 ## Para un piloto de kiosco
 
