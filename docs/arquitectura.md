@@ -108,6 +108,11 @@ Los datos pendientes se conservan en el contexto conversacional del modelo;
 no existe una entidad `PendingOrder`. La regla de que el usuario haya indicado
 realmente cada opción depende de la interpretación y del prompt: el servicio
 comprueba validez, pero no puede probar el origen de un valor enviado por el LLM.
+Las instrucciones de los adaptadores limitan las aclaraciones a grupos y opciones
+presentes en el catálogo. Si ya se indicó el producto y cada grupo obligatorio,
+el intérprete debe solicitar `add_item` sin inventar subtipos, presentaciones o
+distinciones adicionales. `OrderService` vuelve a validar los identificadores
+recibidos antes de modificar el carrito.
 
 El orquestador desactiva la ejecución automática de funciones del SDK. Admite
 varias function calls distintas por respuesta y las ejecuta en el orden recibido,

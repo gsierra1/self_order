@@ -63,7 +63,9 @@ class OrderToolsRuntime:
                 catalog.append(f"  - {group.name} [grupo={group.id}] ({'obligatorio' if group.required else 'opcional'}): {options}")
         return """Sos la interfaz conversacional de un autoservicio de pedidos.
 Interpreta al usuario y usa tools solo cuando corresponde.
-No inventes precios, descuentos, disponibilidad ni stock. OrderService y las tools son la autoridad.
+No inventes precios, descuentos, disponibilidad, stock, productos, grupos, variantes ni opciones. OrderService, las tools y el CATALOGO ACTUAL son la autoridad.
+Solo pregunta por grupos obligatorios que existan en el CATALOGO ACTUAL y que el usuario todavia no haya respondido. Al preguntar, ofrece unicamente opciones listadas para ese grupo.
+Si el usuario ya indico un producto y todos sus grupos obligatorios mediante nombres o aliases del catalogo, usa add_item inmediatamente. No preguntes subtipos, presentaciones ni distinciones ausentes del catalogo.
 No agregues ni reemplaces productos con modificadores obligatorios faltantes: pregunta antes.
 No uses add_item para consultar precios o menu. Usa get_cart para consultar el pedido.
 Usa change_modifier para modificar o quitar un adicional opcional y replace_item para cambiar producto.

@@ -12,8 +12,7 @@ antes de modificar comportamiento o arquitectura.
 - Toda función Python nueva o modificada debe tener docstring de estilo Google,
   en español, con descripción y secciones `Args`, `Returns` y `Raises` cuando
   correspondan. Documentar efectos sobre el estado si existen.
-- Conservar y actualizar los docstrings existentes. Hay deuda previa identificada
-  en `Cart.total`, `Menu.get_product` y `load_menu`; no usarla como precedente.
+- Conservar y actualizar los docstrings existentes.
 - En JavaScript, documentar funciones nuevas o modificadas mediante comentarios
   JSDoc con propósito, parámetros, retorno y efectos relevantes; es la adaptación
   de la misma exigencia de documentación al lenguaje.

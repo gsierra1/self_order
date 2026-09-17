@@ -7,6 +7,7 @@ from unittest.mock import ANY, Mock, patch
 
 from backend.ai.contracts import OrderInterpreter, SpeechToText, VoiceEventPublisher
 from backend.ai.factories import create_order_interpreter, create_speech_to_text
+from backend.ai.orchestrator import GeminiOrderInterpreter
 from backend.ai.groq_interpreter import GroqOrderInterpreter
 from backend.ai.openai_interpreter import OpenAIOrderInterpreter
 from backend.ai.order_tools_runtime import OrderToolsRuntime
@@ -150,6 +151,20 @@ class ProviderContractTests(unittest.IsolatedAsyncioTestCase):
 
 class ProviderFactoryTests(unittest.TestCase):
     """Comprueba selección de proveedor sin exigir credenciales no seleccionadas."""
+
+    def test_llm_prompts_forbid_clarifications_absent_from_catalog(self) -> None:
+        """Impide que los intérpretes inventen variantes al pedir una aclaración."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        shared_instruction = OrderToolsRuntime(service).build_system_instruction()
+        gemini_interpreter = GeminiOrderInterpreter.__new__(GeminiOrderInterpreter)
+        gemini_interpreter.service = service
+        gemini_instruction = gemini_interpreter._build_system_instruction()
+
+        for instruction in (shared_instruction, gemini_instruction):
+            self.assertIn("variantes ni opciones", instruction)
+            self.assertIn("grupos obligatorios", instruction)
+            self.assertIn("distinciones", instruction)
+            self.assertIn("Agua [id=WATER]", instruction)
 
 
     def test_openai_interpreter_uses_the_same_tool_and_service(self) -> None:

@@ -6,8 +6,9 @@ verificacion registrada junto con su cambio.
 
 ## Antes de una demostracion formal
 
-En la revisión del 17/09/2026 no quedan comportamientos visibles pendientes para
-el recorrido previsto de la demo. Resta ejecutar y registrar la corrida final.
+En la revisión del 17/09/2026 no quedan fallas bloqueantes conocidas para el
+recorrido previsto de la demo. Resta calibrar el fin de habla y ejecutar y
+registrar la corrida final.
 
 - **Cierre formal de la matriz con proveedores reales:** las corridas del 16 y
   17/09/2026 ya comprobaron en navegador y con micrófono físico transcripción
@@ -19,6 +20,12 @@ el recorrido previsto de la demo. Resta ejecutar y registrar la corrida final.
   falta registrar en una sola corrida real, con el modelo elegido para exponer,
   producto incompleto, producto agotado, reemplazo, varios extras y finalización
   de los tres pagos. Registrar modelo, fecha y resultado de cada caso.
+- **Calibración del fin de habla:** el navegador considera terminada una frase
+  después de 1,4 segundos de silencio posteriores a voz detectada. En una
+  corrida manual se distinguió correctamente el silencio, pero falta comparar
+  habla continua, pausas naturales y una persona que duda antes de decidir si
+  el intervalo se conserva o se aumenta. El botón de envío manual debe seguir
+  disponible durante la evaluación.
 
 ## Para un piloto de kiosco
 

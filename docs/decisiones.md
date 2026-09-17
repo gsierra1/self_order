@@ -16,6 +16,13 @@ las reglas del negocio y los proveedores de IA.
 `OrderService` valida y cambia objetos de dominio, es la autoridad sobre el pedido.
 De esta manera no permitimos productos o precios inventados.
 
+Las instrucciones de cada adaptador también obligan al intérprete a preguntar
+solo por grupos obligatorios existentes y a mencionar únicamente opciones del
+catálogo. Esto evita aclaraciones inventadas, como distinguir variantes de una
+opción que el menú modela como única. Es una restricción conversacional del
+prompt; la garantía transaccional continúa en `OrderService`, que rechaza todo
+identificador u opción inválidos antes de mutar el carrito.
+
  «La IA entiende la intención; el backend decide si el pedido
 es válido y cuánto cuesta».
 
