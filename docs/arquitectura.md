@@ -61,7 +61,8 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `config/settings.py` | Carga `.env`, selecciona proveedores y obtiene la credencial/modelo de cada capa. |
 | `config/menu.json` | Catálogo local cargado al importar la API; editarlo requiere recargar el proceso. |
 | `frontend/index.html` | Panel conversacional, formulario, controles de micrófono/voz y carrito. |
-| `frontend/app.js` | `createSession`, `connectWebSocket`, `sendMessage`, `renderCart`; captura y conversión de audio, estados visuales. |
+| `frontend/app.js` | `createSession`, `connectWebSocket`, `sendMessage`, `renderCart`; captura y conversión de audio, estados visuales e integración de inactividad. |
+| `frontend/inactivity.js` | `InactivityMonitor`: avisa tras 20 y 40 segundos y solicita una nueva sesión a los 60; permite reiniciar o detener el conteo. |
 | `frontend/styles.css` | Distribución de paneles, mensajes, carrito y adaptación a pantallas pequeñas. |
 | `backend/ai/test_chat.py` | Chat manual de terminal usando el intérprete elegido por `LLM_PROVIDER` y el servicio real. |
 

@@ -14,6 +14,13 @@ La respuesta puede leerse con la voz del navegador si el mismo está habilitado.
 La confirmación y el pago son demostraciones locales, sin integración POS ni
 procesamiento real de tarjetas. El QR es escaneable, pero contiene solo texto de demostracion sin URL ni pago real.
 
+Si la persona deja de interactuar después de iniciar el pedido, la interfaz
+pregunta si sigue allí a los 20 segundos, avisa que cerrará la sesión 20 segundos
+después y crea una sesión nueva tras otros 20 segundos. Una sesión recién creada
+no inicia este conteo hasta que alguien escriba, hable o interactúe con el
+pedido. El temporizador se detiene mientras se procesa una respuesta de voz o
+texto y no consulta al proveedor de IA.
+
 ## Documentación
 
 Empezar por [la guía del proyecto](docs/README.md). Incluye alcance,
