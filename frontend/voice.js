@@ -205,11 +205,15 @@ export function speak(text, onError) {
 /**
  * Adapta importes y marcas de formato para que la voz del navegador los lea naturalmente.
  * @param {string} text Texto visible generado por el asistente.
- * @returns {string} Texto preparado para síntesis, sin puntos de miles ni Markdown.
+ * @returns {string} Texto preparado para síntesis, con importes enteros continuos y sin Markdown.
  */
 function prepareSpeechText(text) {
     return text
-        .replace(/\b(\d{1,3}(?:\.\d{3})+)\b/g, (_, amount) => amount.replace(/\./g, " "))
+        .replace(
+            /\$\s*(\d+(?:\.\d{3})*)\s+pesos argentinos/gi,
+            (_, amount) => `${amount.replace(/\./g, "")} pesos argentinos`
+        )
+        .replace(/\b(\d{1,3}(?:\.\d{3})+)\b/g, (_, amount) => amount.replace(/\./g, ""))
         .replace(/\betc\.?\b/gi, "etcétera")
         .replace(/[|*_`]/g, " ")
         .replace(/\s{2,}/g, " ")

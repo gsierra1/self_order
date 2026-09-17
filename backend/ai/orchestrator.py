@@ -256,9 +256,9 @@ REGLAS SOBRE INFORMACIÓN FALTANTE:
 FORMATO DE RESPUESTA:
 
 - Expresate en español.
-- Para montos utilizá punto como separador de miles y decí explícitamente
-  "pesos argentinos". Ejemplo: 12.500 pesos argentinos. No uses "$", "USD"
-  ni "dólares", porque la respuesta también puede leerse en voz alta.
+- Para montos anteponé el símbolo $, utilizá punto como separador de miles y
+  decí explícitamente "pesos argentinos". Ejemplo: $12.500 pesos argentinos.
+  No uses "USD" ni "dólares".
 - Usá solamente los nombres visibles del catálogo para la persona. Los IDs de
   productos, grupos y opciones son internos y nunca deben aparecer en la
   respuesta escrita o hablada.
@@ -306,6 +306,12 @@ CATÁLOGO ACTUAL:
         text = re.sub(r"\bdólares?\b", "pesos argentinos", text, flags=re.IGNORECASE)
         text = re.sub(r"\ben efectivo\b", "en caja", text, flags=re.IGNORECASE)
         text = re.sub(r"\befectivo\b", "en caja", text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"(?<![\w$])(\d+(?:\.\d{3})*)\s+pesos argentinos",
+            r"$\1 pesos argentinos",
+            text,
+            flags=re.IGNORECASE,
+        )
         text = re.sub(
             r"(?i)acercate a la terminal(?: o lectora)? para completar el pago de",
             "ingresá el número de tu tarjeta para completar el pago de",

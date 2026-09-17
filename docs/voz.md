@@ -198,6 +198,12 @@ audio» a «Audio transcripto. Procesando pedido». Así se distingue la espera 
 STT de la interpretación y ejecución posterior del pedido, aunque ambas formen
 parte del mismo turno para la persona.
 
+Los importes se muestran como `$23.000 pesos argentinos`. Antes de invocar la
+síntesis del navegador, `prepareSpeechText()` elimina el símbolo y los puntos de
+miles y entrega `23000 pesos argentinos`. La separación entre texto visible y
+texto hablado evita que ciertos motores pronuncien «veintitrés cero cero cero»
+o interpreten el punto como decimal.
+
 
 ## Adaptador de transcripción y selección de proveedor
 

@@ -160,7 +160,7 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator("#mic-button")).to_be_enabled()
                         detector_result = page.evaluate("""
                             async () => {
-                                const { EndOfSpeechDetector } = await import('/static/voice.js?v=20260917-3');
+                                const { EndOfSpeechDetector } = await import('/static/voice.js?v=20260917-4');
                                 const detector = new EndOfSpeechDetector({
                                     speechThreshold: 0.01,
                                     minimumSpeechMs: 200,
@@ -198,6 +198,15 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator(".cart-item")).to_have_count(0)
                         expect(page.locator("#message-input")).to_be_disabled()
                         expect(page.locator(".cart-item")).to_have_count(1, timeout=10000)
+                        spoken_texts = page.evaluate("window.spokenTexts")
+                        self.assertTrue(
+                            any("9500 pesos argentinos" in text for text in spoken_texts),
+                            spoken_texts,
+                        )
+                        self.assertFalse(
+                            any("9 500" in text or "9.500" in text for text in spoken_texts),
+                            spoken_texts,
+                        )
                         expect(page.locator("#cart-total")).to_have_text("ARS 9.500")
                         details = page.locator(".cart-item-details")
                         expect(details).to_contain_text(

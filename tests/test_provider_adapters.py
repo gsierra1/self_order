@@ -270,7 +270,7 @@ class ProviderFactoryTests(unittest.TestCase):
 
         self.assertEqual(
             text,
-            "El total es 9.500 pesos argentinos y el precio base 8.500 pesos argentinos.",
+            "El total es $9.500 pesos argentinos y el precio base $8.500 pesos argentinos.",
         )
 
     def test_runtime_converts_cart_table_to_readable_list(self) -> None:
@@ -373,7 +373,7 @@ class ProviderFactoryTests(unittest.TestCase):
 
         self.assertIn("Burger Clásica", text)
         self.assertIn("Agua", text)
-        self.assertIn("8.500 pesos argentinos", text)
+        self.assertIn("$8.500 pesos argentinos", text)
 
     def test_clear_cart_tool_removes_all_lines_in_one_operation(self) -> None:
         """La tool clear_cart vacía varias líneas sin encadenar eliminaciones."""

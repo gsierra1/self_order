@@ -115,7 +115,7 @@ class OrderRulesTests(unittest.TestCase):
         )
         self.assertEqual(
             text,
-            "Elegiste Queso (9.500 pesos argentinos) en Burger Clásica; "
+            "Elegiste Queso ($9.500 pesos argentinos) en Burger Clásica; "
             "no es pesos argentinos.",
         )
 

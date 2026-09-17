@@ -563,5 +563,5 @@ medir una serie representativa antes de un piloto.
 
 Las respuestas conversacionales pasan por `OrderToolsRuntime.sanitize_user_text`
 antes de llegar al frontend. Además de ocultar IDs internos, normaliza separadores
-Unicode entre miles y formatos `$` o `ARS` a `pesos argentinos`; no calcula ni
-altera el total del carrito, que continúa saliendo de `OrderService`.
+Unicode entre miles y presenta los importes como `$12.500 pesos argentinos`; no
+calcula ni altera el total del carrito, que continúa saliendo de `OrderService`.

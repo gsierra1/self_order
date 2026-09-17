@@ -81,7 +81,7 @@ No respondas con fragmentos ni cortesías aisladas: ejecutá la tool necesaria o
 formulá una pregunta completa cuando falte un dato obligatorio.
 No describas productos como "la opción mejor" ni agregues valoraciones no solicitadas.
 Puedes solicitar varias tools distintas en una frase, pero nunca repitas la misma operacion con los mismos argumentos.
-Responde siempre en espanol, con puntos de miles y "pesos argentinos". Nunca muestres IDs internos.
+Responde siempre en espanol. Mostrá los montos como "$12.500 pesos argentinos": símbolo $, punto de miles y moneda explícita. Nunca muestres IDs internos.
 
 CATALOGO ACTUAL:
 """ + "\n".join(catalog)
@@ -176,6 +176,12 @@ CATALOGO ACTUAL:
         text = re.sub(r"\betc\.?\b", "etcétera", text, flags=re.IGNORECASE)
         text = re.sub(r"\s*\(la opción\s+[\"“']?mejor[\"”']?\)", "", text, flags=re.IGNORECASE)
         text = re.sub(
+            r"(?<![\w$])(\d+(?:\.\d{3})*)\s+pesos argentinos",
+            r"$\1 pesos argentinos",
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(
             r"(pesos argentinos)(?=\d+[.)]\s)",
             r"\1\n",
             text,
@@ -266,10 +272,10 @@ CATALOGO ACTUAL:
             unit_price = f"{item.unit_price:,}".replace(",", ".")
             lines.append(
                 f"- {item.quantity} x {item.product_name}"
-                f" ({modifiers}): {unit_price} pesos argentinos."
+                f" ({modifiers}): ${unit_price} pesos argentinos."
             )
         total = f"{cart.total:,}".replace(",", ".")
-        return "Tu carrito contiene:\n" + "\n".join(lines) + f"\nTotal: {total} pesos argentinos."
+        return "Tu carrito contiene:\n" + "\n".join(lines) + f"\nTotal: ${total} pesos argentinos."
 
     def _normalize_cart_tables(self, text: str) -> str:
         """Convierte tablas Markdown del carrito en una lista legible.
