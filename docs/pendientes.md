@@ -6,10 +6,8 @@ verificacion registrada junto con su cambio.
 
 ## Antes de una demostracion formal
 
-En la revisión del 17/09/2026, el único comportamiento visible de la demo que
-continúa sin implementar es el cierre automático del turno por silencio. Los
-demás puntos de esta sección son verificaciones y mediciones previas a la
-presentación, no funciones ausentes del recorrido actual.
+En la revisión del 17/09/2026 no quedan comportamientos visibles pendientes para
+el recorrido previsto de la demo. Resta ejecutar y registrar la corrida final.
 
 - **Cierre formal de la matriz con proveedores reales:** las corridas del 16 y
   17/09/2026 ya comprobaron en navegador y con micrófono físico transcripción
@@ -20,22 +18,7 @@ presentación, no funciones ausentes del recorrido actual.
   caché del frontend y pago mediante simulaciones. Antes de la demostración
   falta registrar en una sola corrida real, con el modelo elegido para exponer,
   producto incompleto, producto agotado, reemplazo, varios extras y finalización
-  de los tres pagos. Registrar modelo, fecha, resultado y latencia de cada caso.
-- **Prueba ambiental en el equipo de la demo:** el funcionamiento básico del
-  micrófono y los parlantes físicos ya fue comprobado. Falta evaluar ruido de
-  fondo representativo, distancia al micrófono, cancelación durante una frase,
-  pérdida y recuperación de red y calidad audible en el equipo concreto de la
-  presentación. Las pruebas automáticas cubren cancelación y reconexión con
-  simulaciones, pero no reproducen el ambiente físico.
-- **Detección automática de silencio y turnos de voz:** incorporar detección de
-  fin de habla para no depender de que la persona pulse **Enviar audio**. La
-  interfaz debe cerrar el turno solo cuando haya silencio suficiente y enviar
-  una única transcripción final; mientras la persona continúa hablando, el
-  texto provisional no debe agregar productos al carrito.
-- **Estabilidad de IA:** medir por separado transcripcion y chat: latencia,
-  errores 429/503 y tasa de exito para un conjunto de pedidos representativo.
-  Esta medición no bloquea la preparación del speech, pero sí hace falta para
-  justificar qué modelos y plan de cuenta se usarían en un piloto.
+  de los tres pagos. Registrar modelo, fecha y resultado de cada caso.
 
 ## Para un piloto de kiosco
 
@@ -52,6 +35,10 @@ presentación, no funciones ausentes del recorrido actual.
   en `.env` hasta que su adaptador y pruebas existan.
 - **Evaluacion Edge/STT local:** comparar latencia total, transcripcion con
   ruido, costo, hardware disponible y funcionamiento sin internet.
+- **Pruebas ambientales y estabilidad de IA:** medir en el hardware y ambiente
+  del kiosco distancia al micrófono, ruido, cancelación de eco, pérdida de red,
+  calidad audible, latencia por etapa, errores 429/503 y tasa de éxito. Definir
+  con esa evidencia los modelos, hardware y plan de cuenta del piloto.
 - **Persistencia e idempotencia:** guardar pedidos y sesiones en almacenamiento
   durable y asociar operaciones a identificadores que eviten duplicados ante
   reintentos o reconexiones.

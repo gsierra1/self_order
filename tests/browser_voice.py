@@ -6,10 +6,15 @@ Requiere Edge instalado y las dependencias de requirements-dev.txt.
 """
 
 import asyncio
+import math
 import socket
+import struct
+import tempfile
 import threading
 import time
 import unittest
+import wave
+from pathlib import Path
 from unittest.mock import patch
 
 import uvicorn
@@ -19,8 +24,28 @@ import backend.api.app as api
 from backend.ai.live_transcriber import LiveTranscriber
 
 
+def write_fake_voice_audio(path: Path) -> None:
+    """Genera voz sintética seguida de silencio para probar fin de habla.
+
+    Args:
+        path: Archivo WAV temporal que leerá el micrófono simulado de Edge.
+    """
+    sample_rate = 16000
+    samples = [0] * int(sample_rate * 0.5)
+    samples.extend(
+        int(32767 * 0.25 * math.sin(2 * math.pi * 220 * index / sample_rate))
+        for index in range(int(sample_rate * 1.2))
+    )
+    samples.extend([0] * int(sample_rate * 2))
+    with wave.open(str(path), "wb") as audio_file:
+        audio_file.setnchannels(1)
+        audio_file.setsampwidth(2)
+        audio_file.setframerate(sample_rate)
+        audio_file.writeframes(struct.pack(f"<{len(samples)}h", *samples))
+
+
 class BrowserTranscriber(LiveTranscriber):
-    """Espera audio real del navegador pero devuelve una frase controlada."""
+    """Espera PCM del micrófono sintético y devuelve una frase controlada."""
 
     async def transcribe(self, publish) -> str:
         """Comprueba PCM recibido y entrega una solicitud conocida.
@@ -39,7 +64,7 @@ class BrowserTranscriber(LiveTranscriber):
         await publish("voice.transcript", {"text": "Quiero una Burger Clásica", "final": False})
         while await self.chunks.get() is not None:
             pass
-        return "Quiero una Burger Clásica con Coca y queso"
+        return "Quiero una Burger Clásica con Sprite y queso"
 
 
 class BrowserAssistant:
@@ -95,7 +120,7 @@ class BrowserVoiceTests(unittest.TestCase):
     """Prueba visible del circuito completo con Edge y dispositivos sintéticos."""
 
     def test_microphone_to_cart_and_confirmation(self) -> None:
-        """Verifica voz, QR demo visible, vuelta al carrito y cierre de pago."""
+        """Verifica silencio automático, carrito, QR, vuelta y cierre de pago."""
         listener = socket.socket()
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
@@ -115,9 +140,13 @@ class BrowserVoiceTests(unittest.TestCase):
                         break
                     time.sleep(.05)
                 self.assertTrue(server.started)
-                with sync_playwright() as playwright:
+                with tempfile.TemporaryDirectory() as temporary_directory, \
+                     sync_playwright() as playwright:
+                    audio_path = Path(temporary_directory) / "voice-then-silence.wav"
+                    write_fake_voice_audio(audio_path)
                     browser = playwright.chromium.launch(channel="msedge", headless=True, args=[
                         "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
+                        f"--use-file-for-fake-audio-capture={audio_path}",
                     ])
                     try:
                         page = browser.new_page(permissions=["microphone"])
@@ -129,6 +158,28 @@ class BrowserVoiceTests(unittest.TestCase):
                         """)
                         page.goto(f"http://127.0.0.1:{port}")
                         expect(page.locator("#mic-button")).to_be_enabled()
+                        detector_result = page.evaluate("""
+                            async () => {
+                                const { EndOfSpeechDetector } = await import('/static/voice.js?v=20260917-3');
+                                const detector = new EndOfSpeechDetector({
+                                    speechThreshold: 0.01,
+                                    minimumSpeechMs: 200,
+                                    silenceMs: 300,
+                                });
+                                return [
+                                    detector.observe(0, 500),
+                                    detector.observe(0.1, 100),
+                                    detector.observe(0.1, 100),
+                                    detector.observe(0, 200),
+                                    detector.observe(0, 100),
+                                    detector.observe(0, 100),
+                                ];
+                            }
+                        """)
+                        self.assertEqual(
+                            detector_result,
+                            [False, False, False, False, True, False],
+                        )
                         session_id = next(iter(set(api.sessions) - previous))
                         current_socket = api.websocket_manager.connections[session_id]
                         close_future = asyncio.run_coroutine_threadsafe(
@@ -146,8 +197,7 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator("#voice-transcript")).to_contain_text("Quiero una Burger Clásica")
                         expect(page.locator(".cart-item")).to_have_count(0)
                         expect(page.locator("#message-input")).to_be_disabled()
-                        page.locator("#mic-button").click()
-                        expect(page.locator(".cart-item")).to_have_count(1)
+                        expect(page.locator(".cart-item")).to_have_count(1, timeout=10000)
                         expect(page.locator("#cart-total")).to_have_text("ARS 9.500")
                         details = page.locator(".cart-item-details")
                         expect(details).to_contain_text(

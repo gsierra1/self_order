@@ -6,8 +6,10 @@ Python valida productos, modificadores y precios. El dashboard muestra la
 conversación y el carrito actualizado por WebSocket.
 
 Una vez que el indicador esté en "Listo", tocá **Hablar** y esperá la
-escucha. Procede a indicar tu pedido por voz y tocá **Enviar audio** al terminar; 
-el texto definitivo usa el mismo intérprete LLM configurado que el chat. 
+escucha. Procede a indicar tu pedido por voz: después de que empieces a hablar,
+1,4 segundos de silencio envían el turno automáticamente. **Enviar audio** queda
+disponible como cierre manual. El texto definitivo usa el mismo intérprete LLM
+configurado que el chat.
 La respuesta puede leerse con la voz del navegador si el mismo está habilitado.
 La confirmación y el pago son demostraciones locales, sin integración POS ni
 procesamiento real de tarjetas. El QR es escaneable, pero contiene solo texto de demostracion sin URL ni pago real.

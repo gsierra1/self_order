@@ -1,4 +1,4 @@
-import { VoiceInput, speak } from "/static/voice.js";
+import { VoiceInput, speak } from "/static/voice.js?v=20260917-3";
 
 let sessionId = null;
 let sessionClosed = false;
@@ -31,7 +31,7 @@ const paymentContent = document.getElementById("payment-content");
 const paymentOptions = paymentPanel.querySelector(".payment-options");
 const paymentTitle = paymentPanel.querySelector("h3");
 
-const voice = new VoiceInput(sendAudio, failVoice);
+const voice = new VoiceInput(sendAudio, failVoice, finishVoiceAfterSilence);
 
 /** Formatea un importe del carrito en pesos argentinos.
  * @param {number} value Importe entero.
@@ -557,10 +557,43 @@ function maybeStartRecording() {
     voice.start();
     phase = "recording";
     showPaymentProcessing();
-    transcript.textContent = "Escuchando… tocá Enviar audio cuando termines.";
+    transcript.textContent = "Escuchando… el audio se enviará cuando termines de hablar.";
     setStatus("Escuchando", "processing");
     updateControls();
     voiceTimer = setTimeout(() => failVoice(new Error("El turno de voz superó los 55 segundos.")), 55000);
+}
+
+/**
+ * Finaliza el turno al detectar silencio o por solicitud manual.
+ * @param {"silence"|"manual"} trigger Motivo que cerró la captura.
+ * @returns {Promise<void>} Se resuelve después de vaciar PCM y enviar `audio.stop`.
+ * @effects Cambia la interfaz a procesamiento y solicita una única transcripción final.
+ */
+async function finishVoiceTurn(trigger) {
+    if (phase !== "recording") return;
+    phase = "processing";
+    showPaymentProcessing();
+    clearTimeout(voiceTimer);
+    updateControls();
+    if (trigger === "silence") {
+        transcript.textContent = "Silencio detectado. Enviando audio…";
+    }
+    setStatus("Procesando audio...", "processing");
+    try {
+        await voice.finish();
+        sendEvent("audio.stop");
+    } catch (error) {
+        failVoice(error);
+    }
+}
+
+/**
+ * Atiende el fin de habla detectado por `VoiceInput`.
+ * @returns {void}
+ * @effects Inicia el cierre asíncrono solo si el turno continúa grabando.
+ */
+function finishVoiceAfterSilence() {
+    void finishVoiceTurn("silence");
 }
 
 /**
@@ -569,13 +602,7 @@ function maybeStartRecording() {
  */
 async function toggleMicrophone() {
     if (phase === "recording") {
-        phase = "processing";
-        showPaymentProcessing();
-        clearTimeout(voiceTimer);
-        updateControls();
-        setStatus("Procesando audio...", "processing");
-        try { await voice.finish(); sendEvent("audio.stop"); }
-        catch (error) { failVoice(error); }
+        await finishVoiceTurn("manual");
         return;
     }
     if (phase !== "ready" || sessionClosed) return;

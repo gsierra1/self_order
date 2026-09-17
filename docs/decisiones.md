@@ -278,3 +278,34 @@ Doble», y calcula el total con la misma lógica existente. La regla vive en
 `OrderService`, por lo que se aplica igual a texto, voz y futuros canales. Si la
 persona tiene dos líneas con configuraciones diferentes, todavía debe indicar
 cuál desea ajustar o el intérprete debe pedir una aclaración.
+
+## 13. Detectar el fin de habla en el navegador
+
+**Estado:** adoptada e implementada el 17/09/2026.
+
+**Contexto:** la captura por voz exigía pulsar **Enviar audio**. Era posible que
+la persona terminara de hablar y esperara una respuesta sin saber que todavía
+debía cerrar el turno. Las transcripciones provisionales no pueden usarse como
+fin de frase porque no garantizan que la persona haya terminado.
+
+**Alternativas consideradas:** conservar únicamente el segundo clic; delegar el
+fin de actividad al proveedor STT; interpretar el texto provisional; o detectar
+actividad localmente a partir de la energía del PCM. Depender del proveedor
+acoplaría esta parte de la experiencia a Gemini y dificultaría cambiar de STT.
+Usar texto provisional podría ejecutar un pedido incompleto.
+
+**Decisión adoptada:** `VoiceInput` calcula RMS sobre los bloques PCM16 de 100 ms.
+Solo habilita el cierre después de detectar al menos 200 ms de voz y solicita un
+único fin de turno tras 1,4 segundos continuos de silencio. El mismo recorrido
+vacía el último bloque y envía `audio.stop`; **Enviar audio** permanece como
+alternativa manual.
+
+**Consecuencias:** la detección no conoce productos ni palabras y permanece
+separada de `SpeechToText`, del intérprete LLM y de `OrderService`. El silencio
+previo a hablar no genera un pedido. La transcripción provisional continúa
+siendo solo visual y únicamente el texto final puede llegar al carrito.
+
+**Límites:** los umbrales son adecuados para la demo y están cubiertos con audio
+sintético. Una pausa de 1,4 segundos se interpreta como fin del turno. Un piloto
+debe calibrarlos con el micrófono, ruido y distancia reales, o reemplazar este
+detector por uno acústico más avanzado sin cambiar el protocolo del backend.

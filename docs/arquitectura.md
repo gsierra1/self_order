@@ -315,7 +315,7 @@ La guía de Adrián describe una arquitectura de producción para un kiosco fís
 | Capa de la guía | Implementación actual | Evaluación |
 | --- | --- | --- |
 | Hardware y captura | Micrófono del navegador con `echoCancellation` y `noiseSuppression`; audio PCM mono a 16 kHz. | Adecuado para validar el flujo. Falta mic array con beamforming/AEC real, equipo industrial, pantalla táctil, pinpad y ticketeadora. |
-| Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo kiosco/PWA, indicador de volumen, detección de silencio, interrupciones y empaquetado de dispositivo. |
+| Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, detección de fin de habla por energía, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo kiosco/PWA, indicador de volumen, interrupciones y empaquetado de dispositivo. |
 | STT | `SpeechToText` desacopla el WebSocket; `GeminiLiveTranscriber` es el adaptador actual hacia Gemini Transcribe Live. | Es el enfoque cloud de la guía, configurable y útil para avanzar rápido. Groq ofrece transcripción por archivo, pero no implementa todavía el contrato de streaming de esta demo; evaluarlo requiere un adaptador que acumule el audio y renuncie a parciales. |
 | NLU y extracción | El LLM seleccionado recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM configurado propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
 | Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR escaneable de texto, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisión de ticket. |
@@ -497,6 +497,11 @@ pago sin selección automática y recuperación de respuestas LLM incompletas si
 duplicar una mutación. No llama a Gemini, OpenAI, Groq, Anthropic, Whisper, Vosk
 ni a otro proveedor; por lo tanto no mide disponibilidad, 503, latencia, costo
 ni precisión de reconocimiento.
+
+La prueba adicional de navegador con Edge usa un micrófono sintético que emite
+voz y luego silencio. Comprueba que el frontend no cierre antes de detectar voz,
+envíe un único `audio.stop` después de 1,4 segundos silenciosos y actualice el
+carrito sin pulsar **Enviar audio**. No sustituye la corrida con micrófono real.
 
 
 ### OpenAI LLM: implementacion y evidencia

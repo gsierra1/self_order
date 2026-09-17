@@ -12,14 +12,18 @@ flowchart LR
     T --> GT[Adaptador STT configurado]
     GT <--> G[Modelo STT configurado]
     T -->|Hipótesis provisional| UI[Pantalla]
-    T -->|Texto final al enviar turno| O[Intérprete LLM configurado]
+    T -->|Texto final al cerrar turno| O[Intérprete LLM configurado]
     O --> S[OrderService]
     S -->|Snapshot validado| UI
     O -->|Respuesta final| UI
     UI --> R[speechSynthesis del navegador]
 ```
 
-`frontend/voice.js` gestiona permiso, inicio/cierre de micrófono y lectura.
+`frontend/voice.js` gestiona permiso, inicio/cierre de micrófono, detección de
+fin de habla y lectura. Calcula la energía RMS de cada bloque PCM: espera al
+menos 200 ms de voz y luego finaliza cuando acumula 1,4 segundos de silencio.
+El silencio previo a empezar a hablar no cierra el turno. **Enviar audio** se
+mantiene como alternativa manual.
 `pcm-worklet.js` captura audio fuera del hilo principal, empaqueta bloques PCM16
 little-endian mono a 16 kHz de 100 ms y vacía el último bloque antes de cerrar.
 El contexto solicita 16 kHz y comprueba la frecuencia. No reproduce el micrófono
@@ -121,8 +125,9 @@ Google documenta explícitamente ese contrato para `gemini-3.5-transcribe-live`.
 Se eligió transcribir y reutilizar el intérprete LLM para mantener un solo historial
 de pedidos para ambos canales. Un agente Live con tools es una alternativa futura,
 pero requiere adaptar conversación, interrupciones y ejecución de operaciones.
-La primera versión usa clic para hablar y clic para enviar; aún faltan silencios
-automáticos, interrupciones durante generación y evaluación de latencias/costos.
+La captura comienza con un clic y termina automáticamente por silencio o con el
+botón manual. Siguen fuera de esta demo las interrupciones mientras el asistente
+genera una respuesta y la evaluación productiva de latencias y costos.
 
 Fuentes: [transcripción y turnos de Gemini](https://ai.google.dev/gemini-api/docs/live-api/live-transcribe)
 y [síntesis del navegador](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis).
@@ -140,9 +145,10 @@ Abrir `http://127.0.0.1:8000/` y recargar con `Ctrl+F5`. La captura requiere per
 y localhost o HTTPS. Si PowerShell bloquea la activacion, usar la solucion temporal indicada en el README principal.
 
 1. Tocar **Hablar**, permitir micrófono y esperar **Escuchando**.
-2. Decir «Quiero una Burger Clásica» y tocar **Enviar audio**. Debe preguntar la bebida;
-   mostrar la hipótesis no debe agregar una línea.
-3. Hablar otra vez: «Con Sprite y queso», y enviar. Debe aparecer una unidad por ARS 9.500.
+2. Decir «Quiero una Burger Clásica» y guardar silencio. Debe enviar el audio
+   automáticamente y preguntar la bebida; mostrar la hipótesis no debe agregar una línea.
+3. Hablar otra vez: «Con Sprite y queso» y guardar silencio. Debe aparecer una unidad por
+   ARS 9.500. Repetir una vez usando **Enviar audio** para comprobar el cierre manual.
 4. Pedir una pizza: debe informar que no está disponible, sin agregarla.
 5. Apagar **Voz ON** y continuar escribiendo en la misma sesión.
 6. Confirmar el pedido. Deben bloquearse micrófono y escritura mientras se
@@ -167,9 +173,10 @@ python -m unittest discover -s tests -v
 python -m unittest discover -s tests -p browser_voice.py -v
 ```
 
-La prueba de navegador requiere Edge instalado. Usa servidor temporal, micrófono
-sintético, transcriptor/orquestador simulados y servicio real. Comprueba el worklet,
-la vista provisional, alta, total, confirmación y solicitud de síntesis. No escucha
+La prueba de navegador requiere Edge instalado. Usa servidor temporal, un audio
+sintético con voz y silencio, transcriptor/orquestador simulados y servicio real.
+Comprueba el worklet, que el silencio previo no cierre, el cierre automático una
+sola vez, la vista provisional, alta, total, confirmación y solicitud de síntesis. No escucha
 parlantes ni llama a Gemini. La suite local cubre reglas del pedido, cancelación,
 límites, desconexión, exclusión de turnos y marcadores de cierre del SDK.
 

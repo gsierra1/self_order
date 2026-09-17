@@ -306,14 +306,15 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           <h3>4. La persona toca Hablar</h3>
           <a href="../frontend/app.js"><code>frontend/app.js</code></a>
           <small><code>toggleMicrophone()</code> env&iacute;a <code>audio.start</code>; <code>VoiceInput</code> prepara
-            el micr&oacute;fono.</small>
+            el micr&oacute;fono y espera que el backend confirme <code>voice.ready</code>.</small>
         </article>
         <article class="step frontend">
           <h3>5. Audio del micr&oacute;fono</h3>
           <a href="../frontend/voice.js"><code>frontend/voice.js</code></a> y <a
             href="../frontend/pcm-worklet.js"><code>pcm-worklet.js</code></a>
           <small>Convierten la captura a PCM16 mono de 16 kHz. <code>sendAudio()</code> manda fragmentos binarios por
-            WebSocket.</small>
+            WebSocket. <code>EndOfSpeechDetector</code> espera voz y luego 1,4 segundos de silencio;
+            <code>finishVoiceTurn()</code> env&iacute;a <code>audio.stop</code>. El bot&oacute;n manual sigue disponible.</small>
         </article>
         <article class="step ai">
           <h3>6. STT: voz a texto</h3>
