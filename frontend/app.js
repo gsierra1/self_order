@@ -394,7 +394,7 @@ function renderPayment(cart) {
                 alt="C\u00f3digo QR de demostraci\u00f3n sin pago real">
             <p>Procesando pago...</p>
             <button type="button" class="payment-action" id="payment-back">ATR\u00c1S</button>`;
-        document.getElementById("payment-back").addEventListener("click", returnToOrder);
+        document.getElementById("payment-back").addEventListener("click", returnToPaymentMethods);
         paymentTimer = setTimeout(() => completePayment(), 5000);
     } else if (method === "CARD") {
         paymentContent.innerHTML = `
@@ -411,7 +411,7 @@ function renderPayment(cart) {
             }
             completePayment();
         });
-        document.getElementById("payment-back").addEventListener("click", returnToOrder);
+        document.getElementById("payment-back").addEventListener("click", returnToPaymentMethods);
     } else {
         paymentContent.innerHTML = `
             <p>Pago en caja seleccionado.</p>
@@ -419,7 +419,7 @@ function renderPayment(cart) {
             <p>Acercate a caja, indicá ese número y realizá el pago.</p>
             <p id="cash-countdown">Esta sesión finalizará en 15.</p>
             <button type="button" class="payment-action" id="payment-back">ATRÁS</button>`;
-        document.getElementById("payment-back").addEventListener("click", returnToOrder);
+        document.getElementById("payment-back").addEventListener("click", returnToPaymentMethods);
         let remaining = 15;
         paymentTimer = setInterval(() => {
             remaining -= 1;
@@ -619,6 +619,29 @@ function applyCart(cart) {
         messageInput.placeholder = "El pedido ya fue confirmado.";
     }
     updateControls();
+}
+
+/** Vuelve desde QR, tarjeta o caja al selector sin habilitar el carrito.
+ * @returns {Promise<void>} Muestra nuevamente los métodos de pago disponibles.
+ * @effects Conserva `PAYMENT_PENDING`, el carrito y el número de pedido, pero
+ * descarta el método seleccionado. */
+async function returnToPaymentMethods() {
+    clearTimeout(paymentTimer);
+    clearInterval(paymentTimer);
+    try {
+        const response = await fetch(
+            `/api/sessions/${sessionId}/payment/method/back`,
+            { method: "POST" },
+        );
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "No se pudo cambiar el método de pago.");
+        phase = "ready";
+        applyCart(data.cart);
+        setStatus("Elegí cómo pagar");
+        updateControls();
+    } catch (error) {
+        appendMessage("Sistema", error.message, "error");
+    }
 }
 
 /**

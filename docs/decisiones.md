@@ -151,8 +151,11 @@ cual contrato usar.
 para usar `prepare_payment()`, `select_payment_method()` y `complete_payment()`.
 
 **Consecuencia:** toda confirmacion del servicio respeta los mismos estados que
-el dashboard. La pasarela sigue siendo una simulacion, pero podra reemplazarse
-por una integracion real sin introducir una ruta paralela de cierre.
+el dashboard. Dentro de `PAYMENT_PENDING`, `return_to_payment_methods()` permite
+cambiar la forma de pago sin reabrir el carrito, mientras `return_to_order()`
+vuelve a `ACTIVE` para modificar productos. La pasarela sigue siendo una
+simulacion, pero podra reemplazarse por una integracion real sin introducir una
+ruta paralela de cierre.
 
 **Estado:** implementada y cubierta por pruebas automatizadas del servicio,
 WebSocket y navegador simulado.

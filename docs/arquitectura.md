@@ -45,7 +45,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/domain/cart_item.py` | `CartItem`: una línea con producto, cantidad, configuración y precio unitario. |
 | `backend/domain/cart.py` | `Cart.total`: suma precio unitario por cantidad de cada línea. |
 | `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
-| `backend/services/order_service.py` | Validación y mutación mediante `add_item`, `remove_item`, `change_quantity`, `adjust_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
+| `backend/services/order_service.py` | Validación y mutación mediante `add_item`, `remove_item`, `change_quantity`, `adjust_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_payment_methods`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
 | `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para el LLM configurado. Incluye `clear_cart` para vaciar el carrito en una sola operación. |
 | `backend/ai/order_tools_runtime.py` | Comparte instrucciones, ejecución segura, detección de mutaciones y sanitización de respuestas entre proveedores; transforma tablas Markdown del carrito en listas legibles. |
 | `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |
@@ -91,11 +91,11 @@ streaming de tokens de respuesta ni procesamiento parcial de pedidos hablados.
 
 ## Tools y reglas
 
-Las diez tools expuestas son `add_item`, `get_cart`, `adjust_quantity`,
+Las once tools expuestas son `add_item`, `get_cart`, `adjust_quantity`,
 `change_modifier`, `replace_item`, `remove_item`, `clear_cart`, `confirm_order`,
-`select_payment_method` y `return_to_order`. `adjust_quantity` recibe una
-variación relativa: `-1` quita una unidad sin borrar la línea. `remove_item`
-queda reservado para quitar la línea completa.
+`select_payment_method`, `return_to_payment_methods` y `return_to_order`.
+`adjust_quantity` recibe una variación relativa: `-1` quita una unidad sin
+borrar la línea. `remove_item` queda reservado para quitar la línea completa.
 
 `add_item` devuelve `needs_clarification` si no recibe cualquier grupo marcado
 como obligatorio por el catálogo, sin modificar nada. Después el servicio verifica
@@ -130,12 +130,19 @@ La confirmacion tambien puede iniciarse desde el boton del carrito sin pasar por
 el LLM configurado; las consultas de precios usan la informacion del catalogo y no mutan el
 pedido.
 
+Después de seleccionar QR, tarjeta o caja, el frontend oculta el título y los
+otros métodos. El botón **Atrás** de ese detalle ejecuta
+`return_to_payment_methods()`: mantiene `PAYMENT_PENDING`, el número y el
+carrito, pero limpia `payment_method` para volver a mostrar el selector. El
+**Atrás** del selector usa `return_to_order()` y recién entonces habilita la
+edición de productos. La conversación dispone de las mismas dos operaciones.
+
 ### Estados de una sesion
 
 | Estado | Cuando aparece | Operaciones y transicion permitida |
 | --- | --- | --- |
 | `ACTIVE` | Al crear la sesion o al volver desde pago. | Permite agregar, cambiar o eliminar. `prepare_payment()` la lleva a `PAYMENT_PENDING`. |
-| `PAYMENT_PENDING` | Se confirmo el carrito para elegir QR, tarjeta o caja; el backend ya asigno numero de pedido. | No permite mutar el carrito. `select_payment_method()` guarda la eleccion; `complete_payment()` la lleva a `CONFIRMED`; `return_to_order()` recupera `ACTIVE` con el mismo carrito. |
+| `PAYMENT_PENDING` | Se confirmo el carrito para elegir QR, tarjeta o caja; el backend ya asigno numero de pedido. | No permite mutar el carrito. `select_payment_method()` guarda la eleccion; `return_to_payment_methods()` limpia solo esa elección; `complete_payment()` la lleva a `CONFIRMED`; `return_to_order()` recupera `ACTIVE` con el mismo carrito. |
 | `CONFIRMED` | El pago demo se completo. | Es el estado final: el pedido no admite texto, voz ni cambios de carrito. El frontend inicia una sesion nueva luego de la cuenta regresiva. |
 
 El flujo expuesto por el dashboard y las tools usa siempre
@@ -474,7 +481,7 @@ no prueba que rindan bien para este menú, micrófono, ruido o cuenta.
 
 ### Validación de esta arquitectura
 
-El 16/09/2026 se ejecutaron 62 pruebas automáticas sin red ni credenciales: una
+El 17/09/2026 se ejecutaron 64 pruebas automáticas sin red ni credenciales: una
 simulación del SDK Live de Gemini, los flujos de WebSocket de voz, reglas del
 pedido y pago, y una prueba nueva que conecta `AlternateSpeechToText` y
 `AlternateOrderInterpreter` simulados con `OrderService` real. La última prueba

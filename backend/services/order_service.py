@@ -821,6 +821,48 @@ class OrderService:
         self._emit_event("payment.cancelled", {"cart": snapshot})
         return {"status": "order_editing", "cart": snapshot}
 
+    def return_to_payment_methods(self, publish_event: bool = True) -> dict:
+        """Descarta el método elegido y conserva el pedido pendiente de pago.
+
+        Args:
+            publish_event: Indica si debe notificarse el cambio por WebSocket.
+                El endpoint HTTP lo desactiva porque ya devuelve el snapshot.
+
+        Returns:
+            Estado pendiente, número de pedido y métodos disponibles para que
+            la interfaz vuelva a mostrar el selector.
+
+        Raises:
+            ValueError: Si la sesión no está pendiente de pago o todavía no se
+                había seleccionado un método.
+        """
+        if self.session.state != SessionState.PAYMENT_PENDING:
+            raise ValueError("The order is not waiting for payment")
+        if self.session.payment_method is None:
+            raise ValueError("No payment method is selected")
+        self.session.payment_method = None
+        snapshot = self._get_cart_snapshot()
+        log_event(
+            "INFO",
+            "payment.method_cleared",
+            session_id=self.session.session_id,
+            order_number=self.session.order_number,
+        )
+        if publish_event:
+            self._emit_event(
+                "payment.pending",
+                {
+                    "cart": snapshot,
+                    "order_number": self.session.order_number,
+                    "payment_methods": ["QR", "CARD", "CASH"],
+                },
+            )
+        return {
+            "status": "payment_pending",
+            "order_number": self.session.order_number,
+            "payment_methods": ["QR", "CARD", "CASH"],
+        }
+
     def complete_payment(self) -> dict:
         """Finaliza el pago de demostración y cierra la sesión.
 

@@ -20,6 +20,7 @@ from backend.ai.tools import (
     create_remove_item_tool,
     create_replace_item_tool,
     create_return_to_order_tool,
+    create_return_to_payment_methods_tool,
     create_select_payment_method_tool,
 )
 from backend.logging.event_logger import log_event
@@ -49,6 +50,7 @@ class GeminiOrderInterpreter(OrderInterpreter):
         "confirm_order",
         "select_payment_method",
         "return_to_order",
+        "return_to_payment_methods",
     }
 
     def __init__(
@@ -118,6 +120,7 @@ class GeminiOrderInterpreter(OrderInterpreter):
         confirm_order_tool = create_confirm_order_tool(self.service)
         select_payment_method_tool = create_select_payment_method_tool(self.service)
         return_to_order_tool = create_return_to_order_tool(self.service)
+        return_to_payment_methods_tool = create_return_to_payment_methods_tool(self.service)
 
         return {
             "add_item": add_item_tool,
@@ -130,6 +133,7 @@ class GeminiOrderInterpreter(OrderInterpreter):
             "confirm_order": confirm_order_tool,
             "select_payment_method": select_payment_method_tool,
             "return_to_order": return_to_order_tool,
+            "return_to_payment_methods": return_to_payment_methods_tool,
         }
 
     def _build_system_instruction(self) -> str:
@@ -222,7 +226,8 @@ REGLAS TRANSACCIONALES:
 - Cuando el pedido esté pendiente de pago, utilizá select_payment_method
   con QR, CARD o CASH según lo que el usuario elija.
 - Si el usuario quiere cambiar el método o volver a modificar el pedido,
-  utilizá return_to_order cuando corresponda.
+  utilizá return_to_payment_methods para mostrar otra vez QR, tarjeta y caja.
+  Utilizá return_to_order solo si quiere modificar los productos del carrito.
 - Si el usuario pide varias operaciones independientes en una misma frase,
   podés emitir varias llamadas distintas; se ejecutarán en el orden recibido.
 - Nunca emitas dos veces la misma operación con los mismos argumentos.

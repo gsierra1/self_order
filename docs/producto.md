@@ -17,6 +17,8 @@ para explorar pedidos por voz.
   solo una solicitud de eliminar el producto completo borra toda la línea.
 - El asistente puede responder por texto y por voz; la voz puede desactivarse.
 - La confirmación debe representar el estado real del pedido.
+- Después de elegir un método de pago se muestra únicamente su flujo. Volver
+  atrás permite elegir otro método; desde el selector se puede volver al carrito.
 
 Ejemplo: «Quiero una Burger Clásica» requiere preguntar la bebida pues la misma 
 no es opcional sino obligatoria. Si la persona responde «con Coca y queso», 

@@ -14,6 +14,7 @@ from backend.ai.tools import (
     create_remove_item_tool,
     create_replace_item_tool,
     create_return_to_order_tool,
+    create_return_to_payment_methods_tool,
     create_select_payment_method_tool,
 )
 from backend.logging.event_logger import log_event
@@ -23,7 +24,7 @@ from backend.services.order_service import OrderService
 class OrderToolsRuntime:
     """Reune prompt, tools y validaciones sin depender de un proveedor LLM."""
 
-    MUTATING_TOOLS = {"add_item", "adjust_quantity", "change_modifier", "replace_item", "remove_item", "clear_cart", "confirm_order", "select_payment_method", "return_to_order"}
+    MUTATING_TOOLS = {"add_item", "adjust_quantity", "change_modifier", "replace_item", "remove_item", "clear_cart", "confirm_order", "select_payment_method", "return_to_order", "return_to_payment_methods"}
 
     def __init__(self, service: OrderService) -> None:
         """Crea las tools ligadas a una sesion y su servicio real.
@@ -43,6 +44,7 @@ class OrderToolsRuntime:
             "confirm_order": create_confirm_order_tool(service),
             "select_payment_method": create_select_payment_method_tool(service),
             "return_to_order": create_return_to_order_tool(service),
+            "return_to_payment_methods": create_return_to_payment_methods_tool(service),
         }
 
     def build_system_instruction(self) -> str:
@@ -67,6 +69,7 @@ No uses add_item para consultar precios o menu. Usa get_cart para consultar el p
 Usa change_modifier para modificar o quitar un adicional opcional y replace_item para cambiar producto.
 Usa adjust_quantity con delta=-1 si la persona pide quitar una unidad de una línea con varias unidades. Usa remove_item solamente si pide eliminar toda la línea y clear_cart para vaciar todo el carrito de una sola vez.
 confirm_order solo prepara pago. En PAYMENT_PENDING usa select_payment_method o return_to_order; no repitas confirm_order.
+Si ya hay un método y la persona quiere ver o cambiar las opciones de pago, usa return_to_payment_methods. Usa return_to_order solamente si quiere modificar los productos del carrito.
 Para CASH di siempre "En caja". Para CARD indica que debe ingresar el numero de tarjeta.
 No uses tablas Markdown ni numeres líneas o alternativas: presentá el carrito como una lista directa.
 Nunca digas solamente "el carrito queda así" o "queda de esta forma": enumerá

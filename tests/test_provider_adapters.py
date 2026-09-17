@@ -380,6 +380,24 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertEqual(event_cart["payment_method"], "CASH")
         self.assertEqual(event_cart["order_number"], result["order_number"])
 
+    def test_return_to_payment_methods_tool_preserves_pending_order(self) -> None:
+        """La tool de voz vuelve al selector sin habilitar modificaciones."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+        service.select_payment_method("CARD")
+        order_number = service.session.order_number
+        runtime = OrderToolsRuntime(service)
+
+        result = runtime.execute(type("Call", (), {
+            "name": "return_to_payment_methods",
+            "args": {},
+        })())
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(service.session.state.value, "PAYMENT_PENDING")
+        self.assertIsNone(service.session.payment_method)
+        self.assertEqual(service.session.order_number, order_number)
+
     def test_groq_interpreter_uses_the_same_tool_and_service(self) -> None:
         """Groq simulado ejecuta tools sin asumir precios ni estado del dominio."""
         service = OrderService(load_menu("config/menu.json"), Session())

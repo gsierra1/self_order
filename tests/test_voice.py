@@ -259,6 +259,25 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(cart["total"], 8500)
         self.assertEqual(cart["items"][0]["selected_modifiers"], {"drink": "WATER"})
 
+    def test_payment_method_back_restores_only_the_selector(self) -> None:
+        """Quita el método elegido sin volver el carrito a edición."""
+        service = self.runtime.service
+        service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+        service.prepare_payment()
+        order_number = service.session.order_number
+        service.select_payment_method("QR")
+
+        response = self.client.post(
+            f"/api/sessions/{self.session.session_id}/payment/method/back"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        cart = response.json()["cart"]
+        self.assertEqual(cart["state"], "PAYMENT_PENDING")
+        self.assertIsNone(cart["payment_method"])
+        self.assertEqual(cart["order_number"], order_number)
+        self.assertEqual(cart["total"], 8500)
+
     def test_serves_scannable_demo_qr_asset(self) -> None:
         """Entrega el SVG QR local sin depender de un proveedor de pagos."""
         response = self.client.get("/static/assets/qr-demostracion.svg")

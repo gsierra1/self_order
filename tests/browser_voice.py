@@ -166,9 +166,15 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator("#payment-panel")).to_be_visible()
                         page.locator('[data-payment-method="QR"]').click()
                         expect(page.locator(".demo-qr")).to_be_visible()
+                        expect(page.locator(".payment-options")).to_be_hidden()
+                        expect(page.locator("#payment-panel h3")).to_be_hidden()
                         expect(page.locator(".demo-qr")).to_have_attribute(
                             "src", "/static/assets/qr-demostracion.svg"
                         )
+                        page.locator("#payment-back").click()
+                        expect(page.locator(".payment-options")).to_be_visible()
+                        expect(page.locator("#payment-panel h3")).to_be_visible()
+                        expect(page.locator(".demo-qr")).to_have_count(0)
                         page.locator("#payment-back").click()
                         expect(page.locator("#payment-panel")).to_be_hidden()
                         expect(page.locator("#message-input")).to_be_enabled()

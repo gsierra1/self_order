@@ -112,6 +112,7 @@ class OpenAIOrderInterpreter(OrderInterpreter):
                 "method": {"type": "string", "enum": ["QR", "CARD", "CASH"]},
             }, ["method"]),
             self._function("return_to_order", "Vuelve a editar el carrito desde pago.", {}, []),
+            self._function("return_to_payment_methods", "Descarta el método elegido y vuelve al selector de pago.", {}, []),
         ]
 
     def _function(

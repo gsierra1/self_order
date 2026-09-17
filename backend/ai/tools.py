@@ -466,3 +466,27 @@ def create_return_to_order_tool(service: OrderService):
         return service.return_to_order()
 
     return return_to_order
+
+
+def create_return_to_payment_methods_tool(service: OrderService):
+    """Crea la tool que vuelve al selector sin reabrir la edición del pedido.
+
+    Args:
+        service: Servicio de pedidos asociado a la sesión actual.
+
+    Returns:
+        Función preparada para el intérprete LLM.
+    """
+
+    def return_to_payment_methods() -> dict:
+        """Descarta el método actual y conserva el pago pendiente.
+
+        Returns:
+            Estado pendiente, número de pedido y métodos disponibles.
+
+        Raises:
+            ValueError: Si no existe un método seleccionado para cambiar.
+        """
+        return service.return_to_payment_methods()
+
+    return return_to_payment_methods

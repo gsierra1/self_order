@@ -345,6 +345,33 @@ def return_to_order(session_id: str) -> dict:
     return {"ok": True, "cart": serialize_cart(runtime.service)}
 
 
+@app.post("/api/sessions/{session_id}/payment/method/back")
+def return_to_payment_methods(session_id: str) -> dict:
+    """Vuelve desde un método elegido al selector de formas de pago.
+
+    Args:
+        session_id: Identificador técnico de la sesión.
+
+    Returns:
+        Carrito pendiente de pago sin un método seleccionado.
+
+    Raises:
+        HTTPException: Si la sesión no espera pago, no había un método elegido
+            o existe otro turno en curso.
+    """
+    runtime = get_runtime(session_id)
+    if not runtime.turn_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Hay un turno en curso.")
+    try:
+        try:
+            runtime.service.return_to_payment_methods(publish_event=False)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    finally:
+        runtime.turn_lock.release()
+    return {"ok": True, "cart": serialize_cart(runtime.service)}
+
+
 @app.delete("/api/sessions/{session_id}/cart/items/{line_id}")
 def delete_cart_item(session_id: str, line_id: int) -> dict:
     """Elimina una línea del carrito desde un control explícito del frontend.
