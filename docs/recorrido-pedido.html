@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,182 +20,471 @@
       --domain: #daf4e6;
       --line: #c9c1df;
     }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--background); color: var(--ink); font-family: Inter, Arial, sans-serif; line-height: 1.5; }
-    header { background: radial-gradient(circle at 85% 20%, #a47aff, transparent 34%), linear-gradient(135deg, #321070, var(--violet)); color: white; padding: 3.5rem max(1.5rem, calc((100% - 1100px) / 2)); }
-    header p { max-width: 760px; color: #eee9ff; margin: .6rem 0 0; }
-    h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.05; }
-    h2 { margin: 0 0 .7rem; font-size: 1.45rem; }
-    h3 { margin: 0; font-size: 1rem; }
-    main { width: min(1100px, calc(100% - 2rem)); margin: 2rem auto 4rem; }
-    .intro, .legend, .example, .notes { background: var(--surface); border-radius: 18px; padding: 1.3rem; box-shadow: 0 8px 28px #4b27821a; margin: 1.2rem 0; }
-    .command { background: #1b1431; color: #f6f1ff; padding: 1rem; border-radius: 10px; overflow-x: auto; font: .9rem Consolas, monospace; }
-    code { background: #ece7f7; color: #4216a1; padding: .12rem .3rem; border-radius: 4px; font-family: Consolas, monospace; font-size: .9em; }
-    .command code { color: inherit; background: none; padding: 0; }
-    .legend { display: flex; gap: .65rem; flex-wrap: wrap; align-items: center; }
-    .pill { border-radius: 999px; padding: .3rem .7rem; font-weight: 700; font-size: .83rem; }
-    .frontend { background: var(--frontend); } .backend { background: var(--backend); } .ai { background: var(--ai); } .domain { background: var(--domain); }
-    .flow { display: grid; gap: .6rem; margin: 1.5rem 0; }
-    .step { position: relative; padding: 1rem 1.1rem; border-radius: 14px; border: 1px solid transparent; }
-    .step:not(:last-child)::after { content: "\2193"; position: absolute; left: 50%; bottom: -1.08rem; transform: translateX(-50%); color: var(--violet); font-size: 1.4rem; font-weight: bold; z-index: 1; }
-    .step small { color: var(--muted); display: block; margin-top: .35rem; }
-    .step a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
-    details { border-top: 1px solid #dcd6ed; padding: .8rem 0; }
-    details:last-child { border-bottom: 1px solid #dcd6ed; }
-    summary { cursor: pointer; font-weight: 700; color: var(--violet-dark); }
-    summary span { color: var(--ink); }
-    .detail-body { padding: .7rem 0 0 1.2rem; }
-    .detail-body p { margin: .25rem 0; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
-    .example { border-left: 7px solid var(--yellow); }
-    .example-phrase { font-size: 1.2rem; font-weight: 700; color: var(--violet-dark); }
-    table { border-collapse: collapse; width: 100%; font-size: .94rem; margin-top: .8rem; }
-    th, td { text-align: left; vertical-align: top; padding: .65rem; border-bottom: 1px solid #ddd7eb; }
-    th { color: var(--violet-dark); }
-    .warning { background: #fff8df; border: 1px solid #f2db85; border-radius: 10px; padding: .8rem; }
-    footer { text-align: center; color: var(--muted); padding: 1rem; font-size: .9rem; }
-    .flow { max-width: 860px; }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--ink);
+      font-family: Inter, Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    header {
+      background: radial-gradient(circle at 85% 20%, #a47aff, transparent 34%), linear-gradient(135deg, #321070, var(--violet));
+      color: white;
+      padding: 3.5rem max(1.5rem, calc((100% - 1100px) / 2));
+    }
+
+    header p {
+      max-width: 760px;
+      color: #eee9ff;
+      margin: .6rem 0 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 1.05;
+    }
+
+    h2 {
+      margin: 0 0 .7rem;
+      font-size: 1.45rem;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    main {
+      width: min(1100px, calc(100% - 2rem));
+      margin: 2rem auto 4rem;
+    }
+
+    .intro,
+    .legend,
+    .example,
+    .notes {
+      background: var(--surface);
+      border-radius: 18px;
+      padding: 1.3rem;
+      box-shadow: 0 8px 28px #4b27821a;
+      margin: 1.2rem 0;
+    }
+
+    .command {
+      background: #1b1431;
+      color: #f6f1ff;
+      padding: 1rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      font: .9rem Consolas, monospace;
+    }
+
+    code {
+      background: #ece7f7;
+      color: #4216a1;
+      padding: .12rem .3rem;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      font-size: .9em;
+    }
+
+    .command code {
+      color: inherit;
+      background: none;
+      padding: 0;
+    }
+
+    .legend {
+      display: flex;
+      gap: .65rem;
+      flex-wrap: wrap;
+      align-items: center;
+      width: 100%;
+      max-width: 860px;
+    }
+
+    .pill {
+      border-radius: 999px;
+      padding: .3rem .7rem;
+      font-weight: 700;
+      font-size: .83rem;
+    }
+
+    .frontend {
+      background: var(--frontend);
+    }
+
+    .backend {
+      background: var(--backend);
+    }
+
+    .ai {
+      background: var(--ai);
+    }
+
+    .domain {
+      background: var(--domain);
+    }
+
+    .flow {
+      display: grid;
+      gap: .6rem;
+      margin: 1.5rem 0;
+    }
+
+    .step {
+      position: relative;
+      padding: 1rem 1.1rem;
+      border-radius: 14px;
+      border: 1px solid transparent;
+    }
+
+    .step:not(:last-child)::after {
+      content: "\2193";
+      position: absolute;
+      left: 50%;
+      bottom: -1.08rem;
+      transform: translateX(-50%);
+      color: var(--violet);
+      font-size: 1.4rem;
+      font-weight: bold;
+      z-index: 1;
+    }
+
+    .step small {
+      color: var(--muted);
+      display: block;
+      margin-top: .35rem;
+    }
+
+    .step a {
+      color: inherit;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    details {
+      border-top: 1px solid #dcd6ed;
+      padding: .8rem 0;
+    }
+
+    details:last-child {
+      border-bottom: 1px solid #dcd6ed;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--violet-dark);
+    }
+
+    summary span {
+      color: var(--ink);
+    }
+
+    .detail-body {
+      padding: .7rem 0 0 1.2rem;
+    }
+
+    .detail-body p {
+      margin: .25rem 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+
+    .example {
+      border-left: 7px solid var(--yellow);
+    }
+
+    .example-phrase {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--violet-dark);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: .94rem;
+      margin-top: .8rem;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: .65rem;
+      border-bottom: 1px solid #ddd7eb;
+    }
+
+    th {
+      color: var(--violet-dark);
+    }
+
+    .warning {
+      background: #fff8df;
+      border: 1px solid #f2db85;
+      border-radius: 10px;
+      padding: .8rem;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 1rem;
+      font-size: .9rem;
+    }
+
+    .flow {
+      max-width: 860px;
+    }
   </style>
 </head>
+
 <body>
   <header>
     <h1>As&iacute; viaja un pedido por voz</h1>
-    <p>Gu&iacute;a visual del recorrido entre navegador, STT, LLM configurado, reglas de negocio y carrito. Cada tarjeta identifica el archivo y la funci&oacute;n que participa.</p>
+    <p>Gu&iacute;a visual del recorrido entre navegador, STT, LLM configurado, reglas de negocio y carrito.</p>
   </header>
   <main>
     <section class="intro">
       <h2>1. Encender el proyecto</h2>
-      <p>Desde la ra&iacute;z del repositorio, el siguiente comando inicia FastAPI. La aplicaci&oacute;n carga el men&uacute;, sirve el frontend y queda a la espera de sesiones.</p>
+      <p>Desde la ra&iacute;z del repositorio, el siguiente comando inicia FastAPI. La aplicaci&oacute;n carga el
+        men&uacute;, sirve el frontend y queda a la espera de sesiones.</p>
       <pre class="command"><code>.\.venv\Scripts\Activate.ps1
 python -m uvicorn backend.api.app:app --reload</code></pre>
       <p>Luego se abre <code>http://127.0.0.1:8000</code>.</p>
     </section>
 
-    <section class="legend" aria-label="Leyenda de capas">
-      <strong>Capas:</strong>
-      <span class="pill frontend">Frontend / navegador</span>
-      <span class="pill backend">API / transporte</span>
-      <span class="pill ai">Voz e IA</span>
-      <span class="pill domain">Dominio y reglas</span>
-    </section>
 
     <section>
       <h2>2. Diagrama de flujo: pedido hablado</h2>
-      <p>Ejemplo: la persona dice <strong>&laquo;Hola, quiero una hamburguesa cl&aacute;sica con Coca-Cola y tomate&raquo;</strong>. Las tarjetas se presentan en una sola columna para que cada flecha una exclusivamente un paso con el siguiente: 1 &darr; 2 &darr; 3.</p>
+      <p>Ejemplo: la persona dice <strong>&laquo;Hola, quiero una hamburguesa cl&aacute;sica con Sprite y
+          tomate&raquo;</strong>.</p>
+      <section class="legend" aria-label="Leyenda de capas">
+        <strong>Capas:</strong>
+        <span class="pill frontend">Frontend / navegador</span>
+        <span class="pill backend">API / transporte</span>
+        <span class="pill ai">Voz e IA</span>
+        <span class="pill domain">Dominio y reglas</span>
+      </section>
+
       <div class="flow">
         <article class="step backend">
           <h3>1. Arranque de FastAPI</h3>
           <a href="../backend/api/app.py"><code>backend/api/app.py</code></a>
-          <small><code>menu = load_menu(MENU_PATH)</code> carga <code>config/menu.json</code>; FastAPI sirve <code>frontend/</code>.</small>
+          <small><code>menu = load_menu(MENU_PATH)</code> carga <code>config/menu.json</code>; FastAPI sirve
+            <code>frontend/</code>.</small>
         </article>
         <article class="step frontend">
           <h3>2. Pantalla y sesi&oacute;n</h3>
           <a href="../frontend/app.js"><code>frontend/app.js</code></a>
-          <small><code>createSession()</code> ejecuta <code>fetch(&quot;/api/sessions&quot;, { method: &quot;POST&quot; })</code>. Con el <code>session_id</code> recibido, <code>connectWebSocket()</code>, en este mismo archivo, abre <code>ws://.../ws/sessions/{session_id}</code>.</small>
+          <small><code>createSession()</code> genera un <code>session_id</code> y un carrito vacío.
+            <code>connectWebSocket()</code> abre esa sesión</small>
         </article>
         <article class="step backend">
           <h3>3. Backend crea el pedido vac&iacute;o</h3>
           <a href="../backend/api/app.py"><code>backend/api/app.py</code></a>
-          <small>La ruta <code>@app.post(&quot;/api/sessions&quot;)</code> ejecuta <code>create_session()</code>, que ensambla <code>Session</code>, <code>OrderService</code> y el <code>OrderInterpreter</code> elegido por <code>LLM_PROVIDER</code> (Groq en la demo). La ruta WebSocket de este archivo recibe despu&eacute;s la conexi&oacute;n abierta en el paso 2.</small>
+          <small>Se ejecuta <code>create_session()</code>, que
+            ensambla <code>Session</code>, <code>OrderService</code> y el <code>OrderInterpreter</code> elegido por
+            <code>LLM_PROVIDER</code>. Luego la ruta WebSocket de este archivo recibe la
+            conexi&oacute;n abierta en el paso 2.</small>
         </article>
         <article class="step frontend">
           <h3>4. La persona toca Hablar</h3>
           <a href="../frontend/app.js"><code>frontend/app.js</code></a>
-          <small><code>toggleMicrophone()</code> env&iacute;a <code>audio.start</code>; <code>VoiceInput</code> prepara el micr&oacute;fono.</small>
+          <small><code>toggleMicrophone()</code> env&iacute;a <code>audio.start</code>; <code>VoiceInput</code> prepara
+            el micr&oacute;fono.</small>
         </article>
         <article class="step frontend">
           <h3>5. Audio del micr&oacute;fono</h3>
-          <a href="../frontend/voice.js"><code>frontend/voice.js</code></a> y <a href="../frontend/pcm-worklet.js"><code>pcm-worklet.js</code></a>
-          <small>Convierten la captura a PCM16 mono de 16 kHz. <code>sendAudio()</code> manda fragmentos binarios por WebSocket.</small>
+          <a href="../frontend/voice.js"><code>frontend/voice.js</code></a> y <a
+            href="../frontend/pcm-worklet.js"><code>pcm-worklet.js</code></a>
+          <small>Convierten la captura a PCM16 mono de 16 kHz. <code>sendAudio()</code> manda fragmentos binarios por
+            WebSocket.</small>
         </article>
         <article class="step ai">
           <h3>6. STT: voz a texto</h3>
           <a href="../backend/ai/live_transcriber.py"><code>backend/ai/live_transcriber.py</code></a>
-          <small><code>SpeechToText / GeminiLiveTranscriber.transcribe()</code> usa el modelo indicado en <code>GEMINI_TRANSCRIPTION_MODEL</code>, publica hip&oacute;tesis y devuelve el texto final.</small>
+          <small><code>SpeechToText / GeminiLiveTranscriber.transcribe()</code> usa el modelo indicado en
+            <code>GEMINI_TRANSCRIPTION_MODEL</code>, publica hip&oacute;tesis y devuelve el texto final.</small>
         </article>
         <article class="step backend">
           <h3>7. El texto entra al mismo flujo que escritura</h3>
           <a href="../backend/api/conversation_socket.py"><code>conversation_socket.py</code></a>
-          <small><code>process_turn()</code> recibe el texto final; <code>execute()</code> llama al int&eacute;rprete LLM sin bloquear el WebSocket.</small>
+          <small><code>process_turn()</code> recibe el texto final; <code>execute()</code> llama al int&eacute;rprete
+            LLM sin bloquear el WebSocket.</small>
         </article>
         <article class="step ai">
           <h3>8. El LLM interpreta la intenci&oacute;n</h3>
           <a href="../backend/ai/orchestrator.py"><code>orchestrator.py</code></a>
-          <small><code>send_message()</code> conversa con el proveedor elegido por <code>LLM_PROVIDER</code> (Groq en la demo). El LLM propone una tool, no modifica el carrito por s&iacute; mismo.</small>
+          <small><code>send_message()</code> conversa con el proveedor elegido por <code>LLM_PROVIDER</code>.
+            El LLM propone una tool, no modifica el carrito por s&iacute; mismo.</small>
         </article>
         <article class="step ai">
           <h3>9. Tool autorizada</h3>
           <a href="../backend/ai/tools.py"><code>backend/ai/tools.py</code></a>
-          <small><code>create_add_item_tool()</code> crea <code>add_item()</code>, revisa grupos obligatorios y delega la operaci&oacute;n segura.</small>
+          <small><code>create_add_item_tool()</code> crea <code>add_item()</code>, revisa grupos obligatorios y delega
+            la operaci&oacute;n segura.</small>
         </article>
         <article class="step domain">
           <h3>10. Reglas y precio</h3>
           <a href="../backend/services/order_service.py"><code>backend/services/order_service.py</code></a>
-          <small><code>OrderService.add_item()</code> y <code>_calculate_unit_price()</code> validan cat&aacute;logo, disponibilidad y precio.</small>
+          <small><code>OrderService.add_item()</code> y <code>_calculate_unit_price()</code> validan cat&aacute;logo,
+            disponibilidad y precio.</small>
         </article>
         <article class="step domain">
           <h3>11. Carrito validado</h3>
-          <a href="../backend/domain/cart.py"><code>Cart</code></a>, <a href="../backend/domain/cart_item.py"><code>CartItem</code></a> y <a href="../backend/domain/menu.py"><code>Menu</code></a>
-          <small>Se guarda una l&iacute;nea con producto, bebida, extra y precio. El carrito es el estado real del pedido.</small>
+          <a href="../backend/domain/cart.py"><code>Cart</code></a>, <a
+            href="../backend/domain/cart_item.py"><code>CartItem</code></a> y <a
+            href="../backend/domain/menu.py"><code>Menu</code></a>
+          <small>Se guarda una l&iacute;nea con producto, bebida, extra y precio. El carrito es el estado real del
+            pedido.</small>
         </article>
         <article class="step frontend">
           <h3>12. Pantalla actualizada</h3>
           <a href="../frontend/app.js"><code>frontend/app.js</code></a>
-          <small><code>onServerMessage()</code> recibe <code>cart.updated</code>; <code>applyCart()</code> y <code>renderCart()</code> muestran el resultado.</small>
+          <small><code>onServerMessage()</code> recibe <code>cart.updated</code>; <code>applyCart()</code> y
+            <code>renderCart()</code> muestran el resultado.</small>
         </article>
       </div>
     </section>
 
     <section class="example">
       <h2>3. Conversaci&oacute;n completa: agregar, consultar, modificar, eliminar y pagar</h2>
-      <p class="example-phrase">Una misma sesi&oacute;n puede recibir varios turnos. Este ejemplo muestra el recorrido esperado de cada operaci&oacute;n.</p>
-      <p>Las tools indicadas son las operaciones que el LLM configurado puede proponer. <code>OrderService</code> decide si son v&aacute;lidas; una pregunta de precio no debe crear una l&iacute;nea provisional en el carrito.</p>
+      <p class="example-phrase">Este ejemplo muestra el recorrido
+        esperado de cada operaci&oacute;n.</p>
+      <p>Las tools indicadas son las operaciones que el LLM configurado puede proponer. <code>OrderService</code> decide
+        si son v&aacute;lidas.</p>
       <table>
-        <thead><tr><th>Turno de la persona</th><th>Recorrido y operaci&oacute;n</th><th>Resultado visible</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Turno de la persona</th>
+            <th>Recorrido y operaci&oacute;n</th>
+            <th>Resultado visible</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td>&laquo;Quiero una Burger Cl&aacute;sica con Coca-Cola y tomate, y una Burger Doble con agua y queso.&raquo;</td><td>Voz o texto llega a <code>process_turn()</code> en <code>conversation_socket.py</code>. El intérprete configurado propone dos <code>add_item()</code> de <code>tools.py</code>; ambos delegan en <code>OrderService.add_item()</code>.</td><td>Dos l&iacute;neas validadas: Cl&aacute;sica (ARS 9.500) y Doble (ARS 11.500). El total es ARS 21.000.</td></tr>
-          <tr><td>&laquo;&iquest;Cu&aacute;nto cuesta una Burger Doble con agua?&raquo;</td><td>El intérprete consulta el cat&aacute;logo para responder. No propone una mutaci&oacute;n del carrito.</td><td>La respuesta informa ARS 10.500. Las dos l&iacute;neas y el total siguen iguales.</td></tr>
-          <tr><td>&laquo;A la cl&aacute;sica sacale tomate y cambi&aacute; Coca-Cola por Sprite.&raquo;</td><td>El intérprete configurado puede proponer dos <code>change_modifier()</code>. Cada cambio pasa por <code>OrderService.change_modifier()</code>, que recalcula el precio y conserva la l&iacute;nea si algo falla.</td><td>La Cl&aacute;sica queda con Sprite y sin tomate: ARS 8.500. El total pasa a ARS 20.000.</td></tr>
-          <tr><td>&laquo;Sac&aacute; la doble.&raquo;</td><td><code>remove_item()</code> de <code>tools.py</code> delega en <code>OrderService.remove_item()</code>.</td><td>Desaparece la Burger Doble. Solo queda la Cl&aacute;sica con Sprite por ARS 8.500.</td></tr>
-          <tr><td>&laquo;&iquest;Qu&eacute; tengo en el carrito?&raquo;</td><td>El int&eacute;rprete configurado consulta el estado actual mediante la tool de carrito, sin mutarlo.</td><td>El asistente enumera la Burger Cl&aacute;sica, Sprite y el total ARS 8.500.</td></tr>
-          <tr><td>La persona toca <strong>Confirmar pedido</strong> o dice &laquo;Confirmo&raquo;.</td><td>El bot&oacute;n llama a <code>POST /api/sessions/{session_id}/payment/start</code>; la voz puede llegar a <code>confirm_order()</code>. Ambos usan la misma transici&oacute;n de <code>OrderService</code>.</td><td>El pedido queda pendiente de pago y el backend genera el n&uacute;mero para retirar.</td></tr>
-          <tr><td>La persona toca QR o dice &laquo;Pago con QR&raquo;.</td><td>El frontend o la tool de selecci&oacute;n registra el m&eacute;todo de pago. La demo muestra un QR escaneable que contiene texto sin URL y, tras cinco segundos, completa el pago simulado.</td><td>Se muestra el n&uacute;mero de pedido para retirar en caja y una cuenta regresiva de quince segundos antes de abrir una sesi&oacute;n nueva.</td></tr>
-          <tr><td>La persona toca <strong>Atr&aacute;s</strong> desde QR, tarjeta o caja.</td><td><code>return_to_payment_methods()</code> limpia solo el m&eacute;todo seleccionado y conserva el estado <code>PAYMENT_PENDING</code>. Otro <strong>Atr&aacute;s</strong> desde el selector usa <code>return_to_order()</code>.</td><td>Primero reaparecen QR, tarjeta y caja; solo el segundo paso vuelve al carrito editable.</td></tr>
+          <tr>
+            <td>&laquo;Quiero una pizza.&raquo;</td>
+            <td><code>process_turn()</code> de <code>conversation_socket.py</code> env&iacute;a el texto a
+              <code>send_message()</code>. El int&eacute;rprete compara el pedido con el cat&aacute;logo construido por
+              <code>OrderToolsRuntime.build_system_instruction()</code> o por la implementaci&oacute;n equivalente
+              del proveedor y debe informar que no existe. Como defensa adicional, si propusiera
+              <code>add_item(product_id=&quot;PIZZA&quot;)</code>, <code>Menu.get_product()</code> consultar&iacute;a
+              <code>self.products.get(product_id)</code>, devolver&iacute;a <code>None</code> y
+              <code>OrderService.add_item()</code> rechazar&iacute;a la operaci&oacute;n con <code>ValueError</code>.
+            </td>
+            <td>El asistente informa que no hay pizza. El carrito contin&uacute;a vac&iacute;o y no se publica
+              <code>cart.updated</code>.</td>
+          </tr>
+          <tr>
+            <td>&laquo;Quiero una Burger Cl&aacute;sica.&raquo;</td>
+            <td>El int&eacute;rprete propone <code>add_item()</code>. En <code>tools.py</code>,
+              <code>_get_missing_required_groups()</code> llama a
+              <code>Menu.get_product(&quot;BURGER_CLASICA&quot;)</code> y recorre sus
+              <code>modifier_groups</code>. La b&uacute;squeda devuelve el producto porque su ID s&iacute; existe;
+              despu&eacute;s encuentra <code>drink</code> con <code>required=true</code> y sin una opci&oacute;n seleccionada.
+              La tool devuelve <code>needs_clarification</code> sin llamar a <code>OrderService.add_item()</code>.
+            </td>
+            <td>El asistente pregunta qu&eacute; bebida quiere. Todav&iacute;a no aparece ninguna hamburguesa en el
+              carrito.</td>
+          </tr>
+          <tr>
+            <td>&laquo;Quiero una Burger Cl&aacute;sica con Sprite y tomate, y una Burger Doble con agua y
+              queso.&raquo;</td>
+            <td>Voz o texto llega a <code>process_turn()</code> en <code>conversation_socket.py</code>. El intérprete
+              configurado propone dos <code>add_item()</code> de <code>tools.py</code>; ambos delegan en
+              <code>OrderService.add_item()</code>.
+            </td>
+            <td>Dos l&iacute;neas validadas: Cl&aacute;sica (ARS 9.500) y Doble (ARS 11.500). El total es ARS 21.000.
+            </td>
+          </tr>
+          <tr>
+            <td>&laquo;&iquest;Cu&aacute;nto cuesta una Burger Doble con agua?&raquo;</td>
+            <td>El intérprete consulta el cat&aacute;logo para responder. No propone una mutaci&oacute;n del carrito.
+            </td>
+            <td>La respuesta informa ARS 10.500. Las dos l&iacute;neas y el total siguen iguales.</td>
+          </tr>
+          <tr>
+            <td>&laquo;A la cl&aacute;sica sacale tomate y cambi&aacute; Sprite por agua.&raquo;</td>
+            <td>El intérprete configurado puede proponer dos <code>change_modifier()</code>. Cada cambio pasa por
+              <code>OrderService.change_modifier()</code>, que recalcula el precio y conserva la l&iacute;nea si algo
+              falla.
+            </td>
+            <td>La Cl&aacute;sica queda con agua y sin tomate: ARS 8.500. El total pasa a ARS 20.000.</td>
+          </tr>
+          <tr>
+            <td>&laquo;Sac&aacute; la doble.&raquo;</td>
+            <td><code>remove_item()</code> de <code>tools.py</code> delega en <code>OrderService.remove_item()</code>.
+            </td>
+            <td>Desaparece la Burger Doble. Solo queda la Cl&aacute;sica con agua por ARS 8.500.</td>
+          </tr>
+          <tr>
+            <td>&laquo;&iquest;Qu&eacute; tengo en el carrito?&raquo;</td>
+            <td>El int&eacute;rprete configurado consulta el estado actual mediante la tool de carrito, sin mutarlo.
+            </td>
+            <td>El asistente enumera la Burger Cl&aacute;sica, agua y el total ARS 8.500.</td>
+          </tr>
+          <tr>
+            <td>La persona toca <strong>Confirmar pedido</strong> o dice &laquo;Confirmo&raquo;.</td>
+            <td>El bot&oacute;n llama a <code>POST /api/sessions/{session_id}/payment/start</code>; la voz puede llegar
+              a <code>confirm_order()</code>. Ambos usan la misma transici&oacute;n de <code>OrderService</code>.</td>
+            <td>El pedido queda pendiente de pago y el backend genera el n&uacute;mero para retirar.</td>
+          </tr>
+          <tr>
+            <td>La persona toca QR o dice &laquo;Pago con QR&raquo;.</td>
+            <td>El frontend o la tool de selecci&oacute;n registra el m&eacute;todo de pago. La demo muestra un QR
+              escaneable que contiene texto sin URL y, tras cinco segundos, completa el pago simulado.</td>
+            <td>Se muestra el n&uacute;mero de pedido para retirar en caja y una cuenta regresiva de quince segundos
+              antes de abrir una sesi&oacute;n nueva.</td>
+          </tr>
+          <tr>
+            <td>La persona toca <strong>Atr&aacute;s</strong> desde QR, tarjeta o caja.</td>
+            <td><code>return_to_payment_methods()</code> limpia solo el m&eacute;todo seleccionado y conserva el estado
+              <code>PAYMENT_PENDING</code>. Otro <strong>Atr&aacute;s</strong> desde el selector usa
+              <code>return_to_order()</code>.
+            </td>
+            <td>Primero reaparecen QR, tarjeta y caja; solo el segundo paso vuelve al carrito editable.</td>
+          </tr>
         </tbody>
       </table>
-      <p>Si luego se agregan tres unidades con el mismo producto, bebida y extras que una l&iacute;nea existente, <code>OrderService.add_item()</code> las consolida: el carrito muestra una sola l&iacute;nea con cantidad cuatro. Si la persona dice &laquo;elimin&aacute; una&raquo;, el int&eacute;rprete debe proponer <code>adjust_quantity(delta=-1)</code> y quedan tres; <code>remove_item()</code> se reserva para eliminar la l&iacute;nea completa.</p>
+      <p>Si luego se agregan tres unidades con el mismo producto, bebida y extras que una l&iacute;nea existente,
+        <code>OrderService.add_item()</code> las consolida: el carrito muestra una sola l&iacute;nea con cantidad
+        cuatro. Si la persona dice &laquo;elimin&aacute; una&raquo;, el int&eacute;rprete debe proponer
+        <code>adjust_quantity(delta=-1)</code> y quedan tres; <code>remove_item()</code> se reserva para eliminar la
+        l&iacute;nea completa.
+      </p>
     </section>
 
-    <section class="notes">
-      <h2>4. Conexiones concretas entre archivos</h2>
-      <table>
-        <thead><tr><th>Origen</th><th>Puente</th><th>Destino</th></tr></thead>
-        <tbody>
-          <tr><td><code>createSession()</code> en <code>frontend/app.js</code></td><td><code>fetch</code> env&iacute;a <code>POST /api/sessions</code></td><td><code>create_session()</code> en <code>backend/api/app.py</code>, que devuelve <code>session_id</code> y el carrito.</td></tr>
-          <tr><td><code>connectWebSocket()</code> en <code>frontend/app.js</code></td><td><code>new WebSocket(.../ws/sessions/{session_id})</code></td><td><code>session_websocket()</code> en <code>backend/api/app.py</code>, que entrega mensajes a <code>handle_conversation()</code> de <code>conversation_socket.py</code>.</td></tr>
-          <tr><td><code>toggleMicrophone()</code> en <code>frontend/app.js</code></td><td><code>VoiceInput</code> y <code>sendAudio()</code> env&iacute;an PCM por el WebSocket</td><td><code>SpeechToText / GeminiLiveTranscriber.transcribe()</code> en <code>backend/ai/live_transcriber.py</code>; su texto final vuelve a <code>process_turn()</code>.</td></tr>
-          <tr><td><code>process_turn()</code> en <code>conversation_socket.py</code></td><td><code>OrderInterpreter.send_message()</code></td><td>El proveedor elegido por <code>LLM_PROVIDER</code> propone una tool de <code>backend/ai/tools.py</code>.</td></tr>
-          <tr><td>Una tool de <code>tools.py</code></td><td>llama a un m&eacute;todo de <code>OrderService</code></td><td><code>Cart</code> se actualiza y el evento <code>cart.updated</code> regresa por WebSocket a <code>onServerMessage()</code> y <code>renderCart()</code> en <code>frontend/app.js</code>.</td></tr>
-        </tbody>
-      </table>
-    </section>
 
     <section class="grid">
       <article class="notes">
         <h2>Lo que el LLM puede y no puede hacer</h2>
-        <p>El LLM configurado interpreta lenguaje natural y puede proponer una tool. No decide precios, stock ni modifica el carrito directamente.</p>
-        <p>La autoridad final es <code>OrderService</code>. Por eso la misma regla protege voz, texto y botones del frontend.</p>
+        <p>El LLM configurado interpreta lenguaje natural y puede proponer una tool. No decide precios, stock ni
+          modifica el carrito directamente.</p>
+        <p>La autoridad final es <code>OrderService</code>. Por eso la misma regla protege voz, texto y botones del
+          frontend.</p>
       </article>
       <article class="notes">
         <h2>Si falta informaci&oacute;n</h2>
-        <p>Si la persona dijera solo &laquo;quiero una Burger Cl&aacute;sica&raquo;, <code>add_item()</code> no agrega una l&iacute;nea incompleta: devuelve que falta el grupo obligatorio <code>Bebida</code>.</p>
+        <p>Si la persona dijera solo &laquo;quiero una Burger Cl&aacute;sica&raquo;, <code>add_item()</code> no agrega
+          una l&iacute;nea incompleta: devuelve que falta el grupo obligatorio <code>Bebida</code>.</p>
       </article>
     </section>
 
-    <section class="warning">
-      <strong>L&iacute;mite actual de la demo:</strong> la transcripci&oacute;n, el LLM configurado y la sesi&oacute;n viven en un proceso local. Si un proveedor falla, el carrito ya validado se conserva. Si se reinicia el backend, las sesiones en memoria se pierden.
-    </section>
   </main>
-  <footer>Documento de apoyo para entender y defender el proyecto de self-order por voz.</footer>
 </body>
+
 </html>
