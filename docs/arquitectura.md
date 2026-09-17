@@ -95,6 +95,12 @@ como `una unidad`, separa modificadores obligatorios y agrupa los adicionales
 como `Extras`. El resumen omite precios por línea, que ya están en el carrito, y
 comunica una sola vez el total y las opciones para continuar.
 
+La interfaz administra además la inactividad sin consultar al LLM. Cuando la
+sesión está lista para recibir una acción, `InactivityMonitor` pregunta
+`¿Seguís ahí?` tras veinte segundos, advierte el cierre veinte segundos después
+y crea una sesión vacía tras otros veinte segundos. Una acción de la persona
+reinicia la secuencia; el conteo se detiene mientras voz o texto se procesan.
+
 ## Tools y reglas
 
 Las once tools expuestas son `add_item`, `get_cart`, `adjust_quantity`,

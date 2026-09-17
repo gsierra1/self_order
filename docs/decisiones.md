@@ -348,3 +348,31 @@ necesitan responder a la intención concreta del turno.
 lo que puede resultar largo en carritos grandes. Antes de producción se deberá
 evaluar una versión incremental o una síntesis abreviada sin perder la referencia
 visual al carrito.
+
+## 15. Cerrar sesiones inactivas desde la interfaz
+
+**Estado:** adoptada e implementada el 17/09/2026.
+
+**Contexto:** un kiosco puede quedar mostrando el pedido de una persona que se
+retiró sin finalizarlo. La siguiente persona no debería encontrar ese carrito ni
+depender de actualizar manualmente la página.
+
+**Alternativas consideradas:** delegar la decisión al LLM; medir únicamente la
+conexión WebSocket; o controlar la actividad efectiva en el navegador. El LLM no
+recibe clics ni teclas, y una conexión abierta no demuestra que alguien continúe
+frente al kiosco.
+
+**Decisión adoptada:** `InactivityMonitor` ejecuta tres intervalos consecutivos
+de veinte segundos mientras la interfaz está lista. Primero pregunta si la
+persona sigue allí, luego avisa que cerrará la sesión y finalmente usa el flujo
+existente que limpia la pantalla y crea otra sesión. Clics, teclas y entradas
+reinician el conteo. El procesamiento de voz o texto lo detiene para que la
+latencia de un proveedor no se interprete como abandono.
+
+**Consecuencias:** los avisos no consumen tokens, no ejecutan tools y no cambian
+el carrito. Si la voz está habilitada también se leen para llamar la atención de
+la persona. La sesión nueva comienza con un carrito vacío.
+
+**Límites:** el navegador controla esta experiencia de demo. Un piloto con
+varias pantallas deberá complementar el mecanismo con expiración y limpieza de
+sesiones en el backend o en el almacenamiento durable.

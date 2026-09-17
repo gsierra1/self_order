@@ -1,4 +1,5 @@
 import { VoiceInput, speak } from "/static/voice.js?v=20260917-5";
+import { InactivityMonitor } from "/static/inactivity.js?v=20260917-1";
 
 let sessionId = null;
 let sessionClosed = false;
@@ -32,6 +33,36 @@ const paymentOptions = paymentPanel.querySelector(".payment-options");
 const paymentTitle = paymentPanel.querySelector("h3");
 
 const voice = new VoiceInput(sendAudio, failVoice, finishVoiceAfterSilence);
+
+const inactivityMonitor = new InactivityMonitor({
+    onPrompt: () => showInactivityMessage("¿Seguís ahí?"),
+    onWarning: () => showInactivityMessage(
+        "La sesión se cerrará en 20 segundos si no recibimos una respuesta.",
+    ),
+    onTimeout: () => void startNewSession(),
+});
+
+/**
+ * Publica un aviso de inactividad por pantalla y por voz cuando está habilitada.
+ * @param {string} message Texto que verá y escuchará la persona.
+ * @returns {void}
+ * @effects Agrega un mensaje sin enviarlo al LLM ni modificar el carrito.
+ */
+function showInactivityMessage(message) {
+    appendMessage("Asistente", message, "assistant");
+    if (assistantAudioEnabled) {
+        speak(message, text => appendMessage("Sistema", text, "error"));
+    }
+}
+
+/**
+ * Reinicia la espera cuando la interfaz admite una respuesta de la persona.
+ * @returns {void}
+ * @effects Descarta la etapa anterior y vuelve a contar veinte segundos.
+ */
+function registerUserActivity() {
+    if (phase === "ready" && !sessionClosed) inactivityMonitor.restart();
+}
 
 /** Formatea un importe del carrito en pesos argentinos.
  * @param {number} value Importe entero.
@@ -325,6 +356,7 @@ function failVoice(error) {
     phase = socket?.readyState === WebSocket.OPEN ? "ready" : "disconnected";
     setStatus("No se pudo enviar el audio", "error");
     updateControls();
+    registerUserActivity();
 }
 
 
@@ -606,6 +638,7 @@ async function toggleMicrophone() {
         return;
     }
     if (phase !== "ready" || sessionClosed) return;
+    inactivityMonitor.stop();
     phase = "preparing";
     showPaymentProcessing();
     voiceBackendReady = false;
@@ -640,6 +673,7 @@ function applyCart(cart) {
     renderPayment(cart);
     sessionClosed = cart.state === "CONFIRMED";
     if (sessionClosed) {
+        inactivityMonitor.stop();
         voice.dispose();
         clearTimeout(voiceTimer);
         setStatus("Pedido confirmado");
@@ -715,6 +749,7 @@ function onServerMessage(event) {
         reconnectAttempts = 0;
         phase = "ready";
         if (!sessionClosed) setStatus(restored ? "Conexi\u00f3n restablecida" : "Listo");
+        registerUserActivity();
     } else if (type === "voice.ready" && phase === "preparing") {
         voiceBackendReady = true;
         maybeStartRecording();
@@ -732,6 +767,7 @@ function onServerMessage(event) {
         }
         if (!sessionClosed) setStatus("Listo");
         if (assistantAudioEnabled) speak(data.text, text => appendMessage("Sistema", text, "error"));
+        registerUserActivity();
     } else if (["voice.error", "backend.error", "ai.error", "client.error", "voice.cancelled"].includes(type)) {
         clearTimeout(voiceTimer);
         voice.dispose();
@@ -739,6 +775,7 @@ function onServerMessage(event) {
         transcript.textContent = "";
         if (data.message) appendMessage("Sistema", data.message, "error");
         if (!sessionClosed) setStatus(type === "voice.cancelled" ? "Listo" : "Error", type === "voice.cancelled" ? "ready" : "error");
+        registerUserActivity();
     }
     updateControls();
 }
@@ -793,6 +830,7 @@ function scheduleReconnect() {
 function handleSocketClose(event, closedSocket) {
     if (socket !== closedSocket) return;
     socket = null;
+    inactivityMonitor.stop();
     clearTimeout(voiceTimer);
     const voiceWasInProgress = ["preparing", "recording", "processing"].includes(phase);
     voiceBackendReady = false;
@@ -862,6 +900,7 @@ async function createSession() {
  * @effects Cancela el socket anterior sin reconectarlo y limpia la pantalla.
  */
 async function startNewSession() {
+    inactivityMonitor.stop();
     clearTimeout(paymentTimer);
     clearInterval(countdownTimer);
     voice.dispose();
@@ -889,6 +928,7 @@ confirmCartButton.addEventListener("click", startPaymentFromCart);
  */
 function sendMessage(message) {
     if (phase !== "ready" || sessionClosed) return;
+    inactivityMonitor.stop();
     window.speechSynthesis?.cancel();
     sendEvent("user.text", { message });
     appendMessage("Vos", message, "user");
@@ -904,5 +944,13 @@ messageForm.addEventListener("submit", event => {
 });
 micButton.addEventListener("click", toggleMicrophone);
 audioButton.addEventListener("click", toggleAssistantAudio);
-window.addEventListener("pagehide", () => { voice.dispose(); window.speechSynthesis?.cancel(); closeSocketIntentionally(); });
+document.addEventListener("pointerdown", registerUserActivity);
+document.addEventListener("keydown", registerUserActivity);
+document.addEventListener("input", registerUserActivity);
+window.addEventListener("pagehide", () => {
+    inactivityMonitor.stop();
+    voice.dispose();
+    window.speechSynthesis?.cancel();
+    closeSocketIntentionally();
+});
 createSession();

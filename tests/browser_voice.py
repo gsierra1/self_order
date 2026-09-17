@@ -163,6 +163,49 @@ class BrowserVoiceTests(unittest.TestCase):
                         """)
                         page.goto(f"http://127.0.0.1:{port}")
                         expect(page.locator("#mic-button")).to_be_enabled()
+                        inactivity_result = page.evaluate("""
+                            async () => {
+                                const { InactivityMonitor } = await import(
+                                    '/static/inactivity.js?v=20260917-1'
+                                );
+                                const events = [];
+                                const delays = [];
+                                const scheduled = new Map();
+                                let nextId = 1;
+                                const monitor = new InactivityMonitor({
+                                    onPrompt: () => events.push('prompt'),
+                                    onWarning: () => events.push('warning'),
+                                    onTimeout: () => events.push('timeout'),
+                                    schedule: (callback, delay) => {
+                                        const id = nextId++;
+                                        delays.push(delay);
+                                        scheduled.set(id, callback);
+                                        return id;
+                                    },
+                                    cancel: id => scheduled.delete(id),
+                                });
+                                const advance = () => {
+                                    const [id, callback] = scheduled.entries().next().value;
+                                    scheduled.delete(id);
+                                    callback();
+                                };
+                                monitor.restart();
+                                advance();
+                                monitor.restart();
+                                advance();
+                                advance();
+                                advance();
+                                return { events, delays };
+                            }
+                        """)
+                        self.assertEqual(
+                            inactivity_result["events"],
+                            ["prompt", "prompt", "warning", "timeout"],
+                        )
+                        self.assertEqual(
+                            inactivity_result["delays"],
+                            [20000, 20000, 20000, 20000, 20000],
+                        )
                         detector_result = page.evaluate("""
                             async () => {
                                 const { EndOfSpeechDetector } = await import('/static/voice.js?v=20260917-5');
