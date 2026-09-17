@@ -286,6 +286,16 @@ class ConversationTests(unittest.TestCase):
         self.assertIn("<svg", response.text)
         self.assertIn("qr-path", response.text)
 
+    def test_frontend_resources_disable_browser_cache(self) -> None:
+        """Evita que una versión anterior del frontend sobreviva a un cambio."""
+        page_response = self.client.get("/")
+        script_response = self.client.get("/static/app.js")
+
+        self.assertIn("no-store", page_response.headers["cache-control"])
+        self.assertIn("no-store", script_response.headers["cache-control"])
+        self.assertIn("app.js?v=20260917-2", page_response.text)
+        self.assertIn("styles.css?v=20260917-2", page_response.text)
+
     def test_cancel_immediately_releases_reservation(self) -> None:
         """Cancelar sin esperar voice.ready no deja la sesión bloqueada."""
         with self.client.websocket_connect(self.url) as ws:

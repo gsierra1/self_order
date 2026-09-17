@@ -4,6 +4,8 @@ from pathlib import Path
 from fastapi import (
     FastAPI,
     HTTPException,
+    Request,
+    Response,
     WebSocket,
 )
 from fastapi.responses import FileResponse, JSONResponse
@@ -42,6 +44,27 @@ app = FastAPI(
     ),
     version="0.1.0",
 )
+
+
+@app.middleware("http")
+async def prevent_frontend_cache(request: Request, call_next) -> Response:
+    """Evita servir una interfaz anterior después de modificar el frontend.
+
+    Args:
+        request: Solicitud HTTP recibida por FastAPI.
+        call_next: Función que ejecuta la ruta o aplicación estática siguiente.
+
+    Returns:
+        Respuesta original con cabeceras que deshabilitan la caché cuando se
+        solicita el HTML principal o un recurso estático.
+    """
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = (
+            "no-store, no-cache, must-revalidate, max-age=0"
+        )
+        response.headers["Pragma"] = "no-cache"
+    return response
 
 
 app.mount(

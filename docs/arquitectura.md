@@ -208,6 +208,12 @@ identificadores tecnicos ni duplicar el catalogo.
 | `DELETE /api/sessions/{id}/cart/items/{line_id}/modifiers/{group_id}` | Quita un modificador opcional y recalcula la línea mediante `OrderService`. |
 | `/ws/sessions/{id}` | Recibe JSON de texto y bytes de audio; publica los eventos siguientes. |
 
+El HTML y los recursos bajo `/static/` se entregan sin caché durante esta etapa
+de desarrollo. Además, las referencias principales incluyen una versión. Esto
+evita que el navegador conserve JavaScript o CSS anteriores después de una
+corrección y muestre un comportamiento distinto del código que ejecuta el
+backend.
+
 Ejemplo de entrada WebSocket:
 
 ```json
@@ -481,7 +487,7 @@ no prueba que rindan bien para este menú, micrófono, ruido o cuenta.
 
 ### Validación de esta arquitectura
 
-El 17/09/2026 se ejecutaron 64 pruebas automáticas sin red ni credenciales: una
+El 17/09/2026 se ejecutaron 65 pruebas automáticas sin red ni credenciales: una
 simulación del SDK Live de Gemini, los flujos de WebSocket de voz, reglas del
 pedido y pago, y una prueba nueva que conecta `AlternateSpeechToText` y
 `AlternateOrderInterpreter` simulados con `OrderService` real. La última prueba
