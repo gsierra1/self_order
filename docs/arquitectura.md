@@ -535,16 +535,17 @@ conversación de terminal real agregó una Burger Clásica con Agua mediante
 posterior también aplicó el agregado y eliminación de tomate. La prueba fue
 contra la API real.
 
-Con `qwen/qwen3.8-27b`, las corridas de navegador y micrófono físico del mismo
-día comprobaron transcripción Gemini, altas y eliminación de líneas, vuelta
-desde pago, QR, tarjeta y caja, cierre y creación de una sesión nueva. Los logs
+Con `qwen/qwen3.8-27b`, las corridas de navegador y micrófono físico del 16 y
+17/09/2026 comprobaron transcripción Gemini, altas y eliminación de líneas,
+cantidades agrupadas, vuelta desde un método al selector, QR, tarjeta y caja,
+cierre y creación de una sesión nueva. Los logs
 registran turnos de voz completos entre aproximadamente 3,4 y 8,6 segundos,
 incluyendo el tiempo durante el cual habló la persona. La interpretación varió
 desde cerca de 1 segundo en altas simples hasta 21 segundos en una eliminación
 y 56 segundos en una consulta que el modelo interpretó incorrectamente como
 pago QR. Es evidencia funcional, pero no un benchmark controlado; confirma la
-necesidad de repetir la matriz formal con `openai/gpt-oss-20b` y medir una serie
-representativa antes de la demostración.
+necesidad de repetir una matriz formal con el modelo elegido para la demo y
+medir una serie representativa antes de un piloto.
 
 Las respuestas conversacionales pasan por `OrderToolsRuntime.sanitize_user_text`
 antes de llegar al frontend. Además de ocultar IDs internos, normaliza separadores

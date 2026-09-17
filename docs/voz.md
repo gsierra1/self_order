@@ -142,7 +142,7 @@ y localhost o HTTPS. Si PowerShell bloquea la activacion, usar la solucion tempo
 1. Tocar **Hablar**, permitir micrófono y esperar **Escuchando**.
 2. Decir «Quiero una Burger Clásica» y tocar **Enviar audio**. Debe preguntar la bebida;
    mostrar la hipótesis no debe agregar una línea.
-3. Hablar otra vez: «Con Coca y queso», y enviar. Debe aparecer una unidad por ARS 9.500.
+3. Hablar otra vez: «Con Sprite y queso», y enviar. Debe aparecer una unidad por ARS 9.500.
 4. Pedir una pizza: debe informar que no está disponible, sin agregarla.
 5. Apagar **Voz ON** y continuar escribiendo en la misma sesión.
 6. Confirmar el pedido. Deben bloquearse micrófono y escritura mientras se

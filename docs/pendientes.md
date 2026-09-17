@@ -6,17 +6,21 @@ verificacion registrada junto con su cambio.
 
 ## Antes de una demostracion formal
 
-- **Cierre formal de la matriz con proveedores reales:** las corridas del
-  16/09/2026 ya comprobaron en navegador y con micrófono físico la
-  transcripción Gemini, interpretación Groq, altas y eliminaciones, vuelta
-  desde pago, selección por voz de QR, tarjeta y caja, cierre del pedido y
-  creación de una sesión nueva. También se escuchó la síntesis del navegador.
-  Antes de la demostración falta repetir y registrar en una sola corrida, con
-  la configuración recomendada `openai/gpt-oss-20b`, producto incompleto,
-  producto agotado, reemplazo, varios extras y los tres pagos. Los últimos
-  registros extensos usan `qwen/qwen3.8-27b`, modelo que mostró respuestas
-  incompletas y mayor variación de latencia; por eso no sustituyen esa corrida
-  final. Registrar modelo, fecha, resultado y latencia de cada caso.
+En la revisión del 17/09/2026, el único comportamiento visible de la demo que
+continúa sin implementar es el cierre automático del turno por silencio. Los
+demás puntos de esta sección son verificaciones y mediciones previas a la
+presentación, no funciones ausentes del recorrido actual.
+
+- **Cierre formal de la matriz con proveedores reales:** las corridas del 16 y
+  17/09/2026 ya comprobaron en navegador y con micrófono físico transcripción
+  Gemini, interpretación Groq, altas y eliminaciones, cantidades agrupadas,
+  vuelta desde un método al selector, selección de QR, tarjeta y caja, cierre
+  del pedido y creación de una sesión nueva. También se escuchó la síntesis del
+  navegador. Las 65 pruebas automáticas cubren reglas, adaptadores, transporte,
+  caché del frontend y pago mediante simulaciones. Antes de la demostración
+  falta registrar en una sola corrida real, con el modelo elegido para exponer,
+  producto incompleto, producto agotado, reemplazo, varios extras y finalización
+  de los tres pagos. Registrar modelo, fecha, resultado y latencia de cada caso.
 - **Prueba ambiental en el equipo de la demo:** el funcionamiento básico del
   micrófono y los parlantes físicos ya fue comprobado. Falta evaluar ruido de
   fondo representativo, distancia al micrófono, cancelación durante una frase,
@@ -30,8 +34,8 @@ verificacion registrada junto con su cambio.
   texto provisional no debe agregar productos al carrito.
 - **Estabilidad de IA:** medir por separado transcripcion y chat: latencia,
   errores 429/503 y tasa de exito para un conjunto de pedidos representativo.
-  Definir ambos modelos y el plan de cuenta con evidencia, no solo por
-  disponibilidad declarada.
+  Esta medición no bloquea la preparación del speech, pero sí hace falta para
+  justificar qué modelos y plan de cuenta se usarían en un piloto.
 
 ## Para un piloto de kiosco
 
