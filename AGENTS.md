@@ -3,8 +3,7 @@
 ## Objetivo y alcance
 
 Construir un autoservicio conversacional de pedidos por voz, con escritura
-alternativa y actualización visual del pedido. El proyecto también debe poder
-explicarse y defenderse técnicamente por su autora. Consultar `docs/README.md`
+alternativa y actualización visual del pedido. Consultar `docs/README.md`
 antes de modificar comportamiento o arquitectura.
 
 ## Documentación obligatoria

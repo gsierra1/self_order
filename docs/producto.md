@@ -20,12 +20,6 @@ para explorar pedidos por voz.
 - Después de elegir un método de pago se muestra únicamente su flujo. Volver
   atrás permite elegir otro método; desde el selector se puede volver al carrito.
 
-Ejemplo: «Quiero una Burger Clásica» requiere preguntar la bebida pues la misma 
-no es opcional sino obligatoria. Si la persona responde «con Coca y queso», 
-recién entonces se agrega la hamburguesa configurada y se actualiza el importe. 
-El queso es un extra opcional; no se agrega si la persona no lo indicó. 
-«Quiero una pizza» no debe crear un producto inexistente.
-
 ## Estados en la interfaz
 
 Hay dos estados distintos que la interfaz debe representar:
