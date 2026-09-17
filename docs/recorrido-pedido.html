@@ -261,7 +261,8 @@
     <section class="intro">
       <h2>1. Encender el proyecto</h2>
       <p>Desde la ra&iacute;z del repositorio, el siguiente comando inicia FastAPI. La aplicaci&oacute;n carga el
-        men&uacute;, sirve el frontend y queda a la espera de sesiones.</p>
+        men&uacute;, entrega al navegador los archivos necesarios para construir el frontend y queda a la espera de
+        sesiones.</p>
       <pre class="command"><code>.\.venv\Scripts\Activate.ps1
 python -m uvicorn backend.api.app:app --reload</code></pre>
       <p>Luego se abre <code>http://127.0.0.1:8000</code>.</p>
@@ -365,8 +366,9 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
       <h2>3. Conversaci&oacute;n completa: agregar, consultar, modificar, eliminar y pagar</h2>
       <p class="example-phrase">Este ejemplo muestra el recorrido
         esperado de cada operaci&oacute;n.</p>
-      <p>Las tools indicadas son las operaciones que el LLM configurado puede proponer. <code>OrderService</code> decide
-        si son v&aacute;lidas.</p>
+      <p>El LLM configurado interpreta lenguaje natural y puede proponer tools. No decide precios, stock ni
+        modifica el carrito directamente. La autoridad final es <code>OrderService</code>, que decide si las tools
+        propuestas son v&aacute;lidas. La misma regla protege voz, texto y botones del frontend.</p>
       <table>
         <thead>
           <tr>
@@ -379,15 +381,15 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           <tr>
             <td>&laquo;Quiero una pizza.&raquo;</td>
             <td><code>process_turn()</code> de <code>conversation_socket.py</code> env&iacute;a el texto a
-              <code>send_message()</code>. El int&eacute;rprete compara el pedido con el cat&aacute;logo construido por
-              <code>OrderToolsRuntime.build_system_instruction()</code> o por la implementaci&oacute;n equivalente
-              del proveedor y debe informar que no existe. Como defensa adicional, si propusiera
+              <code>send_message()</code>. El int&eacute;rprete compara el pedido con los productos del men&uacute; y debe
+              informar que no existe. Como defensa adicional, si propusiera
               <code>add_item(product_id=&quot;PIZZA&quot;)</code>, <code>Menu.get_product()</code> consultar&iacute;a
               <code>self.products.get(product_id)</code>, devolver&iacute;a <code>None</code> y
               <code>OrderService.add_item()</code> rechazar&iacute;a la operaci&oacute;n con <code>ValueError</code>.
             </td>
             <td>El asistente informa que no hay pizza. El carrito contin&uacute;a vac&iacute;o y no se publica
-              <code>cart.updated</code>.</td>
+              <code>cart.updated</code>.
+            </td>
           </tr>
           <tr>
             <td>&laquo;Quiero una Burger Cl&aacute;sica.&raquo;</td>
@@ -395,8 +397,11 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
               <code>_get_missing_required_groups()</code> llama a
               <code>Menu.get_product(&quot;BURGER_CLASICA&quot;)</code> y recorre sus
               <code>modifier_groups</code>. La b&uacute;squeda devuelve el producto porque su ID s&iacute; existe;
-              despu&eacute;s encuentra <code>drink</code> con <code>required=true</code> y sin una opci&oacute;n seleccionada.
-              La tool devuelve <code>needs_clarification</code> sin llamar a <code>OrderService.add_item()</code>.
+              despu&eacute;s encuentra <code>drink</code> con <code>required=true</code> y sin una opci&oacute;n
+              seleccionada.
+              Esta verificaci&oacute;n se ejecuta en cada llamada a las tools <code>add_item()</code> y
+              <code>replace_item()</code>; no interviene al consultar, eliminar o cambiar un modificador. La tool
+              devuelve <code>needs_clarification</code> sin llamar a <code>OrderService.add_item()</code>.
             </td>
             <td>El asistente pregunta qu&eacute; bebida quiere. Todav&iacute;a no aparece ninguna hamburguesa en el
               carrito.</td>
@@ -444,45 +449,34 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
             <td>El pedido queda pendiente de pago y el backend genera el n&uacute;mero para retirar.</td>
           </tr>
           <tr>
-            <td>La persona toca QR o dice &laquo;Pago con QR&raquo;.</td>
-            <td>El frontend o la tool de selecci&oacute;n registra el m&eacute;todo de pago. La demo muestra un QR
-              escaneable que contiene texto sin URL y, tras cinco segundos, completa el pago simulado.</td>
-            <td>Se muestra el n&uacute;mero de pedido para retirar en caja y una cuenta regresiva de quince segundos
-              antes de abrir una sesi&oacute;n nueva.</td>
-          </tr>
-          <tr>
-            <td>La persona toca <strong>Atr&aacute;s</strong> desde QR, tarjeta o caja.</td>
+            <td>Si la persona se arrepiente, toca <strong>Atr&aacute;s</strong> desde QR, tarjeta o caja.</td>
             <td><code>return_to_payment_methods()</code> limpia solo el m&eacute;todo seleccionado y conserva el estado
               <code>PAYMENT_PENDING</code>. Otro <strong>Atr&aacute;s</strong> desde el selector usa
               <code>return_to_order()</code>.
             </td>
             <td>Primero reaparecen QR, tarjeta y caja; solo el segundo paso vuelve al carrito editable.</td>
           </tr>
+          <tr>
+            <td>Finalmente, la persona toca QR o dice &laquo;Pago con QR&raquo;.</td>
+            <td>El frontend o la tool <code>select_payment_method()</code> registra el m&eacute;todo mediante
+              <code>OrderService.select_payment_method()</code>. La interfaz oculta las otras opciones y muestra
+              el QR de demostraci&oacute;n.</td>
+            <td>Durante cinco segundos se muestra el QR mientras se simula el pago.</td>
+          </tr>
+          <tr>
+            <td>La persona espera la finalizaci&oacute;n del pago.</td>
+            <td><code>completePayment()</code> llama a
+              <code>POST /api/sessions/{session_id}/payment/complete</code>. El endpoint ejecuta
+              <code>OrderService.complete_payment()</code> y la sesi&oacute;n pasa a <code>CONFIRMED</code>. Despu&eacute;s de
+              quince segundos, <code>startNewSession()</code> solicita otra sesi&oacute;n al backend.</td>
+            <td>Aparecen &laquo;Pago confirmado&raquo;, el n&uacute;mero de pedido y la cuenta regresiva. Al terminar, la
+              pantalla vuelve a quedar vac&iacute;a y lista para un nuevo pedido con otro <code>session_id</code>.</td>
+          </tr>
         </tbody>
       </table>
-      <p>Si luego se agregan tres unidades con el mismo producto, bebida y extras que una l&iacute;nea existente,
-        <code>OrderService.add_item()</code> las consolida: el carrito muestra una sola l&iacute;nea con cantidad
-        cuatro. Si la persona dice &laquo;elimin&aacute; una&raquo;, el int&eacute;rprete debe proponer
-        <code>adjust_quantity(delta=-1)</code> y quedan tres; <code>remove_item()</code> se reserva para eliminar la
-        l&iacute;nea completa.
-      </p>
+
     </section>
 
-
-    <section class="grid">
-      <article class="notes">
-        <h2>Lo que el LLM puede y no puede hacer</h2>
-        <p>El LLM configurado interpreta lenguaje natural y puede proponer una tool. No decide precios, stock ni
-          modifica el carrito directamente.</p>
-        <p>La autoridad final es <code>OrderService</code>. Por eso la misma regla protege voz, texto y botones del
-          frontend.</p>
-      </article>
-      <article class="notes">
-        <h2>Si falta informaci&oacute;n</h2>
-        <p>Si la persona dijera solo &laquo;quiero una Burger Cl&aacute;sica&raquo;, <code>add_item()</code> no agrega
-          una l&iacute;nea incompleta: devuelve que falta el grupo obligatorio <code>Bebida</code>.</p>
-      </article>
-    </section>
 
   </main>
 </body>
