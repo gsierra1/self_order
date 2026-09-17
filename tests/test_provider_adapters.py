@@ -193,7 +193,9 @@ class ProviderFactoryTests(unittest.TestCase):
         with patch("backend.ai.openai_interpreter.create_openai_client", return_value=client):
             interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
             response = interpreter.send_message("Quiero una Burger Clasica con Agua")
-        self.assertEqual(response, "Agregue tu Burger Clasica con Agua.")
+        self.assertIn("Agregue tu Burger Clasica con Agua.", response)
+        self.assertIn("agregar algún extra", response)
+        self.assertIn("confirmar el pedido", response)
         self.assertEqual(service.get_cart().total, 8500)
         self.assertEqual(client.chat.completions.create.call_count, 2)
 
@@ -287,6 +289,55 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertNotIn("Línea", text)
         self.assertIn("Burger Doble (cantidad: 1; modificadores: Agua, queso;", text)
         self.assertIn("11.500 pesos argentinos", text)
+
+    def test_runtime_preserves_thousands_and_removes_concatenated_line_numbers(self) -> None:
+        """Separa ítems pegados sin confundir miles con números de una lista."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        runtime = OrderToolsRuntime(service)
+
+        text = runtime.sanitize_user_text(
+            "Burger Clásica – 12.500 pesos argentinos2. "
+            "Burger Doble – 10.500 pesos argentinosEl total es 23.000 pesos argentinos"
+        )
+
+        self.assertIn("12.500 pesos argentinos", text)
+        self.assertIn("Burger Doble", text)
+        self.assertIn("23.000 pesos argentinos", text)
+        self.assertNotIn("argentinos2.", text)
+
+    def test_runtime_adds_a_contextual_next_step_after_cart_changes(self) -> None:
+        """Ofrece extras pendientes y confirmación después de una mutación."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+        runtime = OrderToolsRuntime(service)
+
+        text = runtime.ensure_next_step("Agregué la Burger Clásica.", True)
+
+        self.assertIn("agregar algún extra", text)
+        self.assertIn("pedir algo más", text)
+        self.assertIn("confirmar el pedido", text)
+
+    def test_runtime_stops_offering_extras_when_all_are_selected(self) -> None:
+        """Ofrece continuar o confirmar cuando ya no quedan extras disponibles."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        service.add_item(
+            "BURGER_CLASICA",
+            1,
+            {
+                "drink": "WATER",
+                "extra_tomato": "ADD_TOMATO",
+                "extra_lettuce": "ADD_LETTUCE",
+                "extra_ham": "ADD_HAM",
+                "extra_cheese": "ADD_CHEESE",
+            },
+        )
+        runtime = OrderToolsRuntime(service)
+
+        text = runtime.ensure_next_step("Completé los extras.", True)
+
+        self.assertNotIn("agregar algún extra", text)
+        self.assertIn("pedir algo más", text)
+        self.assertIn("confirmar el pedido", text)
 
     def test_runtime_removes_numbered_choices_and_expands_etcetera(self) -> None:
         """Evita leer numeración de alternativas y abreviaturas técnicas."""
@@ -442,7 +493,9 @@ class ProviderFactoryTests(unittest.TestCase):
         with patch("backend.ai.groq_interpreter.create_groq_client", return_value=client):
             interpreter = GroqOrderInterpreter(service, "openai/gpt-oss-20b")
             response = interpreter.send_message("Quiero una Burger Clasica con Agua")
-        self.assertEqual(response, "Agregue tu Burger Clasica con Agua.")
+        self.assertIn("Agregue tu Burger Clasica con Agua.", response)
+        self.assertIn("agregar algún extra", response)
+        self.assertIn("confirmar el pedido", response)
         self.assertEqual(service.get_cart().total, 8500)
         self.assertEqual(client.chat.completions.create.call_count, 2)
         self.assertEqual(
@@ -481,7 +534,9 @@ class ProviderFactoryTests(unittest.TestCase):
             interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
             response = interpreter.send_message("Quiero una hamburguesa simple con agua")
 
-        self.assertEqual(response, "Agregué tu Burger Clásica con agua.")
+        self.assertIn("Agregué tu Burger Clásica con agua.", response)
+        self.assertIn("agregar algún extra", response)
+        self.assertIn("confirmar el pedido", response)
         self.assertEqual(service.get_cart().total, 8500)
         self.assertEqual(len(service.get_cart().items), 1)
         self.assertEqual(client.chat.completions.create.call_count, 3)

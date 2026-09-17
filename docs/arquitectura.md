@@ -88,6 +88,10 @@ arquitectura hexagonal completa con todos sus puertos formalizados.
 
 El cambio de carrito puede llegar antes de la respuesta textual final. No hay
 streaming de tokens de respuesta ni procesamiento parcial de pedidos hablados.
+Después de una mutación válida, el runtime completa las respuestas que no indican
+cómo continuar: ofrece extras todavía disponibles y permite pedir otro producto
+o confirmar. La decisión usa el carrito y el catálogo validados, no una lista
+inventada por el modelo.
 
 ## Tools y reglas
 
@@ -492,7 +496,7 @@ no prueba que rindan bien para este menú, micrófono, ruido o cuenta.
 
 ### Validación de esta arquitectura
 
-El 17/09/2026 se ejecutaron 66 pruebas automáticas sin red ni credenciales: una
+El 17/09/2026 se ejecutaron 69 pruebas automáticas sin red ni credenciales: una
 simulación del SDK Live de Gemini, los flujos de WebSocket de voz, reglas del
 pedido y pago, y una prueba nueva que conecta `AlternateSpeechToText` y
 `AlternateOrderInterpreter` simulados con `OrderService` real. La última prueba

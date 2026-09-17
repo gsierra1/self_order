@@ -17,6 +17,7 @@ from backend.ai.tools import (
     create_return_to_payment_methods_tool,
     create_select_payment_method_tool,
 )
+from backend.domain.session import SessionState
 from backend.logging.event_logger import log_event
 from backend.services.order_service import OrderService
 
@@ -174,7 +175,19 @@ CATALOGO ACTUAL:
         text = re.sub(r"\befectivo\b", "en caja", text, flags=re.IGNORECASE)
         text = re.sub(r"\betc\.?\b", "etcétera", text, flags=re.IGNORECASE)
         text = re.sub(r"\s*\(la opción\s+[\"“']?mejor[\"”']?\)", "", text, flags=re.IGNORECASE)
-        text = re.sub(r"\b\d+[.)](?=\s)", "", text)
+        text = re.sub(
+            r"(pesos argentinos)(?=\d+[.)]\s)",
+            r"\1\n",
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(
+            r"(pesos argentinos)(?=[A-ZÁÉÍÓÚ¿])",
+            r"\1. ",
+            text,
+            flags=re.IGNORECASE,
+        )
+        text = re.sub(r"(?<![\d.])\b\d+[.)](?=\s)", "", text)
         text = re.sub(r"[*`]+", "", text)
         normalized = self._normalize_cart_tables(text)
         if re.search(
@@ -184,6 +197,51 @@ CATALOGO ACTUAL:
         ):
             return self._build_cart_summary()
         return normalized
+
+    def ensure_next_step(self, text: str, transaction_applied: bool) -> str:
+        """Agrega una continuación concreta después de modificar el carrito.
+
+        Args:
+            text: Respuesta ya normalizada para mostrar a la persona.
+            transaction_applied: Indica si el turno cambió realmente el pedido.
+
+        Returns:
+            Respuesta original o respuesta completada con extras, continuidad y
+            confirmación según el carrito validado.
+        """
+        if (
+            not transaction_applied
+            or self.service.session.state is not SessionState.ACTIVE
+            or not self.service.get_cart().items
+        ):
+            return text
+
+        has_available_extra = any(
+            not group.required
+            and group.id not in item.selected_modifiers
+            and any(option.available for option in group.options)
+            for item in self.service.get_cart().items
+            for group in self.service.menu.get_product(item.product_id).modifier_groups
+        )
+        ending = text[-240:].lower()
+        if "confirm" in ending and "?" in ending:
+            if not has_available_extra or "extra" in ending:
+                return text
+            return f"{text} ¿Querés agregar algún extra antes de confirmar?"
+
+        text = re.sub(
+            r"\s*¿?(?:quer[eé]s\s+)?(?:algo|alguna cosa)\s+m[aá]s\??\s*$",
+            "",
+            text,
+            flags=re.IGNORECASE,
+        ).rstrip()
+        if has_available_extra:
+            question = (
+                "¿Querés agregar algún extra, pedir algo más o confirmar el pedido?"
+            )
+        else:
+            question = "¿Querés pedir algo más o confirmar el pedido?"
+        return f"{text} {question}".strip()
 
     def _build_cart_summary(self) -> str:
         """Construye una descripción visible desde el carrito validado.

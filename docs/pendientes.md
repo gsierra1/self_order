@@ -15,7 +15,7 @@ registrar la corrida final.
   Gemini, interpretación Groq, altas y eliminaciones, cantidades agrupadas,
   vuelta desde un método al selector, selección de QR, tarjeta y caja, cierre
   del pedido y creación de una sesión nueva. También se escuchó la síntesis del
-  navegador. Las 66 pruebas automáticas cubren reglas, adaptadores, transporte,
+  navegador. Las 69 pruebas automáticas cubren reglas, adaptadores, transporte,
   caché del frontend y pago mediante simulaciones. Antes de la demostración
   falta registrar en una sola corrida real, con el modelo elegido para exponer,
   producto incompleto, producto agotado, reemplazo, varios extras y finalización

@@ -193,6 +193,11 @@ sesion ya no existe en memoria, el backend cierra con 4404 y la interfaz comienz
 un pedido nuevo. La recuperacion despues de reiniciar el proceso requiere una
 base de datos y queda fuera de la demo actual.
 
+Cuando llega la transcripción final, el frontend cambia el estado de «Procesando
+audio» a «Audio transcripto. Procesando pedido». Así se distingue la espera del
+STT de la interpretación y ejecución posterior del pedido, aunque ambas formen
+parte del mismo turno para la persona.
+
 
 ## Adaptador de transcripción y selección de proveedor
 

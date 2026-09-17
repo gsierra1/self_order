@@ -335,7 +335,8 @@ class OpenAIOrderInterpreter(OrderInterpreter):
                         "No pude completar la interpretación del pedido. El carrito "
                         "no cambió; repetí el pedido o escribilo."
                     )
-                return self.runtime.sanitize_user_text(content)
+                safe_text = self.runtime.sanitize_user_text(content)
+                return self.runtime.ensure_next_step(safe_text, transaction_applied)
             if tool_round >= self.max_tool_rounds:
                 raise RuntimeError("Se alcanzo el maximo de ciclos de tools permitidos.")
             calls = []

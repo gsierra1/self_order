@@ -10,6 +10,7 @@ from backend.ai.errors import (
     classify_gemini_transport_error,
 )
 from backend.ai.gemini_client import create_gemini_client
+from backend.ai.order_tools_runtime import OrderToolsRuntime
 from backend.ai.tools import (
     create_add_item_tool,
     create_adjust_quantity_tool,
@@ -755,6 +756,10 @@ CATÁLOGO ACTUAL:
             )
 
         final_text = self._sanitize_user_text(response.text or "")
+        final_text = OrderToolsRuntime(self.service).ensure_next_step(
+            final_text,
+            transaction_applied,
+        )
 
         log_event(
             "DEBUG",

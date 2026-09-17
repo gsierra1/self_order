@@ -720,7 +720,10 @@ function onServerMessage(event) {
         maybeStartRecording();
     } else if (type === "voice.transcript") {
         transcript.textContent = data.final ? "Audio enviado." : `Escuchando (provisional): ${data.text}`;
-        if (data.final) appendMessage("Vos (voz)", data.text, "user");
+        if (data.final) {
+            appendMessage("Vos (voz)", data.text, "user");
+            setStatus("Audio transcripto. Procesando pedido...", "processing");
+        }
     } else if (type === "assistant.text") {
         appendMessage("Asistente", data.text, "assistant");
         phase = "ready";
