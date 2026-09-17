@@ -381,7 +381,8 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           <tr>
             <td>&laquo;Quiero una pizza.&raquo;</td>
             <td><code>process_turn()</code> de <code>conversation_socket.py</code> env&iacute;a el texto a
-              <code>send_message()</code>. El int&eacute;rprete compara el pedido con los productos del men&uacute; y debe
+              <code>send_message()</code>. El int&eacute;rprete compara el pedido con los productos del men&uacute; y
+              debe
               informar que no existe. Como defensa adicional, si propusiera
               <code>add_item(product_id=&quot;PIZZA&quot;)</code>, <code>Menu.get_product()</code> consultar&iacute;a
               <code>self.products.get(product_id)</code>, devolver&iacute;a <code>None</code> y
@@ -459,17 +460,21 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           <tr>
             <td>Finalmente, la persona toca QR o dice &laquo;Pago con QR&raquo;.</td>
             <td>El frontend o la tool <code>select_payment_method()</code> registra el m&eacute;todo mediante
-              <code>OrderService.select_payment_method()</code>. La interfaz oculta las otras opciones y muestra
-              el QR de demostraci&oacute;n.</td>
+              <code>OrderService.select_payment_method()</code>. La interfaz muestra
+              el QR de demostraci&oacute;n.
+            </td>
             <td>Durante cinco segundos se muestra el QR mientras se simula el pago.</td>
           </tr>
           <tr>
             <td>La persona espera la finalizaci&oacute;n del pago.</td>
             <td><code>completePayment()</code> llama a
               <code>POST /api/sessions/{session_id}/payment/complete</code>. El endpoint ejecuta
-              <code>OrderService.complete_payment()</code> y la sesi&oacute;n pasa a <code>CONFIRMED</code>. Despu&eacute;s de
-              quince segundos, <code>startNewSession()</code> solicita otra sesi&oacute;n al backend.</td>
-            <td>Aparecen &laquo;Pago confirmado&raquo;, el n&uacute;mero de pedido y la cuenta regresiva. Al terminar, la
+              <code>OrderService.complete_payment()</code> y la sesi&oacute;n pasa a <code>CONFIRMED</code>.
+              Despu&eacute;s de
+              quince segundos, <code>startNewSession()</code> solicita otra sesi&oacute;n al backend.
+            </td>
+            <td>Aparecen &laquo;Pago confirmado&raquo;, el n&uacute;mero de pedido y la cuenta regresiva. Al terminar,
+              la
               pantalla vuelve a quedar vac&iacute;a y lista para un nuevo pedido con otro <code>session_id</code>.</td>
           </tr>
         </tbody>
