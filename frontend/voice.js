@@ -209,6 +209,7 @@ export function speak(text, onError) {
  */
 function prepareSpeechText(text) {
     return text
+        .replace(/^\s*-\s+/gm, "")
         .replace(
             /\$\s*(\d+(?:\.\d{3})*)\s+pesos argentinos/gi,
             (_, amount) => `${amount.replace(/\./g, "")} pesos argentinos`

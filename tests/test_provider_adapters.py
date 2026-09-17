@@ -193,9 +193,12 @@ class ProviderFactoryTests(unittest.TestCase):
         with patch("backend.ai.openai_interpreter.create_openai_client", return_value=client):
             interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
             response = interpreter.send_message("Quiero una Burger Clasica con Agua")
-        self.assertIn("Agregue tu Burger Clasica con Agua.", response)
+        self.assertNotIn("Agregue tu Burger Clasica con Agua.", response)
+        self.assertIn("- Burger Clásica. Cantidad: 1.", response)
+        self.assertIn("Bebida: Agua.", response)
         self.assertIn("agregar algún extra", response)
         self.assertIn("confirmar el pedido", response)
+        self.assertEqual(response.count("¿Querés"), 1)
         self.assertEqual(service.get_cart().total, 8500)
         self.assertEqual(client.chat.completions.create.call_count, 2)
 
@@ -313,9 +316,13 @@ class ProviderFactoryTests(unittest.TestCase):
 
         text = runtime.ensure_next_step("Agregué la Burger Clásica.", True)
 
+        self.assertNotIn("Agregué la Burger Clásica.", text)
+        self.assertIn("- Burger Clásica. Cantidad: 1.", text)
+        self.assertIn("Bebida: Agua.", text)
         self.assertIn("agregar algún extra", text)
         self.assertIn("pedir algo más", text)
         self.assertIn("confirmar el pedido", text)
+        self.assertEqual(text.count("¿Querés"), 1)
 
     def test_runtime_stops_offering_extras_when_all_are_selected(self) -> None:
         """Ofrece continuar o confirmar cuando ya no quedan extras disponibles."""
@@ -336,8 +343,11 @@ class ProviderFactoryTests(unittest.TestCase):
         text = runtime.ensure_next_step("Completé los extras.", True)
 
         self.assertNotIn("agregar algún extra", text)
+        self.assertIn("Extras: Tomate, Lechuga, Jamón, Queso.", text)
+        self.assertNotIn("Extra de tomate: Tomate", text)
         self.assertIn("pedir algo más", text)
         self.assertIn("confirmar el pedido", text)
+        self.assertEqual(text.count("¿Querés"), 1)
 
     def test_runtime_removes_numbered_choices_and_expands_etcetera(self) -> None:
         """Evita leer numeración de alternativas y abreviaturas técnicas."""
@@ -493,9 +503,12 @@ class ProviderFactoryTests(unittest.TestCase):
         with patch("backend.ai.groq_interpreter.create_groq_client", return_value=client):
             interpreter = GroqOrderInterpreter(service, "openai/gpt-oss-20b")
             response = interpreter.send_message("Quiero una Burger Clasica con Agua")
-        self.assertIn("Agregue tu Burger Clasica con Agua.", response)
+        self.assertNotIn("Agregue tu Burger Clasica con Agua.", response)
+        self.assertIn("- Burger Clásica. Cantidad: 1.", response)
+        self.assertIn("Bebida: Agua.", response)
         self.assertIn("agregar algún extra", response)
         self.assertIn("confirmar el pedido", response)
+        self.assertEqual(response.count("¿Querés"), 1)
         self.assertEqual(service.get_cart().total, 8500)
         self.assertEqual(client.chat.completions.create.call_count, 2)
         self.assertEqual(
@@ -534,9 +547,12 @@ class ProviderFactoryTests(unittest.TestCase):
             interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
             response = interpreter.send_message("Quiero una hamburguesa simple con agua")
 
-        self.assertIn("Agregué tu Burger Clásica con agua.", response)
+        self.assertNotIn("Agregué tu Burger Clásica con agua.", response)
+        self.assertIn("- Burger Clásica. Cantidad: 1.", response)
+        self.assertIn("Bebida: Agua.", response)
         self.assertIn("agregar algún extra", response)
         self.assertIn("confirmar el pedido", response)
+        self.assertEqual(response.count("¿Querés"), 1)
         self.assertEqual(service.get_cart().total, 8500)
         self.assertEqual(len(service.get_cart().items), 1)
         self.assertEqual(client.chat.completions.create.call_count, 3)

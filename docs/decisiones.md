@@ -316,3 +316,33 @@ siendo solo visual y únicamente el texto final puede llegar al carrito.
 sintético. Una pausa de 1,4 segundos se interpreta como fin del turno. Un piloto
 debe calibrarlos con el micrófono, ruido y distancia reales, o reemplazar este
 detector por uno acústico más avanzado sin cambiar el protocolo del backend.
+
+## 14. Construir el resumen del carrito desde el backend
+
+**Estado:** adoptada e implementada el 17/09/2026.
+
+**Contexto comprobado:** distintos modelos redactaron líneas numeradas que la voz
+leyó como cantidades, repitieron nombres como «Extra de tomate: Tomate» y
+formularon varias veces la pregunta para continuar. El carrito y sus precios eran
+correctos; la inconsistencia estaba en la presentación generada por el LLM.
+
+**Alternativas consideradas:** seguir ampliando el prompt; corregir frases con
+expresiones regulares; o construir el resumen desde el snapshot validado. El
+prompt no garantiza formato y las correcciones de texto se vuelven frágiles ante
+cambios de modelo.
+
+**Decisión adoptada:** después de una mutación válida y mientras la sesión está
+`ACTIVE`, `OrderToolsRuntime` descarta la redacción libre de cierre y presenta el
+carrito real. Usa guiones sin índices, cantidad con etiqueta, modificadores
+obligatorios por grupo, opcionales bajo `Extras`, precios y total calculados por
+`OrderService`, y una única pregunta para continuar o confirmar.
+
+**Consecuencias:** Groq, OpenAI y Gemini muestran el mismo formato; la voz deja de
+depender de cómo cada modelo enumera productos. Las respuestas sin mutaciones,
+las aclaraciones y el flujo de pago conservan la redacción conversacional porque
+necesitan responder a la intención concreta del turno.
+
+**Límites:** el resumen describe el estado completo después de cada cambio, por
+lo que puede resultar largo en carritos grandes. Antes de producción se deberá
+evaluar una versión incremental o una síntesis abreviada sin perder la referencia
+visual al carrito.

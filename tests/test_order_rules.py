@@ -277,9 +277,13 @@ class OrderRulesTests(unittest.TestCase):
             "Agregá una clásica con queso y Coca, y una doble con Sprite."
         )
 
-        self.assertIn("Listo", response)
+        self.assertNotIn("Listo", response)
+        self.assertIn("- Burger Clásica. Cantidad: 1.", response)
+        self.assertIn("- Burger Doble. Cantidad: 1.", response)
+        self.assertNotRegex(response, r"(?m)^\s*\d+[.)]")
         self.assertIn("agregar algún extra", response)
         self.assertIn("confirmar el pedido", response)
+        self.assertEqual(response.count("¿Querés"), 1)
         self.assertEqual(len(self.service.get_cart().items), 2)
         self.assertEqual(orchestrator._send_to_gemini.call_count, 2)
 

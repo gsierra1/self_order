@@ -88,10 +88,11 @@ arquitectura hexagonal completa con todos sus puertos formalizados.
 
 El cambio de carrito puede llegar antes de la respuesta textual final. No hay
 streaming de tokens de respuesta ni procesamiento parcial de pedidos hablados.
-Después de una mutación válida, el runtime completa las respuestas que no indican
-cómo continuar: ofrece extras todavía disponibles y permite pedir otro producto
-o confirmar. La decisión usa el carrito y el catálogo validados, no una lista
-inventada por el modelo.
+Después de una mutación válida sobre un carrito activo, el runtime reemplaza la
+redacción libre del LLM por un resumen construido desde el carrito validado. Cada
+línea usa un guion, identifica la cantidad, separa modificadores obligatorios y
+agrupa los adicionales como `Extras`. Al final ofrece una sola vez agregar extras
+todavía disponibles, pedir otro producto o confirmar.
 
 ## Tools y reglas
 

@@ -101,7 +101,12 @@ class BrowserAssistant:
             1,
             {"drink": "WATER", "extra_cheese": "ADD_CHEESE"},
         )
-        return "Agregué tu hamburguesa. El total es 9.500 pesos argentinos."
+        return (
+            "Pedido actualizado.\n"
+            "- Burger Clásica. Cantidad: 1.\n"
+            "Bebida: Agua. Extras: Queso.\n"
+            "Total: $9.500 pesos argentinos."
+        )
 
 
 def create_browser_assistant(service) -> BrowserAssistant:
@@ -160,7 +165,7 @@ class BrowserVoiceTests(unittest.TestCase):
                         expect(page.locator("#mic-button")).to_be_enabled()
                         detector_result = page.evaluate("""
                             async () => {
-                                const { EndOfSpeechDetector } = await import('/static/voice.js?v=20260917-4');
+                                const { EndOfSpeechDetector } = await import('/static/voice.js?v=20260917-5');
                                 const detector = new EndOfSpeechDetector({
                                     speechThreshold: 0.01,
                                     minimumSpeechMs: 200,
@@ -205,6 +210,14 @@ class BrowserVoiceTests(unittest.TestCase):
                         )
                         self.assertFalse(
                             any("9 500" in text or "9.500" in text for text in spoken_texts),
+                            spoken_texts,
+                        )
+                        self.assertFalse(
+                            any("- Burger" in text for text in spoken_texts),
+                            spoken_texts,
+                        )
+                        self.assertTrue(
+                            any("Cantidad: 1" in text for text in spoken_texts),
                             spoken_texts,
                         )
                         expect(page.locator("#cart-total")).to_have_text("ARS 9.500")

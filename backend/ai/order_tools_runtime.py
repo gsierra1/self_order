@@ -205,14 +205,15 @@ CATALOGO ACTUAL:
         return normalized
 
     def ensure_next_step(self, text: str, transaction_applied: bool) -> str:
-        """Agrega una continuación concreta después de modificar el carrito.
+        """Reemplaza la redacción libre por un resumen y una continuación únicos.
 
         Args:
-            text: Respuesta ya normalizada para mostrar a la persona.
+            text: Respuesta normalizada del proveedor, conservada si el turno no
+                modificó un carrito activo.
             transaction_applied: Indica si el turno cambió realmente el pedido.
 
         Returns:
-            Respuesta original o respuesta completada con extras, continuidad y
+            Respuesta original o resumen determinista con extras, continuidad y
             confirmación según el carrito validado.
         """
         if (
@@ -229,25 +230,14 @@ CATALOGO ACTUAL:
             for item in self.service.get_cart().items
             for group in self.service.menu.get_product(item.product_id).modifier_groups
         )
-        ending = text[-240:].lower()
-        if "confirm" in ending and "?" in ending:
-            if not has_available_extra or "extra" in ending:
-                return text
-            return f"{text} ¿Querés agregar algún extra antes de confirmar?"
-
-        text = re.sub(
-            r"\s*¿?(?:quer[eé]s\s+)?(?:algo|alguna cosa)\s+m[aá]s\??\s*$",
-            "",
-            text,
-            flags=re.IGNORECASE,
-        ).rstrip()
+        summary = "Pedido actualizado.\n" + self._build_cart_summary()
         if has_available_extra:
             question = (
                 "¿Querés agregar algún extra, pedir algo más o confirmar el pedido?"
             )
         else:
             question = "¿Querés pedir algo más o confirmar el pedido?"
-        return f"{text} {question}".strip()
+        return f"{summary}\n{question}"
 
     def _build_cart_summary(self) -> str:
         """Construye una descripción visible desde el carrito validado.
@@ -262,18 +252,29 @@ CATALOGO ACTUAL:
                 "El carrito sigue vacío. Todavía no se aplicó ningún cambio; "
                 "indicame los datos obligatorios que faltan para agregar el producto."
             )
-        lines = []
+        lines: list[str] = []
         for item in cart.items:
             details = self.service.menu.get_modifier_details(
                 item.product_id,
                 item.selected_modifiers,
             )
-            modifiers = ", ".join(detail["option_name"] for detail in details)
+            required_details = [detail for detail in details if detail["required"]]
+            optional_details = [detail for detail in details if not detail["required"]]
             unit_price = f"{item.unit_price:,}".replace(",", ".")
-            lines.append(
-                f"- {item.quantity} x {item.product_name}"
-                f" ({modifiers}): ${unit_price} pesos argentinos."
+            lines.append(f"- {item.product_name}. Cantidad: {item.quantity}.")
+            lines.extend(
+                f"  {detail['group_name']}: {detail['option_name']}."
+                for detail in required_details
             )
+            if optional_details:
+                extras = ", ".join(
+                    detail["option_name"] for detail in optional_details
+                )
+                lines.append(f"  Extras: {extras}.")
+            lines.append(f"  Precio unitario: ${unit_price} pesos argentinos.")
+            if item.quantity > 1:
+                subtotal = f"{item.unit_price * item.quantity:,}".replace(",", ".")
+                lines.append(f"  Subtotal: ${subtotal} pesos argentinos.")
         total = f"{cart.total:,}".replace(",", ".")
         return "Tu carrito contiene:\n" + "\n".join(lines) + f"\nTotal: ${total} pesos argentinos."
 

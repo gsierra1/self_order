@@ -293,7 +293,7 @@ class ConversationTests(unittest.TestCase):
 
         self.assertIn("no-store", page_response.headers["cache-control"])
         self.assertIn("no-store", script_response.headers["cache-control"])
-        self.assertIn("app.js?v=20260917-4", page_response.text)
+        self.assertIn("app.js?v=20260917-5", page_response.text)
         self.assertIn("styles.css?v=20260917-2", page_response.text)
 
     def test_cancel_immediately_releases_reservation(self) -> None:

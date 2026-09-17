@@ -1,4 +1,4 @@
-import { VoiceInput, speak } from "/static/voice.js?v=20260917-4";
+import { VoiceInput, speak } from "/static/voice.js?v=20260917-5";
 
 let sessionId = null;
 let sessionClosed = false;
