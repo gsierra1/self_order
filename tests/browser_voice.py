@@ -163,6 +163,13 @@ class BrowserVoiceTests(unittest.TestCase):
                         """)
                         page.goto(f"http://127.0.0.1:{port}")
                         expect(page.locator("#mic-button")).to_be_enabled()
+                        page.wait_for_timeout(20500)
+                        initial_message_count = page.locator(".assistant-message").count()
+                        self.assertEqual(
+                            initial_message_count,
+                            1,
+                            f"La sesión nueva no debe avisar sin interacción: {initial_message_count}",
+                        )
                         inactivity_result = page.evaluate("""
                             async () => {
                                 const { InactivityMonitor } = await import(

@@ -14,6 +14,7 @@ let countdownTimer = null;
 let reconnectTimer = null;
 let reconnectAttempts = 0;
 let currentCart = null;
+let hasUserInteracted = false;
 
 const conversation = document.getElementById("conversation");
 const messageForm = document.getElementById("message-form");
@@ -60,8 +61,21 @@ function showInactivityMessage(message) {
  * @returns {void}
  * @effects Descarta la etapa anterior y vuelve a contar veinte segundos.
  */
+function restartInactivityTimer() {
+    if (hasUserInteracted && phase === "ready" && !sessionClosed) {
+        inactivityMonitor.restart();
+    }
+}
+
+/**
+ * Registra una acción de la persona y comienza o reinicia su espera.
+ * @returns {void}
+ * @effects Marca la sesión como utilizada y reinicia el monitor si está lista.
+ */
 function registerUserActivity() {
-    if (phase === "ready" && !sessionClosed) inactivityMonitor.restart();
+    if (sessionClosed) return;
+    hasUserInteracted = true;
+    if (phase === "ready") inactivityMonitor.restart();
 }
 
 /** Formatea un importe del carrito en pesos argentinos.
@@ -356,7 +370,7 @@ function failVoice(error) {
     phase = socket?.readyState === WebSocket.OPEN ? "ready" : "disconnected";
     setStatus("No se pudo enviar el audio", "error");
     updateControls();
-    registerUserActivity();
+    restartInactivityTimer();
 }
 
 
@@ -638,6 +652,7 @@ async function toggleMicrophone() {
         return;
     }
     if (phase !== "ready" || sessionClosed) return;
+    hasUserInteracted = true;
     inactivityMonitor.stop();
     phase = "preparing";
     showPaymentProcessing();
@@ -749,7 +764,7 @@ function onServerMessage(event) {
         reconnectAttempts = 0;
         phase = "ready";
         if (!sessionClosed) setStatus(restored ? "Conexi\u00f3n restablecida" : "Listo");
-        registerUserActivity();
+        restartInactivityTimer();
     } else if (type === "voice.ready" && phase === "preparing") {
         voiceBackendReady = true;
         maybeStartRecording();
@@ -767,7 +782,7 @@ function onServerMessage(event) {
         }
         if (!sessionClosed) setStatus("Listo");
         if (assistantAudioEnabled) speak(data.text, text => appendMessage("Sistema", text, "error"));
-        registerUserActivity();
+        restartInactivityTimer();
     } else if (["voice.error", "backend.error", "ai.error", "client.error", "voice.cancelled"].includes(type)) {
         clearTimeout(voiceTimer);
         voice.dispose();
@@ -775,7 +790,7 @@ function onServerMessage(event) {
         transcript.textContent = "";
         if (data.message) appendMessage("Sistema", data.message, "error");
         if (!sessionClosed) setStatus(type === "voice.cancelled" ? "Listo" : "Error", type === "voice.cancelled" ? "ready" : "error");
-        registerUserActivity();
+        restartInactivityTimer();
     }
     updateControls();
 }
@@ -901,6 +916,7 @@ async function createSession() {
  */
 async function startNewSession() {
     inactivityMonitor.stop();
+    hasUserInteracted = false;
     clearTimeout(paymentTimer);
     clearInterval(countdownTimer);
     voice.dispose();
@@ -928,6 +944,7 @@ confirmCartButton.addEventListener("click", startPaymentFromCart);
  */
 function sendMessage(message) {
     if (phase !== "ready" || sessionClosed) return;
+    hasUserInteracted = true;
     inactivityMonitor.stop();
     window.speechSynthesis?.cancel();
     sendEvent("user.text", { message });
