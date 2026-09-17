@@ -103,7 +103,7 @@ class BrowserAssistant:
         )
         return (
             "Pedido actualizado.\n"
-            "- Burger Clásica. Cantidad: 1.\n"
+            "- Burger Clásica. Cantidad: una unidad.\n"
             "Bebida: Agua. Extras: Queso.\n"
             "Total: $9.500 pesos argentinos."
         )
@@ -217,8 +217,15 @@ class BrowserVoiceTests(unittest.TestCase):
                             spoken_texts,
                         )
                         self.assertTrue(
-                            any("Cantidad: 1" in text for text in spoken_texts),
+                            any("Cantidad: una unidad" in text for text in spoken_texts),
                             spoken_texts,
+                        )
+                        assistant_text = page.locator(
+                            ".assistant-message p"
+                        ).last
+                        expect(assistant_text).to_have_css("white-space", "pre-line")
+                        expect(assistant_text).to_contain_text(
+                            "- Burger Clásica. Cantidad: una unidad."
                         )
                         expect(page.locator("#cart-total")).to_have_text("ARS 9.500")
                         details = page.locator(".cart-item-details")

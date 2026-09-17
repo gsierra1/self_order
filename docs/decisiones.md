@@ -333,9 +333,11 @@ cambios de modelo.
 
 **Decisión adoptada:** después de una mutación válida y mientras la sesión está
 `ACTIVE`, `OrderToolsRuntime` descarta la redacción libre de cierre y presenta el
-carrito real. Usa guiones sin índices, cantidad con etiqueta, modificadores
-obligatorios por grupo, opcionales bajo `Extras`, precios y total calculados por
-`OrderService`, y una única pregunta para continuar o confirmar.
+carrito real. Usa guiones sin índices, expresa una sola unidad con palabras,
+mantiene cada producto en una línea visual, muestra modificadores obligatorios
+por grupo y opcionales bajo `Extras`. Omite precios unitarios repetidos, comunica
+el total calculado por `OrderService` y hace una única pregunta para continuar o
+confirmar.
 
 **Consecuencias:** Groq, OpenAI y Gemini muestran el mismo formato; la voz deja de
 depender de cómo cada modelo enumera productos. Las respuestas sin mutaciones,

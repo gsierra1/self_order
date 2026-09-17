@@ -260,8 +260,12 @@ CATALOGO ACTUAL:
             )
             required_details = [detail for detail in details if detail["required"]]
             optional_details = [detail for detail in details if not detail["required"]]
-            unit_price = f"{item.unit_price:,}".replace(",", ".")
-            lines.append(f"- {item.product_name}. Cantidad: {item.quantity}.")
+            quantity = (
+                "una unidad"
+                if item.quantity == 1
+                else f"{item.quantity} unidades"
+            )
+            lines.append(f"- {item.product_name}. Cantidad: {quantity}.")
             lines.extend(
                 f"  {detail['group_name']}: {detail['option_name']}."
                 for detail in required_details
@@ -271,10 +275,6 @@ CATALOGO ACTUAL:
                     detail["option_name"] for detail in optional_details
                 )
                 lines.append(f"  Extras: {extras}.")
-            lines.append(f"  Precio unitario: ${unit_price} pesos argentinos.")
-            if item.quantity > 1:
-                subtotal = f"{item.unit_price * item.quantity:,}".replace(",", ".")
-                lines.append(f"  Subtotal: ${subtotal} pesos argentinos.")
         total = f"{cart.total:,}".replace(",", ".")
         return "Tu carrito contiene:\n" + "\n".join(lines) + f"\nTotal: ${total} pesos argentinos."
 

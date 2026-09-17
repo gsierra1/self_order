@@ -204,11 +204,13 @@ miles y entrega `23000 pesos argentinos`. La separación entre texto visible y
 texto hablado evita que ciertos motores pronuncien «veintitrés cero cero cero»
 o interpreten el punto como decimal.
 
-Los resúmenes del carrito usan guiones visibles y expresan cada unidad como
-`Burger Clásica. Cantidad: 1`, para que el número tenga contexto y no parezca el
-índice de una lista. `prepareSpeechText()` quita el guion inicial antes de leer.
-Los modificadores opcionales se pronuncian agrupados, por ejemplo `Extras:
-Tomate, Lechuga`, sin repetir el nombre técnico de cada grupo.
+Los resúmenes del carrito usan guiones visibles y expresan una cantidad unitaria
+como `Burger Clásica. Cantidad: una unidad`, sin un `1` que pueda confundirse con
+el índice de una lista. El frontend conserva los saltos de línea y
+`prepareSpeechText()` quita el guion inicial antes de leer. Los modificadores
+opcionales se pronuncian agrupados, por ejemplo `Extras: Tomate, Lechuga`, sin
+repetir el nombre técnico de cada grupo. La voz comunica solamente el total; los
+precios por producto permanecen disponibles en el carrito visual.
 
 
 ## Adaptador de transcripción y selección de proveedor

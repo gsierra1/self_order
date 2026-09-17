@@ -278,8 +278,9 @@ class OrderRulesTests(unittest.TestCase):
         )
 
         self.assertNotIn("Listo", response)
-        self.assertIn("- Burger Clásica. Cantidad: 1.", response)
-        self.assertIn("- Burger Doble. Cantidad: 1.", response)
+        self.assertIn("- Burger Clásica. Cantidad: una unidad.", response)
+        self.assertIn("- Burger Doble. Cantidad: una unidad.", response)
+        self.assertNotIn("Precio unitario", response)
         self.assertNotRegex(response, r"(?m)^\s*\d+[.)]")
         self.assertIn("agregar algún extra", response)
         self.assertIn("confirmar el pedido", response)

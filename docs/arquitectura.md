@@ -90,9 +90,10 @@ El cambio de carrito puede llegar antes de la respuesta textual final. No hay
 streaming de tokens de respuesta ni procesamiento parcial de pedidos hablados.
 Después de una mutación válida sobre un carrito activo, el runtime reemplaza la
 redacción libre del LLM por un resumen construido desde el carrito validado. Cada
-línea usa un guion, identifica la cantidad, separa modificadores obligatorios y
-agrupa los adicionales como `Extras`. Al final ofrece una sola vez agregar extras
-todavía disponibles, pedir otro producto o confirmar.
+producto ocupa una línea iniciada con un guion, expresa las cantidades unitarias
+como `una unidad`, separa modificadores obligatorios y agrupa los adicionales
+como `Extras`. El resumen omite precios por línea, que ya están en el carrito, y
+comunica una sola vez el total y las opciones para continuar.
 
 ## Tools y reglas
 
