@@ -170,8 +170,9 @@ WebSocket y navegador simulado.
 
 ## 09. Adaptadores de proveedores de voz e interpretación
 
-**Estado:** adoptada e implementada el 16/09/2026 con Gemini para STT y con
-Gemini, OpenAI o Groq para interpretación LLM. Otros adaptadores continúan
+**Estado:** adoptada e implementada el 16/09/2026. La implementación actual usa
+Gemini para STT y permite elegir Gemini, OpenAI o Groq para la interpretación LLM.
+Solo los proveedores adicionales que no aparecen en esa lista continúan
 pendientes.
 
 **Contexto comprobado:** `conversation_socket.py` construía directamente
