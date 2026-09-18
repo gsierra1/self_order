@@ -99,6 +99,13 @@ como `una unidad`, separa modificadores obligatorios y agrupa los adicionales
 como `Extras`. El resumen omite precios por línea, que ya están en el carrito, y
 comunica una sola vez el total y las opciones para continuar.
 
+Con los adaptadores compatibles con Chat Completions, como Groq y OpenAI, una
+mutación válida ya no genera una segunda llamada al LLM solo para redactar la
+confirmación. `OrderToolsRuntime.get_post_mutation_response()` construye esa
+respuesta desde el estado validado, por lo que el turno termina apenas concluyen
+las tools solicitadas. Gemini conserva su protocolo actual de respuesta de función
+antes de cerrar el turno.
+
 La interfaz administra además la inactividad sin consultar al LLM. Después de
 un mensaje escrito enviado o de una transcripción final de voz,
 `InactivityMonitor` pregunta `¿Seguís ahí?` tras veinte segundos, advierte el cierre

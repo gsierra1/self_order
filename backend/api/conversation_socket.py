@@ -36,11 +36,14 @@ def _detect_payment_method(text: str) -> str | None:
         opción inequívoca; ``None`` si debe interpretarla el LLM.
     """
     normalized = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().upper()
+    compact = "".join(character for character in normalized if character.isalnum())
     if "TARJETA" in normalized:
         return "CARD"
     if "CAJA" in normalized or "EFECTIVO" in normalized:
         return "CASH"
-    if "QR" in normalized:
+    if "QR" in normalized or any(
+        variant in compact for variant in ("QR", "QERRE", "CUERRE", "CONCURRE")
+    ):
         return "QR"
     return None
 

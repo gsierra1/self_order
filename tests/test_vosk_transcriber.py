@@ -112,12 +112,12 @@ class VoskTranscriberTests(unittest.IsolatedAsyncioTestCase):
     def test_normalizes_observed_menu_words_without_inventing_an_operation(self) -> None:
         """Corrige variantes de bebida y conserva el resto de la transcripción."""
         text = _normalize_menu_vocabulary(
-            "quiero otra burguer doble pero la debida tiene que ser esperáis",
+            "quiero otra burguer doble pero la debida tiene que ser espiral y pago concurre",
         )
 
         self.assertEqual(
             text,
-            "quiero otra burguer doble pero la bebida tiene que ser Sprite",
+            "quiero otra burguer doble pero la bebida tiene que ser Sprite y pago QR",
         )
 
 

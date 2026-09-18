@@ -359,4 +359,15 @@ class OpenAIOrderInterpreter(OrderInterpreter):
                     "role": "tool", "tool_call_id": call.call_id,
                     "content": json.dumps(result, ensure_ascii=False),
                 })
+            if transaction_applied:
+                response_text = self.runtime.get_post_mutation_response(last_tool)
+                self.messages.append({"role": "assistant", "content": response_text})
+                log_event(
+                    "INFO",
+                    "llm.deterministic_post_mutation_response",
+                    provider=self.provider_name,
+                    session_id=self.service.session.session_id,
+                    tool=last_tool,
+                )
+                return response_text
         raise RuntimeError("Se alcanzo el maximo de ciclos de tools permitidos.")

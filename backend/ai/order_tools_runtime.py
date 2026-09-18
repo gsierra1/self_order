@@ -254,6 +254,28 @@ CATALOGO ACTUAL:
         """
         return self._build_cart_summary()
 
+    def get_post_mutation_response(self, tool_name: str | None) -> str:
+        """Construye una respuesta sin pedir otra redacción al proveedor LLM.
+
+        Args:
+            tool_name: Última tool que modificó el pedido durante el turno.
+
+        Returns:
+            Confirmación basada en el estado validado, el carrito y la etapa de
+            pago actual.
+        """
+        if self.service.session.state is SessionState.PAYMENT_PENDING:
+            if tool_name == "return_to_payment_methods":
+                return "Podés elegir QR, tarjeta o en caja."
+            if tool_name == "select_payment_method":
+                labels = {"QR": "QR", "CARD": "tarjeta", "CASH": "caja"}
+                method = self.service.session.payment_method
+                return f"Seleccioné el pago en {labels.get(method, 'el método indicado')}."
+            return "Pedido preparado. Elegí QR, tarjeta o en caja."
+        if tool_name == "clear_cart":
+            return "El carrito quedó vacío. Podés empezar un nuevo pedido."
+        return self.ensure_next_step("", True)
+
     def _build_cart_summary(self) -> str:
         """Construye una descripción visible desde el carrito validado.
 

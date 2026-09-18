@@ -219,7 +219,7 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertIn("confirmar el pedido", response)
         self.assertEqual(response.count("¿Querés"), 1)
         self.assertEqual(service.get_cart().total, 8500)
-        self.assertEqual(client.chat.completions.create.call_count, 2)
+        self.assertEqual(client.chat.completions.create.call_count, 1)
 
     def test_default_providers_are_gemini(self) -> None:
         """La ausencia de variables conserva el comportamiento anterior con Gemini."""
@@ -543,7 +543,7 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertIn("confirmar el pedido", response)
         self.assertEqual(response.count("¿Querés"), 1)
         self.assertEqual(service.get_cart().total, 8500)
-        self.assertEqual(client.chat.completions.create.call_count, 2)
+        self.assertEqual(client.chat.completions.create.call_count, 1)
         self.assertEqual(
             client.chat.completions.create.call_args_list[0].kwargs["max_tokens"],
             800,
@@ -589,7 +589,7 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertEqual(response.count("¿Querés"), 1)
         self.assertEqual(service.get_cart().total, 8500)
         self.assertEqual(len(service.get_cart().items), 1)
-        self.assertEqual(client.chat.completions.create.call_count, 3)
+        self.assertEqual(client.chat.completions.create.call_count, 2)
 
     def test_openai_interpreter_replaces_a_second_incomplete_response(self) -> None:
         """Evita exponer una cortesía aislada cuando el reintento tampoco sirve."""

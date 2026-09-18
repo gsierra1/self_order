@@ -26,6 +26,9 @@ _MENU_SPEECH_CORRECTIONS = {
     "esperais": "Sprite",
     "esperáis": "Sprite",
     "esperaís": "Sprite",
+    "espiral": "Sprite",
+    "concurre": "QR",
+    "q erre": "QR",
 }
 
 

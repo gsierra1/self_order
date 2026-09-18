@@ -112,6 +112,8 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(_detect_payment_method("quiero pagar con tarjeta"), "CARD")
         self.assertEqual(_detect_payment_method("prefiero pagar en caja"), "CASH")
         self.assertEqual(_detect_payment_method("pago por QR"), "QR")
+        self.assertEqual(_detect_payment_method("pago con q erre"), "QR")
+        self.assertEqual(_detect_payment_method("pago concurre"), "QR")
         self.assertIsNone(_detect_payment_method("quiero pagar"))
 
     def test_payment_questions_do_not_choose_a_method(self) -> None:
