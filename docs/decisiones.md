@@ -171,8 +171,8 @@ WebSocket y navegador simulado.
 ## 09. Adaptadores de proveedores de voz e interpretación
 
 **Estado:** adoptada e implementada el 16/09/2026. La implementación actual usa
-Gemini para STT y permite elegir Gemini, OpenAI o Groq para la interpretación LLM.
-Solo los proveedores adicionales que no aparecen en esa lista continúan
+Gemini o Vosk para STT y permite elegir Gemini, OpenAI o Groq para la
+interpretación LLM. Solo los proveedores adicionales que no aparecen en esa lista continúan
 pendientes.
 
 **Contexto comprobado:** `conversation_socket.py` construía directamente
@@ -193,7 +193,7 @@ con preparación implícita en el adaptador, `feed`, `finish`, `transcribe` con
 parciales/final, `cancel` y `close`. `OrderInterpreter` recibe texto final y
 administra la conversación y las tools de su proveedor. Las fábricas leen
 `STT_PROVIDER` y `LLM_PROVIDER`; hoy la fábrica STT devuelve
-`GeminiLiveTranscriber` y la fábrica LLM puede devolver `GeminiOrderInterpreter`,
+`GeminiLiveTranscriber` o `VoskTranscriber`, y la fábrica LLM puede devolver `GeminiOrderInterpreter`,
 `OpenAIOrderInterpreter` o `GroqOrderInterpreter`. Las tools siguen delegando en `OrderService`, que
 conserva la única autoridad transaccional.
 
@@ -206,8 +206,9 @@ un STT local necesita modelo instalado y ruta, no una API key cloud para ese
 tramo.
 
 **Límites:** una interfaz no hace interoperables los protocolos por sí sola.
-Anthropic, Google Cloud, Azure, Whisper, Vosk y Ollama no están
-implementados ni probados contra el sistema. La simulación confirma la unión
+Al momento de esta decisión Vosk todavía no estaba implementado; la decisión 18
+registra su incorporación posterior. Anthropic, Google Cloud, Azure, Whisper y
+Ollama no están implementados ni probados contra el sistema. La simulación confirma la unión
 interna y la protección de `OrderService`, pero no resuelve los 503 ni demuestra
 latencia, costo, disponibilidad, exactitud con ruido o seguridad de una cuenta
 productiva. Cada adaptador futuro deberá convertir sus tools o resultados al

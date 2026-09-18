@@ -90,6 +90,10 @@ transcriptor a 85 segundos y espera el cierre hasta 20 segundos. La interfaz
 también limita el tiempo de preparación. Una cola saturada produce un error;
 no se descartan fragmentos silenciosamente.
 
+Los mensajes escritos de HTTP y WebSocket se normalizan con el mismo límite de
+1.000 caracteres antes de reservar un turno o consultar el LLM. Así una entrada
+accidentalmente extensa no consume contexto ni cuota del proveedor.
+
 Cancelar, fallar o desconectar descarta transcripciones pendientes y libera recursos.
 Si ya comenzó la interpretación, se espera su resultado: cancelar una coroutine
 no detiene el thread ni revierte una tool. La reserva se libera al terminar,

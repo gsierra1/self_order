@@ -106,7 +106,7 @@ modelo en la PC: Groq ejecuta `openai/gpt-oss-20b` en la nube mediante una API
 compatible con OpenAI. El nombre `openai/` identifica al modelo, no al servicio
 que procesa la solicitud: el proveedor configurado sigue siendo Groq.
 
-Para generar una clave de Gemini para la transcripción recomendada:
+Para generar una clave de Gemini si se elige Gemini para transcripción o chat:
 
 1. Entrá a [Google AI Studio](https://aistudio.google.com/).
 2. Iniciá sesión con tu cuenta de Google y abrí [la sección de claves API](https://aistudio.google.com/app/apikey).

@@ -15,7 +15,7 @@ registrar la corrida final.
   Gemini, interpretación Groq, altas y eliminaciones, cantidades agrupadas,
   vuelta desde un método al selector, selección de QR, tarjeta y caja, cierre
   del pedido y creación de una sesión nueva. También se escuchó la síntesis del
-  navegador. Las 76 pruebas automáticas cubren reglas, adaptadores, transporte,
+  navegador. Las 92 pruebas automáticas cubren reglas, adaptadores, transporte,
   caché del frontend y pago mediante simulaciones. Antes de la demostración
   falta registrar en una sola corrida real, con el modelo elegido para exponer,
   producto incompleto, producto agotado, reemplazo, varios extras y finalización
@@ -89,6 +89,10 @@ registrar la corrida final.
 - **Persistencia e idempotencia:** guardar pedidos y sesiones en almacenamiento
   durable y asociar operaciones a identificadores que eviten duplicados ante
   reintentos o reconexiones.
+- **Vencimiento de sesiones en memoria:** la demo conserva las sesiones en el
+  proceso para permitir reconexión y mostrar el cierre local. Antes de un uso
+  continuo se debe definir TTL, limpieza de sesiones confirmadas/inactivas y
+  cierre de clientes de IA, o mover ese estado a la persistencia durable.
 - **Catálogo y stock escalables:** la demo usa `config/menu.json` porque el menú
   actual es pequeño y el archivo resulta sencillo de leer, actualizar,
   versionar y probar sin depender de servicios externos. Antes de producción se

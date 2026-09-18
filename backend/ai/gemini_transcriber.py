@@ -115,7 +115,8 @@ class GeminiLiveTranscriber(SpeechToText):
             Texto definitivo del turno; nunca utiliza una hipótesis provisional.
 
         Raises:
-            TimeoutError: Si falla la apertura o el turno no termina a tiempo.
+            SpeechToTextConnectionTimeout: Si Gemini no abre el turno a tiempo.
+            SpeechToTextFinalizationTimeout: Si Gemini no confirma el texto final.
             ValueError: Si no hay transcripción final o el proveedor cierra antes.
             AIProviderError: Si Gemini rechaza la solicitud o falla la red.
             Exception: Si ocurre una falla interna o al publicar eventos.
@@ -231,7 +232,9 @@ class GeminiLiveTranscriber(SpeechToText):
                 raise SpeechToTextConnectionTimeout(
                     "Gemini no abrió el turno de transcripción a tiempo.",
                 ) from exc
-            raise
+            raise SpeechToTextFinalizationTimeout(
+                "Gemini no confirmó la transcripción final a tiempo.",
+            ) from exc
         except Exception as exc:
             provider_error = classify_gemini_transport_error(
                 exc,

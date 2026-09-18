@@ -12,6 +12,7 @@ from vosk import KaldiRecognizer, Model
 from backend.ai.contracts import (
     SpeechToText,
     SpeechToTextConfigurationError,
+    SpeechToTextFinalizationTimeout,
     VoiceEventPublisher,
 )
 from backend.logging.event_logger import log_event
@@ -211,7 +212,8 @@ class VoskTranscriber(SpeechToText):
 
         Raises:
             RuntimeError: Si falta o no se puede abrir el modelo local de Vosk.
-            TimeoutError: Si no se recibe el final del audio en el tiempo límite.
+            SpeechToTextFinalizationTimeout: Si no se recibe el final del audio
+                en el tiempo límite.
             ValueError: Si el turno finaliza sin texto reconocible.
 
         Effects:
@@ -236,31 +238,36 @@ class VoskTranscriber(SpeechToText):
             session_id=self.session_id,
             model_path=str(Path(self.model_path).expanduser()),
         )
-        while True:
-            chunk = await asyncio.wait_for(self.chunks.get(), timeout=65)
-            if chunk is None:
-                break
-            accepted = await asyncio.to_thread(recognizer.AcceptWaveform, chunk)
-            if accepted:
-                segment = _normalize_menu_vocabulary(
-                    _read_result(await asyncio.to_thread(recognizer.Result), "text"),
-                )
-                if segment:
-                    final_parts.append(segment)
-            else:
-                partial = _normalize_menu_vocabulary(
-                    _read_result(
-                        await asyncio.to_thread(recognizer.PartialResult),
-                        "partial",
-                    ),
-                )
-                visible_text = " ".join([*final_parts, partial]).strip()
-                if visible_text and visible_text != last_partial:
-                    last_partial = visible_text
-                    await publish("voice.transcript", {
-                        "text": visible_text,
-                        "final": False,
-                    })
+        try:
+            while True:
+                chunk = await asyncio.wait_for(self.chunks.get(), timeout=65)
+                if chunk is None:
+                    break
+                accepted = await asyncio.to_thread(recognizer.AcceptWaveform, chunk)
+                if accepted:
+                    segment = _normalize_menu_vocabulary(
+                        _read_result(await asyncio.to_thread(recognizer.Result), "text"),
+                    )
+                    if segment:
+                        final_parts.append(segment)
+                else:
+                    partial = _normalize_menu_vocabulary(
+                        _read_result(
+                            await asyncio.to_thread(recognizer.PartialResult),
+                            "partial",
+                        ),
+                    )
+                    visible_text = " ".join([*final_parts, partial]).strip()
+                    if visible_text and visible_text != last_partial:
+                        last_partial = visible_text
+                        await publish("voice.transcript", {
+                            "text": visible_text,
+                            "final": False,
+                        })
+        except TimeoutError as exc:
+            raise SpeechToTextFinalizationTimeout(
+                "Vosk no recibió el final del audio a tiempo.",
+            ) from exc
         final_segment = _normalize_menu_vocabulary(
             _read_result(
                 await asyncio.to_thread(recognizer.FinalResult),

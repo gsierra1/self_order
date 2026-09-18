@@ -10,8 +10,9 @@ perder las primeras palabras por empezar a hablar durante el handshake.
 ## Visión general
 
 Es una aplicación Python modular con FastAPI, un frontend de HTML/CSS/JavaScript
-y proveedores configurables para transcripción e interpretación. La demo usa
-Gemini Transcribe Live como STT y Groq como LLM. No son microservicios: los
+y proveedores configurables para transcripción e interpretación. La configuración
+de ejemplo usa Vosk local como STT y Groq como LLM; Gemini Transcribe Live sigue
+disponible como alternativa cloud. No son microservicios: los
 módulos del backend comparten un proceso y las sesiones viven en memoria.
 
 ```mermaid
@@ -394,11 +395,17 @@ Esta elección se tomó porque un JSON generado libremente por el modelo todaví
 
 La alternativa de JSON puede evaluarse más adelante como contrato de intercambio con un POS u otro servicio, pero no debe reemplazar la validación central del dominio.
 
-### Por qué usamos STT cloud en esta etapa
+### Por qué el STT es configurable en esta etapa
 
-La transcripción utiliza Gemini Transcribe Live porque permite probar el flujo con el micrófono disponible, sin comprar hardware ni mantener un modelo local. Esto reduce el tiempo hasta una demo funcional y mantiene una sola integración configurable mediante `.env`.
+Gemini Transcribe Live permitió validar primero el flujo cloud con el micrófono
+disponible. Después se incorporó Vosk local para que la demo pueda transcribir
+sin una API key ni cobro por minuto. El `.env.example` prioriza Vosk; Gemini se
+mantiene como alternativa para comparar precisión y comportamiento de streaming.
 
-La contrapartida es la dependencia de internet, el costo por uso y una latencia que todavía debe medirse por etapa. Por eso la elección es válida para la prueba de concepto, pero queda abierta para el piloto físico. La configuración permite cambiar el modelo sin modificar el dominio ni el frontend.
+Vosk evita la red en la transcripción, pero su modelo pequeño todavía debe
+evaluarse con español rioplatense y ruido real. Gemini depende de red, cuota y
+disponibilidad del proveedor. La separación `SpeechToText` permite comparar ambas
+opciones sin cambiar el dominio ni el frontend.
 
 ### Por qué el frontend es web y el estado vive en backend
 
@@ -553,6 +560,14 @@ pago sin selección automática y recuperación de respuestas LLM incompletas si
 duplicar una mutación. No llama a Gemini, OpenAI, Groq, Anthropic, Whisper, Vosk
 ni a otro proveedor; por lo tanto no mide disponibilidad, 503, latencia, costo
 ni precisión de reconocimiento.
+
+En la auditoría local del 18/09/2026, la suite creció a 92 pruebas sin red ni
+credenciales. Agrega cobertura para IDs de líneas no reutilizables,
+consolidación tras cambiar extras o reemplazar productos, revalidación de
+disponibilidad antes de pagar, catálogo JSON con referencias inválidas, origen
+correcto de errores por proveedor, límite de mensajes y timeouts de STT. Sigue
+siendo evidencia automática: no prueba proveedores reales ni el audio de un
+micrófono físico.
 
 La prueba adicional de navegador con Edge usa un micrófono sintético que emite
 voz y luego silencio. Comprueba que el frontend no cierre antes de detectar voz,

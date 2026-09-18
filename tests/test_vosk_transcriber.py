@@ -2,9 +2,12 @@
 
 import asyncio
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
-from backend.ai.contracts import SpeechToTextConfigurationError
+from backend.ai.contracts import (
+    SpeechToTextConfigurationError,
+    SpeechToTextFinalizationTimeout,
+)
 from backend.ai.vosk_transcriber import VoskTranscriber, _normalize_menu_vocabulary
 
 
@@ -108,6 +111,29 @@ class VoskTranscriberTests(unittest.IsolatedAsyncioTestCase):
         ):
             with self.assertRaises(SpeechToTextConfigurationError):
                 await transcriber.transcribe(publish)
+
+    async def test_timeout_after_ready_uses_the_shared_finalization_error(self) -> None:
+        """Clasifica una espera sin audio como finalización recuperable."""
+        transcriber = VoskTranscriber("session-test", "models/fake")
+        events: list[tuple[str, dict]] = []
+
+        async def publish(event_type: str, data: dict) -> None:
+            """Conserva la disponibilidad publicada antes de agotar el turno.
+
+            Args:
+                event_type: Tipo de evento de voz publicado.
+                data: Datos asociados al evento publicado.
+            """
+            events.append((event_type, data))
+
+        with patch("backend.ai.vosk_transcriber._load_model", return_value=object()), patch(
+            "backend.ai.vosk_transcriber.KaldiRecognizer",
+            return_value=FakeRecognizer(),
+        ), patch.object(transcriber.chunks, "get", new=AsyncMock(side_effect=TimeoutError)):
+            with self.assertRaises(SpeechToTextFinalizationTimeout):
+                await transcriber.transcribe(publish)
+
+        self.assertEqual(events, [("voice.ready", {})])
 
     def test_normalizes_observed_menu_words_without_inventing_an_operation(self) -> None:
         """Corrige variantes de bebida y conserva el resto de la transcripción."""
