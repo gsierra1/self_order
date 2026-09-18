@@ -176,6 +176,19 @@ python -m backend.ai.list_openai_models
 
 El listado indica disponibilidad de cuenta, pero no garantiza compatibilidad con
 tools ni saldo de API.
+
+Para consultar los modelos visibles para la cuenta Groq, sin imprimir la clave
+(sólo aplica a `LLM_PROVIDER=groq`):
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m backend.ai.list_groq_models
+```
+
+El comando consulta el catálogo expuesto para esa cuenta. Que un modelo aparezca
+en la lista no garantiza que admita tools; la compatibilidad se valida con una
+prueba controlada del adaptador.
+
 El diseño está separado en `SpeechToText` para audio por streaming y
 `OrderInterpreter` para texto y tools. Gemini los implementa con
 `GeminiLiveTranscriber` y `GeminiOrderInterpreter`. Ningún adaptador puede
@@ -200,7 +213,7 @@ de Live, ejecutar desde la raíz:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
-python -m backend.ai.list_models
+python -m backend.ai.list_gemini_models
 ```
 
 El comando requiere red y `GEMINI_API_KEY`; consulta únicamente los modelos de

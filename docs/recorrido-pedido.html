@@ -318,7 +318,7 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         </article>
         <article class="step ai">
           <h3>6. STT: voz a texto</h3>
-          <a href="../backend/ai/live_transcriber.py"><code>backend/ai/live_transcriber.py</code></a>
+          <a href="../backend/ai/gemini_transcriber.py"><code>backend/ai/gemini_transcriber.py</code></a>
           <small><code>SpeechToText / GeminiLiveTranscriber.transcribe()</code> usa el modelo indicado en
             <code>GEMINI_TRANSCRIPTION_MODEL</code>, publica hip&oacute;tesis y devuelve el texto final.</small>
         </article>
@@ -330,7 +330,7 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         </article>
         <article class="step ai">
           <h3>8. El LLM interpreta la intenci&oacute;n</h3>
-          <a href="../backend/ai/orchestrator.py"><code>orchestrator.py</code></a>
+          <a href="../backend/ai/gemini_llm_interpreter.py"><code>gemini_llm_interpreter.py</code></a>
           <small><code>send_message()</code> conversa con el proveedor elegido por <code>LLM_PROVIDER</code>.
             El LLM propone una tool, no modifica el carrito por s&iacute; mismo.</small>
         </article>

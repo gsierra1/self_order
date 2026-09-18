@@ -30,7 +30,7 @@ El contexto solicita 16 kHz y comprueba la frecuencia. No reproduce el micrófon
 por los parlantes. Al hablar se cancela la lectura del asistente.
 
 `backend/ai/contracts.py` define `SpeechToText`; el adaptador actual
-`GeminiLiveTranscriber` en `backend/ai/live_transcriber.py` no tiene tools ni
+`GeminiLiveTranscriber` en `backend/ai/gemini_transcriber.py` no tiene tools ni
 acceso al carrito. Publica
 hipótesis, acumula segmentos definitivos y devuelve texto al cerrar el turno.
 `backend/api/conversation_socket.py` valida eventos y entrega ese texto al
@@ -105,8 +105,8 @@ configuración recomendada. La demo usa Groq para el chat mediante
 `GROQ_CHAT_MODEL=openai/gpt-oss-20b`; también se puede elegir Gemini u OpenAI
 con sus variables propias. Los nombres se pueden cambiar en `.env` sin modificar
 el código y las credenciales quedan en backend.
-Para consultar los modelos habilitados para la cuenta local, ejecutar
-`python -m backend.ai.list_models` con el entorno virtual activo. La salida es
+Para consultar los modelos Gemini habilitados para la cuenta local, ejecutar
+`python -m backend.ai.list_gemini_models` con el entorno virtual activo. La salida es
 informativa y muestra todos los modelos junto con sus acciones: `generateContent`
 para el chat y `bidiGenerateContent` para transcripción en vivo. La disponibilidad
 y los nombres pueden cambiar por cuenta o fecha, por lo que no son valores fijos.
@@ -229,8 +229,7 @@ con `finish()`, publica parciales y devuelve el texto definitivo con
 WebSocket.
 
 La implementación efectiva sigue siendo `GeminiLiveTranscriber` en
-`backend/ai/live_transcriber.py`; `LiveTranscriber` permanece como alias de
-compatibilidad. `STT_PROVIDER=gemini` es el único valor implementado. Configurar
+`backend/ai/gemini_transcriber.py`. `STT_PROVIDER=gemini` es el único valor implementado. Configurar
 por ahora `whisper`, `vosk`, `openai`, `google-cloud` o `azure` devuelve un error
 claro antes de abrir el turno: sus nombres están reservados como posibilidades,
 no son implementaciones listas para usar.

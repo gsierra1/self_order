@@ -11,7 +11,7 @@ from backend.ai.tools import (
     create_replace_item_tool,
 )
 from backend.ai.errors import classify_gemini_api_error
-from backend.ai.orchestrator import OrderConversationOrchestrator
+from backend.ai.gemini_llm_interpreter import GeminiOrderInterpreter
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
 from backend.services.order_service import OrderService
@@ -106,8 +106,8 @@ class OrderRulesTests(unittest.TestCase):
 
     def test_user_text_hides_internal_modifier_ids_and_dollars(self) -> None:
         """La salida pública usa nombres y moneda argentinos, nunca códigos internos."""
-        orchestrator = OrderConversationOrchestrator.__new__(
-            OrderConversationOrchestrator
+        orchestrator = GeminiOrderInterpreter.__new__(
+            GeminiOrderInterpreter
         )
         orchestrator.service = self.service
         text = orchestrator._sanitize_user_text(
@@ -238,10 +238,10 @@ class OrderRulesTests(unittest.TestCase):
             )
         self.assertFalse(self.service.get_cart().items)
 
-    def test_orchestrator_executes_multiple_requested_operations(self) -> None:
+    def test_gemini_interpreter_executes_multiple_requested_operations(self) -> None:
         """Ejecuta dos tools distintas del mismo turno en el orden recibido."""
-        orchestrator = OrderConversationOrchestrator.__new__(
-            OrderConversationOrchestrator
+        orchestrator = GeminiOrderInterpreter.__new__(
+            GeminiOrderInterpreter
         )
         orchestrator.service = self.service
         orchestrator.max_tool_rounds = 5
@@ -288,10 +288,10 @@ class OrderRulesTests(unittest.TestCase):
         self.assertEqual(len(self.service.get_cart().items), 2)
         self.assertEqual(orchestrator._send_to_gemini.call_count, 2)
 
-    def test_orchestrator_rejects_duplicate_operation_in_batch(self) -> None:
+    def test_gemini_interpreter_rejects_duplicate_operation_in_batch(self) -> None:
         """No ejecuta un lote que repite exactamente la misma operación."""
-        orchestrator = OrderConversationOrchestrator.__new__(
-            OrderConversationOrchestrator
+        orchestrator = GeminiOrderInterpreter.__new__(
+            GeminiOrderInterpreter
         )
         orchestrator.service = self.service
         calls = [

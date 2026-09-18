@@ -249,8 +249,3 @@ class GeminiLiveTranscriber(SpeechToText):
                     await receiver
             await client.aio.aclose()
             client.close()
-
-
-# Alias transitorio para imports de pruebas o integraciones anteriores.
-# El nombre canónico para nuevas dependencias es GeminiLiveTranscriber.
-LiveTranscriber = GeminiLiveTranscriber

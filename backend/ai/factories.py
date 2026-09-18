@@ -1,10 +1,10 @@
 """Crea adaptadores de IA según la configuración, fuera del dominio."""
 
 from backend.ai.contracts import OrderInterpreter, SpeechToText
-from backend.ai.groq_interpreter import GroqOrderInterpreter
-from backend.ai.live_transcriber import GeminiLiveTranscriber
-from backend.ai.orchestrator import GeminiOrderInterpreter
-from backend.ai.openai_interpreter import OpenAIOrderInterpreter
+from backend.ai.groq_llm_interpreter import GroqOrderInterpreter
+from backend.ai.gemini_transcriber import GeminiLiveTranscriber
+from backend.ai.gemini_llm_interpreter import GeminiOrderInterpreter
+from backend.ai.openai_llm_interpreter import OpenAIOrderInterpreter
 from backend.services.order_service import OrderService
 from config.settings import (
     get_chat_model,

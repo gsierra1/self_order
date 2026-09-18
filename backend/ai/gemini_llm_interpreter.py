@@ -99,7 +99,7 @@ class GeminiOrderInterpreter(OrderInterpreter):
 
         log_event(
             "INFO",
-            "orchestrator.started",
+            "gemini_llm_interpreter.started",
             session_id=self.service.session.session_id,
             model=self.model,
         )
@@ -342,7 +342,7 @@ CATÁLOGO ACTUAL:
         if tool is None:
             log_event(
                 "ERROR",
-                "orchestrator.unauthorized_tool",
+                "gemini_llm_interpreter.unauthorized_tool",
                 session_id=self.service.session.session_id,
                 tool=function_call.name,
             )
@@ -417,7 +417,7 @@ CATÁLOGO ACTUAL:
             if signature in executed_calls or signature in batch_signatures:
                 log_event(
                     "ERROR",
-                    "orchestrator.duplicate_tool_call",
+                    "gemini_llm_interpreter.duplicate_tool_call",
                     session_id=self.service.session.session_id,
                     tool=function_call.name,
                     arguments=arguments,
@@ -718,7 +718,7 @@ CATÁLOGO ACTUAL:
             if tool_rounds >= self.max_tool_rounds:
                 log_event(
                     "ERROR",
-                    "orchestrator.max_tool_rounds",
+                    "gemini_llm_interpreter.max_tool_rounds",
                     session_id=session_id,
                     max_tool_rounds=self.max_tool_rounds,
                 )
@@ -732,7 +732,7 @@ CATÁLOGO ACTUAL:
             if len(function_calls) > 1:
                 log_event(
                     "INFO",
-                    "orchestrator.multiple_function_calls",
+                    "gemini_llm_interpreter.multiple_function_calls",
                     session_id=session_id,
                     function_call_count=len(function_calls),
                 )
@@ -775,8 +775,3 @@ CATÁLOGO ACTUAL:
         )
 
         return final_text
-
-
-# Alias transitorio para el nombre usado antes de introducir el contrato.
-# Las nuevas fábricas deben depender de GeminiOrderInterpreter o OrderInterpreter.
-OrderConversationOrchestrator = GeminiOrderInterpreter

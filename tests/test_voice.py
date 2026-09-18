@@ -14,13 +14,13 @@ from starlette.websockets import WebSocketDisconnect
 import backend.api.app as api
 from backend.api.conversation_socket import _detect_payment_method, _is_payment_methods_question
 from backend.ai.contracts import SpeechToTextFinalizationTimeout
-from backend.ai.live_transcriber import LiveTranscriber
+from backend.ai.gemini_transcriber import GeminiLiveTranscriber
 from backend.ai.errors import AIProviderError
 from backend.domain.session import Session
 from backend.services.order_service import OrderService
 
 
-class FakeTranscriber(LiveTranscriber):
+class FakeTranscriber(GeminiLiveTranscriber):
     """Transcriptor de prueba que espera audio.stop antes de entregar texto."""
 
     async def transcribe(self, publish) -> str:
@@ -143,7 +143,7 @@ class ConversationTests(unittest.TestCase):
         self.assertFalse(ws.receive_json()["data"]["final"])
         self.assistant.send_message.assert_not_called()
 
-    def test_final_voice_uses_existing_orchestrator_once(self) -> None:
+    def test_final_voice_uses_existing_interpreter_once(self) -> None:
         """Procesa solo el texto final, sin duplicar por un audio.stop repetido."""
         with self.client.websocket_connect(self.url) as ws:
             self.start_voice(ws)
@@ -438,10 +438,10 @@ class TranscriberTests(unittest.IsolatedAsyncioTestCase):
             aio=SimpleNamespace(live=SimpleNamespace(connect=connect), aclose=AsyncMock()),
             close=Mock(),
         )
-        transcriber = LiveTranscriber()
+        transcriber = GeminiLiveTranscriber()
         transcriber.feed(b"\x00\x00")
         transcriber.finish()
-        with patch("backend.ai.live_transcriber.create_gemini_client", return_value=client):
+        with patch("backend.ai.gemini_transcriber.create_gemini_client", return_value=client):
             result = await transcriber.transcribe(AsyncMock())
         self.assertEqual(result, "Burger Clásica")
         self.assertIn("activity_start", sent[0])
@@ -453,12 +453,12 @@ class TranscriberTests(unittest.IsolatedAsyncioTestCase):
         """Limita tamaño de fragmento, duración total y audio después del cierre."""
         for chunk in [b"", b"x", b"x" * 32770]:
             with self.assertRaises(ValueError):
-                LiveTranscriber().feed(chunk)
-        transcriber = LiveTranscriber()
+                GeminiLiveTranscriber().feed(chunk)
+        transcriber = GeminiLiveTranscriber()
         transcriber.byte_count = 16000 * 2 * 60
         with self.assertRaises(ValueError):
             transcriber.feed(b"xx")
-        transcriber = LiveTranscriber()
+        transcriber = GeminiLiveTranscriber()
         transcriber.finish()
         with self.assertRaises(ValueError):
             transcriber.feed(b"xx")

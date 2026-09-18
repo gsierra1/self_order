@@ -7,9 +7,10 @@ from unittest.mock import ANY, Mock, patch
 
 from backend.ai.contracts import OrderInterpreter, SpeechToText, VoiceEventPublisher
 from backend.ai.factories import create_order_interpreter, create_speech_to_text
-from backend.ai.orchestrator import GeminiOrderInterpreter
-from backend.ai.groq_interpreter import GroqOrderInterpreter
-from backend.ai.openai_interpreter import OpenAIOrderInterpreter
+from backend.ai.gemini_llm_interpreter import GeminiOrderInterpreter
+from backend.ai.groq_llm_interpreter import GroqOrderInterpreter
+from backend.ai.list_groq_models import list_groq_models
+from backend.ai.openai_llm_interpreter import OpenAIOrderInterpreter
 from backend.ai.order_tools_runtime import OrderToolsRuntime
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
@@ -152,6 +153,23 @@ class ProviderContractTests(unittest.IsolatedAsyncioTestCase):
 class ProviderFactoryTests(unittest.TestCase):
     """Comprueba selección de proveedor sin exigir credenciales no seleccionadas."""
 
+    def test_groq_model_list_orders_identifiers_and_closes_client(self) -> None:
+        """Lista modelos Groq simulados sin revelar ni requerir una credencial real."""
+        client = Mock()
+        client.models.list.return_value.data = [
+            type("Model", (), {"id": "z-model"})(),
+            type("Model", (), {"id": "a-model"})(),
+        ]
+
+        with patch(
+            "backend.ai.list_groq_models.create_groq_client",
+            return_value=client,
+        ):
+            models = list_groq_models()
+
+        self.assertEqual(models, ["a-model", "z-model"])
+        client.close.assert_called_once_with()
+
     def test_llm_prompts_forbid_clarifications_absent_from_catalog(self) -> None:
         """Impide que los intérpretes inventen variantes al pedir una aclaración."""
         service = OrderService(load_menu("config/menu.json"), Session())
@@ -190,7 +208,7 @@ class ProviderFactoryTests(unittest.TestCase):
         })()]})()
         client = Mock()
         client.chat.completions.create.side_effect = [first, second]
-        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=client):
+        with patch("backend.ai.openai_llm_interpreter.create_openai_client", return_value=client):
             interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
             response = interpreter.send_message("Quiero una Burger Clasica con Agua")
         self.assertNotIn("Agregue tu Burger Clasica con Agua.", response)
@@ -225,7 +243,7 @@ class ProviderFactoryTests(unittest.TestCase):
     def test_openai_credit_balance_error_is_not_reported_as_temporary(self) -> None:
         """Un 429 sin creditos explica facturacion y no recomienda reintentar."""
         service = OrderService(load_menu("config/menu.json"), Session())
-        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=Mock()):
+        with patch("backend.ai.openai_llm_interpreter.create_openai_client", return_value=Mock()):
             interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
         error = type("CreditError", (Exception,), {
             "status_code": 429,
@@ -239,7 +257,7 @@ class ProviderFactoryTests(unittest.TestCase):
     def test_rate_limit_error_exposes_provider_retry_time(self) -> None:
         """Muestra el tiempo de espera que Groq u OpenAI devuelven en headers."""
         service = OrderService(load_menu("config/menu.json"), Session())
-        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=Mock()):
+        with patch("backend.ai.openai_llm_interpreter.create_openai_client", return_value=Mock()):
             interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
         error = type("RateLimitError", (Exception,), {
             "status_code": 429,
@@ -502,7 +520,7 @@ class ProviderFactoryTests(unittest.TestCase):
         })()]})()
         client = Mock()
         client.chat.completions.create.side_effect = [first, second]
-        with patch("backend.ai.groq_interpreter.create_groq_client", return_value=client):
+        with patch("backend.ai.groq_llm_interpreter.create_groq_client", return_value=client):
             interpreter = GroqOrderInterpreter(service, "openai/gpt-oss-20b")
             response = interpreter.send_message("Quiero una Burger Clasica con Agua")
         self.assertNotIn("Agregue tu Burger Clasica con Agua.", response)
@@ -546,7 +564,7 @@ class ProviderFactoryTests(unittest.TestCase):
         client = Mock()
         client.chat.completions.create.side_effect = [incomplete, tool_response, complete]
 
-        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=client):
+        with patch("backend.ai.openai_llm_interpreter.create_openai_client", return_value=client):
             interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
             response = interpreter.send_message("Quiero una hamburguesa simple con agua")
 
@@ -573,7 +591,7 @@ class ProviderFactoryTests(unittest.TestCase):
         client = Mock()
         client.chat.completions.create.side_effect = responses
 
-        with patch("backend.ai.openai_interpreter.create_openai_client", return_value=client):
+        with patch("backend.ai.openai_llm_interpreter.create_openai_client", return_value=client):
             interpreter = OpenAIOrderInterpreter(service, "gpt-4.1-mini")
             response = interpreter.send_message("Quiero una hamburguesa simple con agua")
 

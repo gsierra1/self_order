@@ -406,3 +406,32 @@ recuperables, no llaman al LLM y no modifican el carrito.
 **Límites:** esto recupera la sesión local, pero no acelera ni garantiza la
 respuesta de Gemini Live. La selección de otro STT requiere un adaptador y una
 evaluación real de calidad, latencia, costo y estabilidad.
+
+## 17. Nombrar los adaptadores de IA por proveedor y función
+
+**Estado:** adoptada e implementada el 18/09/2026.
+
+**Contexto:** los módulos iniciales `live_transcriber.py` y `orchestrator.py`
+fueron creados cuando Gemini era el único proveedor. Luego se incorporaron
+intérpretes LLM de OpenAI y Groq, y la arquitectura dejó previsto sumar STT
+adicionales. Los nombres genéricos ya no permitían distinguir si un archivo
+trataba voz, LLM o qué proveedor implementaba.
+
+**Alternativas consideradas:** reunir todos los transcriptores en un único
+archivo; conservar los nombres históricos y documentar su alcance; o usar un
+módulo por adaptador con proveedor y función explícitos.
+
+**Decisión adoptada:** se usa `gemini_transcriber.py` para STT Gemini y
+`gemini_llm_interpreter.py`, `openai_llm_interpreter.py` y
+`groq_llm_interpreter.py` para LLM. Los listados de modelos también identifican
+su proveedor: `list_gemini_models.py`, `list_openai_models.py` y
+`list_groq_models.py`. No se conservan aliases de los nombres anteriores.
+
+**Consecuencias:** al incorporar un proveedor nuevo se agrega su adaptador en
+un archivo separado y la fábrica decide cuál construir. Tools, errores,
+contratos y `OrderToolsRuntime` continúan compartidos porque no pertenecen a un
+proveedor concreto.
+
+**Límites:** el nombre no implementa interoperabilidad. Vosk u otro STT aún
+necesita su adaptador, configuración, pruebas y evaluación real antes de poder
+seleccionarse en `STT_PROVIDER`.

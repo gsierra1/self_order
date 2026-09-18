@@ -1,7 +1,7 @@
 """Interprete Groq que reutiliza el protocolo compatible de tools."""
 
 from backend.ai.groq_client import create_groq_client
-from backend.ai.openai_interpreter import OpenAIOrderInterpreter
+from backend.ai.openai_llm_interpreter import OpenAIOrderInterpreter
 
 
 class GroqOrderInterpreter(OpenAIOrderInterpreter):

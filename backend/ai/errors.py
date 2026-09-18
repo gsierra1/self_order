@@ -179,7 +179,7 @@ def classify_gemini_api_error(
         user_message = (
             f"El modelo configurado «{model}» no está disponible para "
             f"{operation} en esta cuenta (404). Verificá el nombre del "
-            "modelo y sus capacidades con python -m backend.ai.list_models."
+            "modelo y sus capacidades con python -m backend.ai.list_gemini_models."
         )
 
     elif code == 401:

@@ -49,12 +49,13 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para el LLM configurado. Incluye `clear_cart` para vaciar el carrito en una sola operación. |
 | `backend/ai/order_tools_runtime.py` | Comparte instrucciones, ejecución segura, detección de mutaciones y sanitización de respuestas entre proveedores; transforma tablas Markdown del carrito en listas legibles. |
 | `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |
-| `backend/ai/live_transcriber.py` | `GeminiLiveTranscriber`: implementación Gemini del contrato STT; `LiveTranscriber` es alias temporal. |
-| `backend/ai/orchestrator.py` | `GeminiOrderInterpreter`: implementación Gemini de `OrderInterpreter`, conservada para `LLM_PROVIDER=gemini`. |
-| `backend/ai/openai_interpreter.py` | `OpenAIOrderInterpreter`: implementación OpenAI de `OrderInterpreter`; requiere saldo de API. |
-| `backend/ai/groq_interpreter.py` | `GroqOrderInterpreter`: implementación Groq de `OrderInterpreter`, usada por la demo. |
+| `backend/ai/gemini_transcriber.py` | `GeminiLiveTranscriber`: implementación Gemini del contrato STT. |
+| `backend/ai/gemini_llm_interpreter.py` | `GeminiOrderInterpreter`: implementación Gemini de `OrderInterpreter`, conservada para `LLM_PROVIDER=gemini`. |
+| `backend/ai/openai_llm_interpreter.py` | `OpenAIOrderInterpreter`: implementación OpenAI de `OrderInterpreter`; requiere saldo de API. |
+| `backend/ai/groq_llm_interpreter.py` | `GroqOrderInterpreter`: implementación Groq de `OrderInterpreter`, usada por la demo. |
 | `backend/ai/errors.py` | `AIProviderError` y clasificadores de errores HTTP/transporte; conservan etapa y si el pedido ya cambió. |
 | `backend/ai/factories.py` | `create_speech_to_text()` y `create_order_interpreter()` seleccionan el adaptador configurado. |
+| `backend/ai/list_gemini_models.py`, `list_openai_models.py`, `list_groq_models.py` | Consultas de diagnóstico de los modelos visibles para cada cuenta, sin imprimir credenciales. |
 | `backend/api/app.py` | Sirve frontend, crea `SessionRuntime` con `OrderInterpreter`, expone HTTP y WebSocket y serializa estado. |
 | `backend/api/websocket_manager.py` | Registra una conexión por sesión y publica eventos, incluso desde código en otro thread. |
 | `backend/logging/event_logger.py` | `log_event()`, formatters y handlers: JSONL detallado, texto legible y consola, con rotación. |
@@ -453,10 +454,9 @@ flowchart LR
 construye `GeminiLiveTranscriber`. Para chat, implementa `gemini`, `openai` y
 `groq`, que construyen respectivamente `GeminiOrderInterpreter`,
 `OpenAIOrderInterpreter` y `GroqOrderInterpreter`.
-Los nombres anteriores, `LiveTranscriber` y `OrderConversationOrchestrator`, se
-conservan como alias transitorios para que imports de pruebas o diagnósticos
-existentes no rompan durante la transición. El código nuevo depende de los
-contratos, no de esos alias.
+Los nombres históricos `LiveTranscriber` y `OrderConversationOrchestrator`
+no se conservan en el código actual: los módulos y clases explícitos identifican
+proveedor y tipo de IA. El código de borde depende de los contratos.
 
 Si se configura un proveedor futuro antes de agregar su adaptador, la fábrica
 muestra un error explícito y no intenta leer claves de otro proveedor. Así una

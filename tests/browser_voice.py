@@ -21,7 +21,7 @@ import uvicorn
 from playwright.sync_api import sync_playwright, expect
 
 import backend.api.app as api
-from backend.ai.live_transcriber import LiveTranscriber
+from backend.ai.gemini_transcriber import GeminiLiveTranscriber
 
 
 def write_fake_voice_audio(path: Path) -> None:
@@ -44,7 +44,7 @@ def write_fake_voice_audio(path: Path) -> None:
         audio_file.writeframes(struct.pack(f"<{len(samples)}h", *samples))
 
 
-class BrowserTranscriber(LiveTranscriber):
+class BrowserTranscriber(GeminiLiveTranscriber):
     """Espera PCM del micrófono sintético y devuelve una frase controlada."""
 
     async def transcribe(self, publish) -> str:
