@@ -12,6 +12,7 @@ from backend.ai.errors import AIProviderError
 from backend.ai.contracts import (
     SpeechToText,
     SpeechToTextConnectionTimeout,
+    SpeechToTextConfigurationError,
     SpeechToTextFinalizationTimeout,
 )
 from backend.ai.factories import create_speech_to_text
@@ -64,6 +65,19 @@ def _is_payment_methods_question(text: str) -> bool:
         "CUALES SON LAS OPCIONES DE PAGO",
     )
     return any(pattern in normalized for pattern in question_patterns)
+
+
+def _get_stt_label(audio: SpeechToText) -> str:
+    """Convierte el identificador técnico del STT en un nombre visible.
+
+    Args:
+        audio: Adaptador de transcripción que produjo el evento o error.
+
+    Returns:
+        Nombre breve y legible del proveedor de voz seleccionado.
+    """
+    labels = {"gemini": "Gemini", "vosk": "Vosk"}
+    return labels.get(audio.provider_name, audio.provider_name.capitalize())
 
 
 async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) -> None:
@@ -195,7 +209,23 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
             if audio is not None:
                 try:
                     text = await audio.transcribe(publish)
+                except SpeechToTextConfigurationError as exc:
+                    provider_label = _get_stt_label(audio)
+                    log_event(
+                        "WARN",
+                        "voice.configuration_error",
+                        session_id=session_id,
+                        provider=audio.provider_name,
+                    )
+                    await publish("voice.error", {
+                        "message": str(exc),
+                        "stage": "VOICE_CONFIGURATION",
+                        "source": provider_label,
+                        "retryable": False,
+                    })
+                    return False
                 except SpeechToTextConnectionTimeout as exc:
+                    provider_label = _get_stt_label(audio)
                     log_event(
                         "WARN",
                         "voice.connection_timeout",
@@ -204,15 +234,16 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     )
                     await publish("voice.error", {
                         "message": (
-                            "No se pudo conectar con Gemini para iniciar la "
-                            "transcripción. El pedido no cambió; podés volver a "
-                            "hablar o escribir."
+                            f"No se pudo iniciar la transcripción con {provider_label}. "
+                            "El pedido no cambió; podés volver a hablar o escribir."
                         ),
                         "stage": "VOICE_CONNECTION",
+                        "source": provider_label,
                         "retryable": True,
                     })
                     return True
                 except SpeechToTextFinalizationTimeout as exc:
+                    provider_label = _get_stt_label(audio)
                     log_event(
                         "WARN",
                         "voice.finalization_timeout",
@@ -221,11 +252,12 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     )
                     await publish("voice.error", {
                         "message": (
-                            "Gemini recibió el audio, pero no devolvió una "
+                            f"{provider_label} recibió el audio, pero no devolvió una "
                             "transcripción final a tiempo. El pedido no cambió; "
                             "podés volver a hablar o escribir."
                         ),
                         "stage": "VOICE_FINALIZATION",
+                        "source": provider_label,
                         "retryable": True,
                     })
                     return True

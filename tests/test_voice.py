@@ -13,7 +13,10 @@ from starlette.websockets import WebSocketDisconnect
 
 import backend.api.app as api
 from backend.api.conversation_socket import _detect_payment_method, _is_payment_methods_question
-from backend.ai.contracts import SpeechToTextFinalizationTimeout
+from backend.ai.contracts import (
+    SpeechToTextConfigurationError,
+    SpeechToTextFinalizationTimeout,
+)
 from backend.ai.gemini_transcriber import GeminiLiveTranscriber
 from backend.ai.errors import AIProviderError
 from backend.domain.session import Session
@@ -54,6 +57,26 @@ class FinalizationTimeoutTranscriber(FakeTranscriber):
         """
         await publish("voice.ready", {})
         raise SpeechToTextFinalizationTimeout("El proveedor no terminó el turno.")
+
+
+class ConfigurationErrorTranscriber(FakeTranscriber):
+    """Simula un STT local que no puede abrir el modelo configurado."""
+
+    provider_name = "vosk"
+
+    async def transcribe(self, publish) -> str:
+        """Falla antes de publicar disponibilidad para representar un modelo ausente.
+
+        Args:
+            publish: Callback no utilizado porque el STT no pudo inicializarse.
+
+        Raises:
+            SpeechToTextConfigurationError: Siempre, para comprobar el mensaje
+                visible de una configuración local inválida.
+        """
+        raise SpeechToTextConfigurationError(
+            "Vosk no pudo preparar el modelo local.",
+        )
 
 
 class ConversationTests(unittest.TestCase):
@@ -196,6 +219,24 @@ class ConversationTests(unittest.TestCase):
 
         self.assertFalse(self.runtime.turn_lock.locked())
         self.assistant.send_message.assert_called_once_with("Quiero una Burger Clásica con Coca")
+
+    def test_local_stt_configuration_error_preserves_the_order(self) -> None:
+        """Informa un modelo Vosk inválido sin enviar texto ni tocar el carrito."""
+        with patch(
+            "backend.api.conversation_socket.create_speech_to_text",
+            return_value=ConfigurationErrorTranscriber(),
+        ):
+            with self.client.websocket_connect(self.url) as ws:
+                self.assertEqual(ws.receive_json()["type"], "connection.ready")
+                ws.send_json({"type": "audio.start"})
+                error = ws.receive_json()
+
+        self.assertEqual(error["type"], "voice.error")
+        self.assertEqual(error["data"]["stage"], "VOICE_CONFIGURATION")
+        self.assertEqual(error["data"]["source"], "Vosk")
+        self.assertFalse(error["data"]["retryable"])
+        self.assertFalse(self.runtime.turn_lock.locked())
+        self.assistant.send_message.assert_not_called()
 
     def test_http_and_text_blocked_while_recording(self) -> None:
         """La reserva de voz impide procesar una segunda entrada concurrente."""
@@ -340,7 +381,7 @@ class ConversationTests(unittest.TestCase):
 
         self.assertIn("no-store", page_response.headers["cache-control"])
         self.assertIn("no-store", script_response.headers["cache-control"])
-        self.assertIn("app.js?v=20260918-7", page_response.text)
+        self.assertIn("app.js?v=20260918-8", page_response.text)
         self.assertIn("styles.css?v=20260918-5", page_response.text)
 
     def test_frontend_inactivity_requires_a_confirmed_message(self) -> None:

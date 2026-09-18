@@ -50,6 +50,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/ai/order_tools_runtime.py` | Comparte instrucciones, ejecución segura, detección de mutaciones y sanitización de respuestas entre proveedores; transforma tablas Markdown del carrito en listas legibles. |
 | `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |
 | `backend/ai/gemini_transcriber.py` | `GeminiLiveTranscriber`: implementación Gemini del contrato STT. |
+| `backend/ai/vosk_transcriber.py` | `VoskTranscriber`: implementación STT local que reutiliza un modelo indicado por `STT_MODEL_PATH`. |
 | `backend/ai/gemini_llm_interpreter.py` | `GeminiOrderInterpreter`: implementación Gemini de `OrderInterpreter`, conservada para `LLM_PROVIDER=gemini`. |
 | `backend/ai/openai_llm_interpreter.py` | `OpenAIOrderInterpreter`: implementación OpenAI de `OrderInterpreter`; requiere saldo de API. |
 | `backend/ai/groq_llm_interpreter.py` | `GroqOrderInterpreter`: implementación Groq de `OrderInterpreter`, usada por la demo. |
@@ -337,7 +338,7 @@ La guía de Adrián describe una arquitectura de producción para un kiosco fís
 | --- | --- | --- |
 | Hardware y captura | Micrófono del navegador con `echoCancellation` y `noiseSuppression`; audio PCM mono a 16 kHz. | Adecuado para validar el flujo. Falta mic array con beamforming/AEC real, equipo industrial, pantalla táctil, pinpad y ticketeadora. |
 | Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, detección de fin de habla por energía, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo kiosco/PWA, indicador de volumen, interrupciones y empaquetado de dispositivo. |
-| STT | `SpeechToText` desacopla el WebSocket; `GeminiLiveTranscriber` es el adaptador actual hacia Gemini Transcribe Live. | Es el enfoque cloud de la guía, configurable y útil para avanzar rápido. Groq ofrece transcripción por archivo, pero no implementa todavía el contrato de streaming de esta demo; evaluarlo requiere un adaptador que acumule el audio y renuncie a parciales. |
+| STT | `SpeechToText` desacopla el WebSocket; `GeminiLiveTranscriber` usa Gemini Live y `VoskTranscriber` procesa localmente PCM16 a 16 kHz. | Gemini permite validar el enfoque cloud; Vosk evita red y cobro por minuto para STT, pero requiere modelo local y evaluación real de calidad. Groq ofrece transcripción por archivo, no el streaming de esta demo. |
 | NLU y extracción | El LLM seleccionado recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM configurado propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
 | Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR escaneable de texto, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisión de ticket. |
 
@@ -428,6 +429,8 @@ flowchart LR
     F1 --> C1[SpeechToText]
     C1 --> G1[GeminiLiveTranscriber]
     G1 --> GT[Gemini Live Transcribe]
+    C1 --> V1[VoskTranscriber]
+    V1 --> VM[Modelo Vosk local]
     C1 --> T[Texto final]
     T --> F2[create_order_interpreter]
     F2 --> C2[OrderInterpreter]
@@ -450,8 +453,8 @@ flowchart LR
   `OrderService`.
 
 `backend/ai/factories.py` lee `STT_PROVIDER` y `LLM_PROVIDER` mediante
-`config/settings.py`. Para voz, la fábrica implementa solamente `gemini` y
-construye `GeminiLiveTranscriber`. Para chat, implementa `gemini`, `openai` y
+`config/settings.py`. Para voz, la fábrica implementa `gemini` y `vosk`, y
+construye respectivamente `GeminiLiveTranscriber` o `VoskTranscriber`. Para chat, implementa `gemini`, `openai` y
 `groq`, que construyen respectivamente `GeminiOrderInterpreter`,
 `OpenAIOrderInterpreter` y `GroqOrderInterpreter`.
 Los nombres históricos `LiveTranscriber` y `OrderConversationOrchestrator`
@@ -470,18 +473,19 @@ implementada.
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=gemini` | `GEMINI_API_KEY` una sola vez | `GEMINI_TRANSCRIPTION_MODEL`, `GEMINI_CHAT_MODEL` |
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=groq` | `GEMINI_API_KEY` y `GROQ_API_KEY` | `GEMINI_TRANSCRIPTION_MODEL`, `GROQ_CHAT_MODEL` |
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=openai` | `GEMINI_API_KEY` y `OPENAI_API_KEY` | `GEMINI_TRANSCRIPTION_MODEL`, `OPENAI_CHAT_MODEL` |
+| `STT_PROVIDER=vosk`, `LLM_PROVIDER=groq` | `STT_MODEL_PATH` y `GROQ_API_KEY` | Ruta de modelo Vosk, `GROQ_CHAT_MODEL` |
 | Gemini + LLM futuro | `GEMINI_API_KEY` y la clave del LLM elegido al implementar su adaptador | Modelo Gemini STT y variable del LLM futuro |
 | STT futuro + Gemini | Credencial o modelo local del STT y `GEMINI_API_KEY` | Variable STT futura y `GEMINI_CHAT_MODEL` |
 | Ambos futuros | Solo credenciales o archivos de los proveedores seleccionados | Variables propias de los adaptadores |
 | STT local | No necesita clave cloud para STT; sí `STT_MODEL_PATH` y el modelo instalado | Ruta, idioma y parámetros del motor local |
 
 `.env.example` presenta la combinación activa recomendada Gemini STT + Groq LLM
-y anota cómo cambiar a Gemini Chat u OpenAI. Las claves reales continúan fuera
-de Git. Anthropic, `STT_MODEL_PATH` y otros proveedores futuros se documentan en
-el README y en `docs/pendientes.md`, pero todavía no son configuraciones que el
-código acepte.
+y anota cómo cambiar a Vosk, Gemini Chat u OpenAI. Las claves reales y los
+modelos locales continúan fuera de Git. Anthropic y otros proveedores futuros
+se documentan en el README y en `docs/pendientes.md`, pero todavía no son
+configuraciones que el código acepte.
 
-### Candidatos investigados, no implementados
+### Candidatos investigados y estado de integración
 
 | Capa | Candidato | Qué requeriría el adaptador | Estado |
 | --- | --- | --- | --- |
@@ -489,7 +493,7 @@ código acepte.
 | STT cloud | Google Cloud Speech-to-Text | Credenciales de Google Cloud y cliente de streaming, distinto de la clave Gemini | Investigado; sin código ni prueba real. |
 | STT cloud | Azure Speech | Clave o identidad de Azure, región y cliente de reconocimiento continuo | Investigado; sin código ni prueba real. |
 | STT local | Whisper o faster-whisper | `STT_MODEL_PATH`, modelo descargado, CPU/GPU y segmentación de audio | Investigado; sin código ni prueba real. |
-| STT local | Vosk | `STT_MODEL_PATH`, modelo Vosk e integración de parciales locales | Investigado; sin código ni prueba real. |
+| STT local | Vosk | `STT_MODEL_PATH`, modelo Vosk y PCM16 a 16 kHz | Adaptador implementado y probado con simulaciones; falta prueba real con modelo y micrófono. |
 | LLM cloud | OpenAI | `OPENAI_API_KEY`, mapeo de function calling a las mismas tools autorizadas | Adaptador implementado y probado con simulaciones; la prueba real quedó bloqueada por falta de saldo API. |
 | LLM cloud | Anthropic | `ANTHROPIC_API_KEY`, mapeo de tool use a las mismas tools autorizadas | Investigado; sin código ni prueba real. |
 | LLM local | Ollama con un modelo compatible | Servicio/modelo local y adaptación de tool calling; no API key cloud por defecto | Investigado; sin código ni prueba real. |

@@ -608,10 +608,27 @@ class ProviderFactoryTests(unittest.TestCase):
             self.assertIs(create_order_interpreter(service), sentinel)
         adapter.assert_called_once_with(service=service, model=ANY)
 
+    def test_vosk_factory_uses_local_model_path_without_cloud_key(self) -> None:
+        """Selecciona Vosk con ruta local sin leer una credencial de Gemini."""
+        sentinel = object()
+        with patch.dict(
+            os.environ,
+            {"STT_PROVIDER": "vosk", "STT_MODEL_PATH": "models/test"},
+            clear=False,
+        ), patch(
+            "backend.ai.factories.VoskTranscriber",
+            return_value=sentinel,
+        ) as adapter:
+            self.assertIs(create_speech_to_text("session-test"), sentinel)
+        adapter.assert_called_once_with(
+            session_id="session-test",
+            model_path="models/test",
+        )
+
     def test_unimplemented_provider_fails_before_reading_its_credential(self) -> None:
         """Un proveedor futuro explica el límite sin requerir claves inexistentes."""
-        with patch.dict(os.environ, {"STT_PROVIDER": "vosk", "LLM_PROVIDER": "anthropic"}, clear=False):
-            with self.assertRaisesRegex(RuntimeError, "STT_PROVIDER='vosk'.*no tiene un adaptador"):
+        with patch.dict(os.environ, {"STT_PROVIDER": "whisper", "LLM_PROVIDER": "anthropic"}, clear=False):
+            with self.assertRaisesRegex(RuntimeError, "STT_PROVIDER='whisper'.*no tiene un adaptador"):
                 create_speech_to_text()
             service = OrderService(load_menu("config/menu.json"), Session())
             with self.assertRaisesRegex(RuntimeError, "LLM_PROVIDER='anthropic'.*no tiene un adaptador"):

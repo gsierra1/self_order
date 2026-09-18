@@ -15,7 +15,7 @@ registrar la corrida final.
   Gemini, interpretación Groq, altas y eliminaciones, cantidades agrupadas,
   vuelta desde un método al selector, selección de QR, tarjeta y caja, cierre
   del pedido y creación de una sesión nueva. También se escuchó la síntesis del
-  navegador. Las 72 pruebas automáticas cubren reglas, adaptadores, transporte,
+  navegador. Las 76 pruebas automáticas cubren reglas, adaptadores, transporte,
   caché del frontend y pago mediante simulaciones. Antes de la demostración
   falta registrar en una sola corrida real, con el modelo elegido para exponer,
   producto incompleto, producto agotado, reemplazo, varios extras y finalización
@@ -46,16 +46,19 @@ registrar la corrida final.
   adaptador `SpeechToText` con conexión, fragmentos, parciales, final,
   cancelación y cierre, configuración y rama en la fábrica STT; después validar
   audio real, latencia, ruido y reconexión. No seleccionar un proveedor futuro
-  en `.env` hasta que su adaptador y pruebas existan.
+  en `.env` hasta que su adaptador y pruebas existan. Vosk ya cumple ese contrato
+  y puede seleccionarse; su validación con modelo y micrófono reales sigue pendiente.
 - **Selección de STT sin costo de uso o con cuota limitada:** la investigación del
   18/09/2026 no encontró un STT cloud ilimitado y gratis que sea adecuado para
   producción. Las alternativas locales no cobran por minuto: **Vosk** funciona
   sin internet y su modelo español disponible es Apache 2.0, pero el modelo
   grande ocupa 1,4 GB; **Whisper** y **faster-whisper** también pueden correr
   localmente y Whisper publica código y pesos bajo MIT, aunque requieren
-  descargar el modelo y consumir CPU/GPU. Vosk es el primer candidato local a
-  evaluar porque su reconocimiento incremental se adapta naturalmente a los
-  fragmentos y parciales de `SpeechToText`. Whisper/faster-whisper puede
+  descargar el modelo y consumir CPU/GPU. Vosk fue el primer candidato local
+  evaluado porque su reconocimiento incremental se adapta naturalmente a los
+  fragmentos y parciales de `SpeechToText`; el adaptador quedó implementado el
+  18/09/2026 con pruebas simuladas. Falta medir su precisión con español
+  rioplatense, ruido y el micrófono real. Whisper/faster-whisper puede
   conservar el contrato y el resto del bot, pero inicialmente convendría
   transcribir al recibir `audio.stop`; los parciales requerirían una estrategia
   adicional de ventanas de audio.

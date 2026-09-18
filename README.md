@@ -1,7 +1,7 @@
 # Self Order Voice
 
-Prueba de un autoservicio conversacional: Gemini transcribe la voz; el LLM
-configurado interpreta el texto y el usuario también puede escribir. Un backend
+Prueba de un autoservicio conversacional: el STT configurado transcribe la voz;
+el LLM configurado interpreta el texto y el usuario también puede escribir. Un backend
 Python valida productos, modificadores y precios. El dashboard muestra la
 conversación y el carrito actualizado por WebSocket.
 
@@ -93,8 +93,8 @@ Chat. Gemini usa una sola
 `GEMINI_API_KEY` para las dos capas; sus modelos se configuran con
 `GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
 
-Gemini está implementado para STT y LLM. Groq y OpenAI están implementados solo
-para LLM; su STT sigue pendiente. Groq ofrece Whisper mediante un endpoint de
+Gemini está implementado para STT y LLM. Vosk está implementado como STT local;
+Groq y OpenAI están implementados solo para LLM. Groq ofrece Whisper mediante un endpoint de
 archivo, pero no el streaming de fragmentos que necesita esta interfaz; por eso
 no se puede cambiar solo una variable sin crear otro adaptador. El `.env.example` selecciona Groq porque la
 cuenta gratuita de Groq permitió probar las tools del carrito. No se instala un
@@ -157,14 +157,47 @@ OPENAI_CHAT_MODEL=gpt-4.1-mini
 de la cuenta ayuda a revisar acceso, pero la compatibilidad con tools y el saldo
 se confirman mediante una solicitud real.
 
-`whisper`, `vosk`, `anthropic`, `google-cloud`, `azure` u otro valor no
+`whisper`, `anthropic`, `google-cloud`, `azure` u otro valor no
 implementado se informa claramente y no intenta usar una clave ajena.
 
 Los proveedores se seleccionan mediante `STT_PROVIDER` y `LLM_PROVIDER`. Hoy
-STT admite `gemini`; LLM admite `gemini`, `groq` y `openai`. Cada proveedor
+STT admite `gemini` y `vosk`; LLM admite `gemini`, `groq` y `openai`. Cada proveedor
 requiere sus propias variables: Gemini usa `GEMINI_API_KEY`, Groq usa
-`GROQ_API_KEY` y OpenAI usa `OPENAI_API_KEY`. Solo se exige la credencial del
-proveedor elegido para esa capa. No compartas ni subas `.env` al repositorio.
+`GROQ_API_KEY`, OpenAI usa `OPENAI_API_KEY` y Vosk usa `STT_MODEL_PATH`.
+Solo se exige la credencial o el modelo del proveedor elegido para esa capa. No
+compartas ni subas `.env` al repositorio.
+
+### Usar Vosk como STT local
+
+Vosk procesa el audio en tu computadora: no necesita `GEMINI_API_KEY` para la
+transcripción y no cobra por minuto. Requiere instalar la dependencia del
+proyecto y descargar una vez un modelo de idioma. El modelo pequeño de español
+es una opción práctica para la demo; el modelo grande puede dar otra calidad,
+pero ocupa mucho más espacio. Ambos modelos se descargan fuera de Git.
+
+Desde la raíz del repositorio, descargá y descomprimí el modelo pequeño:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+New-Item -ItemType Directory -Force .models
+Invoke-WebRequest -Uri "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip" -OutFile ".models\vosk-model-small-es-0.42.zip"
+Expand-Archive -LiteralPath ".models\vosk-model-small-es-0.42.zip" -DestinationPath ".models" -Force
+```
+
+Luego modificá solamente tu `.env` local:
+
+```dotenv
+STT_PROVIDER=vosk
+STT_MODEL_PATH=.models/vosk-model-small-es-0.42
+LLM_PROVIDER=groq
+GROQ_API_KEY=tu_clave_de_groq
+GROQ_CHAT_MODEL=openai/gpt-oss-20b
+```
+
+Vosk recibe PCM16 de 16 kHz, publica hipótesis mientras hablás y entrega el
+texto final al terminar el turno. El modelo se carga una vez y queda reutilizado
+en memoria. La transcripción será local, aunque el LLM seguirá siendo cloud si
+dejás `LLM_PROVIDER=groq`. Ver [modelos de Vosk](https://alphacephei.com/vosk/models/).
 
 Para consultar los modelos visibles para la cuenta OpenAI, sin imprimir la
 clave (sólo aplica a `LLM_PROVIDER=openai`):

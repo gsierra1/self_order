@@ -15,6 +15,10 @@ class SpeechToTextFinalizationTimeout(TimeoutError):
     """Indica que el proveedor STT recibió audio pero no confirmó texto final."""
 
 
+class SpeechToTextConfigurationError(RuntimeError):
+    """Indica que el STT elegido no puede prepararse con su configuración local."""
+
+
 class SpeechToText(ABC):
     """Define un turno de voz por streaming sin conocer carrito ni tools."""
 

@@ -5,12 +5,14 @@ from backend.ai.groq_llm_interpreter import GroqOrderInterpreter
 from backend.ai.gemini_transcriber import GeminiLiveTranscriber
 from backend.ai.gemini_llm_interpreter import GeminiOrderInterpreter
 from backend.ai.openai_llm_interpreter import OpenAIOrderInterpreter
+from backend.ai.vosk_transcriber import VoskTranscriber
 from backend.services.order_service import OrderService
 from config.settings import (
     get_chat_model,
     get_groq_chat_model,
     get_llm_provider,
     get_openai_chat_model,
+    get_stt_model_path,
     get_stt_provider,
 )
 
@@ -30,9 +32,14 @@ def create_speech_to_text(session_id: str | None = None) -> SpeechToText:
     provider = get_stt_provider()
     if provider == "gemini":
         return GeminiLiveTranscriber(session_id=session_id)
+    if provider == "vosk":
+        return VoskTranscriber(
+            session_id=session_id,
+            model_path=get_stt_model_path(),
+        )
     raise RuntimeError(
         f"STT_PROVIDER={provider!r} todavía no tiene un adaptador implementado. "
-        "Usá 'gemini' o agregá el adaptador y sus pruebas antes de seleccionarlo."
+        "Usá 'gemini', 'vosk' o agregá el adaptador y sus pruebas antes de seleccionarlo."
     )
 
 

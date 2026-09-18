@@ -45,6 +45,19 @@ def get_transcription_model() -> str:
     return os.getenv("GEMINI_TRANSCRIPTION_MODEL", "gemini-3.5-transcribe-live")
 
 
+def get_stt_model_path() -> str:
+    """Obtiene la ruta local configurada para un motor STT basado en archivos.
+
+    Returns:
+        Ruta al directorio del modelo local, o una cadena vacía si no se definió.
+
+    Effects:
+        Carga el archivo .env local antes de consultar la configuración.
+    """
+    load_dotenv()
+    return os.getenv("STT_MODEL_PATH", "").strip()
+
+
 def get_chat_model() -> str:
     """Obtiene el modelo Gemini que interpreta y redacta los pedidos.
 

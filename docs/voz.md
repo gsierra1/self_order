@@ -29,10 +29,10 @@ little-endian mono a 16 kHz de 100 ms y vacía el último bloque antes de cerrar
 El contexto solicita 16 kHz y comprueba la frecuencia. No reproduce el micrófono
 por los parlantes. Al hablar se cancela la lectura del asistente.
 
-`backend/ai/contracts.py` define `SpeechToText`; el adaptador actual
-`GeminiLiveTranscriber` en `backend/ai/gemini_transcriber.py` no tiene tools ni
-acceso al carrito. Publica
-hipótesis, acumula segmentos definitivos y devuelve texto al cerrar el turno.
+`backend/ai/contracts.py` define `SpeechToText`; los adaptadores actuales
+`GeminiLiveTranscriber` en `backend/ai/gemini_transcriber.py` y
+`VoskTranscriber` en `backend/ai/vosk_transcriber.py` no tienen tools ni acceso
+al carrito. Publican hipótesis y devuelven texto al cerrar el turno.
 `backend/api/conversation_socket.py` valida eventos y entrega ese texto al
 `OrderInterpreter` elegido por `LLM_PROVIDER`. Las reglas del servicio se conservan.
 
@@ -101,7 +101,9 @@ cancela la lectura, manteniendo el texto disponible.
 ## Configuración y decisión
 
 `GEMINI_TRANSCRIPTION_MODEL` usa `gemini-3.5-transcribe-live` en la
-configuración recomendada. La demo usa Groq para el chat mediante
+configuración recomendada. También se puede elegir `STT_PROVIDER=vosk`, que
+usa el modelo local indicado por `STT_MODEL_PATH` y no requiere API key para la
+transcripción. La demo usa Groq para el chat mediante
 `GROQ_CHAT_MODEL=openai/gpt-oss-20b`; también se puede elegir Gemini u OpenAI
 con sus variables propias. Los nombres se pueden cambiar en `.env` sin modificar
 el código y las credenciales quedan en backend.
@@ -228,18 +230,20 @@ con `finish()`, publica parciales y devuelve el texto definitivo con
 `transcribe()`, y permite `cancel()` y `close()` al abandonar el turno o el
 WebSocket.
 
-La implementación efectiva sigue siendo `GeminiLiveTranscriber` en
-`backend/ai/gemini_transcriber.py`. `STT_PROVIDER=gemini` es el único valor implementado. Configurar
-por ahora `whisper`, `vosk`, `openai`, `google-cloud` o `azure` devuelve un error
-claro antes de abrir el turno: sus nombres están reservados como posibilidades,
-no son implementaciones listas para usar.
+Las implementaciones efectivas son `GeminiLiveTranscriber` en
+`backend/ai/gemini_transcriber.py` y `VoskTranscriber` en
+`backend/ai/vosk_transcriber.py`. `STT_PROVIDER` admite `gemini` o `vosk`.
+Vosk carga el modelo local una vez, procesa PCM16 a 16 kHz, publica hipótesis
+con `PartialResult()` y solo entrega `FinalResult()` después de `audio.stop`.
+Configurar por ahora `whisper`, `openai`, `google-cloud` o `azure` devuelve un
+error claro antes de abrir el turno.
 
 Un futuro adaptador debe conservar el contrato completo: preparar su conexión,
 aceptar fragmentos, publicar hipótesis separadas del final, no entregar texto
-incompleto al pedido, cancelar sin mutar y cerrar sus recursos. Whisper y Vosk
-requerirían además el modelo local definido en `STT_MODEL_PATH`; los servicios
-cloud requerirían la credencial del proveedor seleccionado. La elección se debe
-hacer con una matriz de prueba real de latencia, ruido, costo, hardware e
+incompleto al pedido, cancelar sin mutar y cerrar sus recursos. Vosk ya usa el
+modelo local definido en `STT_MODEL_PATH`; Whisper requeriría su propio modelo
+local y los servicios cloud la credencial del proveedor seleccionado. La elección
+se debe hacer con una matriz de prueba real de latencia, ruido, costo, hardware e
 interrupciones; esta arquitectura permite esa comparación sin reescribir
 `OrderService`.
 

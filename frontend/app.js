@@ -374,13 +374,13 @@ function failVoice(error) {
     try { sendEvent("audio.cancel"); } catch (_) { /* La conexión ya está cerrada. */ }
     transcript.textContent = "Audio cancelado; el pedido no fue enviado.";
     const message = error.message.includes("conexión de voz")
-        ? "No se pudo conectar con Gemini para iniciar la transcripción. El pedido no fue enviado."
+        ? "No se pudo iniciar el canal de voz. El pedido no fue enviado."
         : error.message;
     appendMessage("Sistema", message, "error");
     phase = socket?.readyState === WebSocket.OPEN ? "recovering" : "disconnected";
     setStatus(
         error.message.includes("conexión de voz")
-            ? "No se pudo conectar con Gemini"
+            ? "No se pudo iniciar la voz"
             : "No se pudo enviar el audio",
         "error",
     );
@@ -811,10 +811,12 @@ function onServerMessage(event) {
         if (data.message) appendMessage("Sistema", data.message, "error");
         const voiceStatus = pendingVoiceRelease
             ? "Liberando el turno de voz"
+            : data.stage === "VOICE_CONFIGURATION"
+            ? "Revisá la configuración de voz"
             : data.stage === "VOICE_CONNECTION"
-            ? "No se pudo conectar con Gemini"
+            ? `No se pudo iniciar ${data.source || "la voz"}`
             : data.stage === "VOICE_FINALIZATION"
-                ? "Gemini no finalizó la transcripción"
+                ? `${data.source || "El STT"} no finalizó la transcripción`
                 : type === "voice.cancelled" ? "Listo" : "Error";
         if (!sessionClosed) setStatus(voiceStatus, type === "voice.cancelled" ? "ready" : "error");
         restartInactivityTimer();

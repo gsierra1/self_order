@@ -432,6 +432,39 @@ un archivo separado y la fábrica decide cuál construir. Tools, errores,
 contratos y `OrderToolsRuntime` continúan compartidos porque no pertenecen a un
 proveedor concreto.
 
-**Límites:** el nombre no implementa interoperabilidad. Vosk u otro STT aún
-necesita su adaptador, configuración, pruebas y evaluación real antes de poder
-seleccionarse en `STT_PROVIDER`.
+**Límites:** el nombre no implementa interoperabilidad. Vosk se incorporó luego
+como primer adaptador STT adicional; cualquier otro STT todavía necesita su
+adaptador, configuración, pruebas y evaluación real antes de poder seleccionarse
+en `STT_PROVIDER`.
+
+## 18. Incorporar Vosk como STT local opcional
+
+**Estado:** adoptada e implementada con simulaciones el 18/09/2026.
+
+**Contexto:** Gemini Live presentó demoras y fallas de finalización en corridas
+reales. Se necesitaba una alternativa de STT que no dependiera de una cuota cloud
+ni de una API key, sin cambiar las reglas transaccionales ya validadas.
+
+**Alternativas consideradas:** conservar solo Gemini; usar Whisper local;
+integrar un servicio cloud con cuota; o incorporar Vosk. Whisper también puede
+correr localmente, pero requiere otro modelo y una estrategia adicional para
+publicar parciales. Los servicios cloud conservan costo, cuota o dependencia de
+red.
+
+**Decisión adoptada:** `VoskTranscriber` implementa `SpeechToText` mediante
+`vosk==0.3.45`. Recibe el mismo PCM16 mono de 16 kHz, usa `PartialResult()` para
+hipótesis y `FinalResult()` al recibir `audio.stop`. `STT_PROVIDER=vosk` y
+`STT_MODEL_PATH` hacen que la fábrica lo seleccione. El modelo se carga una vez
+por ruta y se reutiliza en memoria; `.models/` se excluye de Git.
+
+**Consecuencias:** Vosk no requiere una clave cloud para la transcripción. El
+texto final sigue el mismo recorrido hacia el LLM configurado, las tools y
+`OrderService`; menú, precios, disponibilidad, carrito y pago no cambian. Si el
+modelo falta o la ruta es inválida, la interfaz informa una configuración de voz
+recuperable sin alterar el pedido.
+
+**Límites:** las pruebas automáticas simulan el reconocedor; todavía no prueban
+un modelo Vosk real ni calidad con micrófono, español rioplatense o ruido. La
+primera carga del modelo puede demorar y consume memoria/CPU local. Usar Vosk
+solo hace local el STT: el LLM seguirá usando red si se configura Groq, Gemini u
+OpenAI.
