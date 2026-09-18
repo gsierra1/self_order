@@ -15,7 +15,7 @@ registrar la corrida final.
   Gemini, interpretación Groq, altas y eliminaciones, cantidades agrupadas,
   vuelta desde un método al selector, selección de QR, tarjeta y caja, cierre
   del pedido y creación de una sesión nueva. También se escuchó la síntesis del
-  navegador. Las 69 pruebas automáticas cubren reglas, adaptadores, transporte,
+  navegador. Las 71 pruebas automáticas cubren reglas, adaptadores, transporte,
   caché del frontend y pago mediante simulaciones. Antes de la demostración
   falta registrar en una sola corrida real, con el modelo elegido para exponer,
   producto incompleto, producto agotado, reemplazo, varios extras y finalización
@@ -47,6 +47,36 @@ registrar la corrida final.
   cancelación y cierre, configuración y rama en la fábrica STT; después validar
   audio real, latencia, ruido y reconexión. No seleccionar un proveedor futuro
   en `.env` hasta que su adaptador y pruebas existan.
+- **Selección de STT sin costo de uso o con cuota limitada:** la investigación del
+  18/09/2026 no encontró un STT cloud ilimitado y gratis que sea adecuado para
+  producción. Las alternativas locales no cobran por minuto: **Vosk** funciona
+  sin internet y su modelo español disponible es Apache 2.0, pero el modelo
+  grande ocupa 1,4 GB; **Whisper** y **faster-whisper** también pueden correr
+  localmente y Whisper publica código y pesos bajo MIT, aunque requieren
+  descargar el modelo y consumir CPU/GPU. Vosk es el primer candidato local a
+  evaluar porque su reconocimiento incremental se adapta naturalmente a los
+  fragmentos y parciales de `SpeechToText`. Whisper/faster-whisper puede
+  conservar el contrato y el resto del bot, pero inicialmente convendría
+  transcribir al recibir `audio.stop`; los parciales requerirían una estrategia
+  adicional de ventanas de audio.
+
+  Entre las alternativas cloud con cuota inicial, Google Cloud Speech-to-Text
+  ofrece 60 minutos mensuales sin cargo y streaming bidireccional, aunque exige
+  habilitar facturación; Azure Speech F0 ofrece una cuota gratuita limitada y
+  una sola transcripción concurrente; Deepgram ofrece crédito promocional, no
+  gratuidad permanente. OpenAI requiere crédito de API, como confirmó la prueba
+  local de `credit_balance_exhausted`. Groq ofrece Whisper muy rápido, pero su
+  endpoint actual procesa archivos y publica precios por hora: serviría como
+  adaptador final al cerrar el audio, no como reemplazo inmediato del streaming
+  actual. Antes de implementar, comparar Vosk local, Google Cloud streaming y
+  Azure/Deepgram según costo, español rioplatense, ruido, latencia y hardware.
+  Fuentes: [Vosk y modelos](https://github.com/alphacep/vosk-space/blob/master/models.md),
+  [Whisper](https://github.com/openai/whisper),
+  [Google Cloud STT](https://cloud.google.com/speech-to-text/pricing),
+  [cuotas streaming de Google](https://cloud.google.com/speech-to-text/docs/quotas),
+  [Azure Speech](https://learn.microsoft.com/azure/ai-services/speech-service/speech-services-quotas-and-limits),
+  [Deepgram](https://deepgram.com/pricing) y
+  [Groq Speech-to-Text](https://console.groq.com/docs/speech-to-text).
 - **Evaluacion Edge/STT local:** comparar latencia total, transcripcion con
   ruido, costo, hardware disponible y funcionamiento sin internet.
 - **Pruebas ambientales y estabilidad de IA:** medir en el hardware y ambiente
