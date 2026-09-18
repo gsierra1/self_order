@@ -9,6 +9,8 @@ para explorar pedidos por voz.
 
 - La persona puede hablar o escribir dentro de una misma sesión de pedido.
 - La pantalla refleja lo que se va pidiendo sin esperar al cierre del pedido.
+- La columna conversacional muestra bebidas y extras del catálogo como guía visual;
+  es informativa y no agrega productos por sí sola.
 - Si el producto no existe o está indisponible, el asistente lo informa.
 - Si faltan opciones obligatorias, pregunta antes de agregar la línea al carrito.
 - Se pueden corregir productos y opciones durante la conversación.

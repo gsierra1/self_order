@@ -60,7 +60,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/logging/event_logger.py` | `log_event()`, formatters y handlers: JSONL detallado, texto legible y consola, con rotación. |
 | `config/settings.py` | Carga `.env`, selecciona proveedores y obtiene la credencial/modelo de cada capa. |
 | `config/menu.json` | Catálogo local cargado al importar la API; editarlo requiere recargar el proceso. |
-| `frontend/index.html` | Panel conversacional, formulario, controles de micrófono/voz y carrito. |
+| `frontend/index.html` | Panel conversacional, catálogo visual animado de bebidas y extras, formulario, controles de micrófono/voz y carrito. |
 | `frontend/app.js` | `createSession`, `connectWebSocket`, `sendMessage`, `renderCart`; captura y conversión de audio, estados visuales e integración de inactividad. |
 | `frontend/inactivity.js` | `InactivityMonitor`: avisa tras 20 y 40 segundos y solicita una nueva sesión a los 60; permite reiniciar o detener el conteo. |
 | `frontend/styles.css` | Distribución de paneles, mensajes, carrito y adaptación a pantallas pequeñas. |

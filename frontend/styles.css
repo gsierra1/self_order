@@ -650,6 +650,108 @@ h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.05; }
     font-size: 13px;
 }
 
+/* =========================================================
+   DESCUBRIMIENTO VISUAL DEL MENÚ
+   ========================================================= */
+
+.menu-showcase {
+    flex-shrink: 0;
+    padding: 13px 30px 15px;
+    border-bottom: 1px solid var(--sia-line);
+    background:
+        linear-gradient(105deg, rgba(255, 229, 0, .13), transparent 39%),
+        #fff;
+}
+
+.showcase-row {
+    display: grid;
+    grid-template-columns: 118px minmax(0, 1fr);
+    align-items: center;
+    gap: 15px;
+}
+
+.showcase-row + .showcase-row {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(115, 50, 250, .08);
+}
+
+.showcase-label .eyebrow {
+    margin-bottom: 1px;
+    font-size: 9px;
+    letter-spacing: .12em;
+}
+
+.showcase-label h2 {
+    font-size: 15px;
+    line-height: 1.1;
+}
+
+.showcase-window {
+    min-width: 0;
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.showcase-track {
+    display: flex;
+    width: max-content;
+    animation: showcase-scroll 15s linear infinite;
+}
+
+.showcase-track--extras { animation-duration: 20s; }
+
+.showcase-option {
+    width: 102px;
+    flex: 0 0 102px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--sia-ink);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.showcase-image {
+    width: 34px;
+    height: 42px;
+    flex: 0 0 34px;
+    background-image: url("/static/assets/menu-options.png");
+    background-repeat: no-repeat;
+    background-size: 700% 100%;
+    filter: drop-shadow(0 4px 4px rgba(23, 18, 51, .12));
+}
+
+.showcase-option--cola .showcase-image { background-position: 0% 0; }
+.showcase-option--sprite .showcase-image { background-position: 16.6667% 0; }
+.showcase-option--water .showcase-image { background-position: 33.3333% 0; }
+.showcase-option--tomato .showcase-image { background-position: 50% 0; }
+.showcase-option--lettuce .showcase-image { background-position: 66.6667% 0; }
+.showcase-option--cheese .showcase-image { background-position: 83.3333% 0; }
+.showcase-option--ham .showcase-image { background-position: 100% 0; }
+
+.order-introduction {
+    flex-shrink: 0;
+    padding: 18px 30px 14px;
+    background: #fff;
+}
+
+.order-introduction h2 {
+    font-size: 21px;
+}
+
+.order-introduction p {
+    margin: 5px 0 0;
+    color: #77738b;
+    font-size: 13px;
+}
+
+@keyframes showcase-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
 .status {
     border: 1px solid rgba(115, 50, 250, .16);
     box-shadow: 0 5px 16px rgba(115, 50, 250, .08);
@@ -743,7 +845,15 @@ h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.05; }
 
 @media (max-width: 850px) {
     .panel-header { min-height: 116px; padding: 22px; }
+    .menu-showcase { padding: 12px 22px; }
+    .order-introduction { padding: 16px 22px 12px; }
+    .showcase-row { grid-template-columns: 100px minmax(0, 1fr); gap: 9px; }
+    .showcase-option { width: 92px; flex-basis: 92px; font-size: 11px; }
     .conversation { padding: 22px; }
     .message-form { padding: 16px; }
     .brand-logo { width: 58px; height: 43px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .showcase-track { animation: none; }
 }

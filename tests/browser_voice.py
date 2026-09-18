@@ -125,7 +125,7 @@ class BrowserVoiceTests(unittest.TestCase):
     """Prueba visible del circuito completo con Edge y dispositivos sintéticos."""
 
     def test_microphone_to_cart_and_confirmation(self) -> None:
-        """Verifica silencio automático, carrito, QR, vuelta y cierre de pago."""
+        """Verifica menú visual, voz, carrito, QR, vuelta y cierre de pago."""
         listener = socket.socket()
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
@@ -163,6 +163,21 @@ class BrowserVoiceTests(unittest.TestCase):
                         """)
                         page.goto(f"http://127.0.0.1:{port}")
                         expect(page.locator("#mic-button")).to_be_enabled()
+                        expect(page.locator(".menu-showcase")).to_be_visible()
+                        expect(page.locator(".showcase-row")).to_have_count(2)
+                        expect(page.locator(".showcase-option")).to_have_count(14)
+                        first_option_background = page.locator(
+                            ".showcase-image"
+                        ).first.evaluate(
+                            "element => getComputedStyle(element).backgroundImage"
+                        )
+                        self.assertIn("menu-options.png", first_option_background)
+                        first_track_animation = page.locator(
+                            ".showcase-track"
+                        ).first.evaluate(
+                            "element => getComputedStyle(element).animationName"
+                        )
+                        self.assertEqual(first_track_animation, "showcase-scroll")
                         page.wait_for_timeout(20500)
                         initial_message_count = page.locator(".assistant-message").count()
                         self.assertEqual(
