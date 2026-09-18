@@ -364,11 +364,12 @@ recibe clics ni teclas, y una conexión abierta no demuestra que alguien contin�
 frente al kiosco.
 
 **Decisión adoptada:** `InactivityMonitor` ejecuta tres intervalos consecutivos
-de veinte segundos después de la primera interacción de la persona. Primero
+de veinte segundos después del primer mensaje confirmado de la persona. Primero
 pregunta si sigue allí, luego avisa que cerrará la sesión y finalmente usa el
-flujo existente que limpia la pantalla y crea otra sesión. Clics, teclas y
-entradas reinician el conteo. Una sesión nueva permanece sin temporizador hasta
-que alguien interactúa. El procesamiento de voz o texto lo detiene para que la
+flujo existente que limpia la pantalla y crea otra sesión. Solo un mensaje de
+texto enviado o una transcripción final de voz reinician el conteo. Una sesión
+nueva, mover el mouse, enfocar un campo o tocar un control sin enviar un mensaje
+permanecen sin temporizador. El procesamiento de voz o texto lo detiene para que la
 latencia de un proveedor no se interprete como abandono.
 
 **Consecuencias:** los avisos no consumen tokens, no ejecutan tools y no cambian

@@ -68,14 +68,16 @@ function restartInactivityTimer() {
 }
 
 /**
- * Registra una acción de la persona y comienza o reinicia su espera.
+ * Registra un mensaje confirmado de la persona y comienza o reinicia su espera.
  * @returns {void}
- * @effects Marca la sesión como utilizada y reinicia el monitor si está lista.
+ * @effects Marca la sesión como utilizada. Solo se invoca al enviar texto o
+ * recibir una transcripción final, para que recorrer la interfaz no active el
+ * cierre automático.
  */
-function registerUserActivity() {
+function registerUserMessage() {
     if (sessionClosed) return;
     hasUserInteracted = true;
-    if (phase === "ready") inactivityMonitor.restart();
+    inactivityMonitor.stop();
 }
 
 /** Formatea un importe del carrito en pesos argentinos.
@@ -652,7 +654,6 @@ async function toggleMicrophone() {
         return;
     }
     if (phase !== "ready" || sessionClosed) return;
-    hasUserInteracted = true;
     inactivityMonitor.stop();
     phase = "preparing";
     showPaymentProcessing();
@@ -771,6 +772,7 @@ function onServerMessage(event) {
     } else if (type === "voice.transcript") {
         transcript.textContent = data.final ? "Audio enviado." : `Escuchando (provisional): ${data.text}`;
         if (data.final) {
+            registerUserMessage();
             appendMessage("Vos (voz)", data.text, "user");
             setStatus("Audio transcripto. Procesando pedido...", "processing");
         }
@@ -940,12 +942,15 @@ confirmCartButton.addEventListener("click", startPaymentFromCart);
 
 /**
  * Envía texto solo cuando no hay un turno hablado o escrito pendiente.
- * @param {string} message Mensaje del usuario.
+ * @param {string} message Mensaje confirmado de la persona o de un control de
+ * interfaz que expresa su elección.
+ * @returns {void}
+ * @effects Detiene la inactividad mientras el backend procesa el mensaje y
+ * deja la conversación en estado de procesamiento.
  */
 function sendMessage(message) {
     if (phase !== "ready" || sessionClosed) return;
-    hasUserInteracted = true;
-    inactivityMonitor.stop();
+    registerUserMessage();
     window.speechSynthesis?.cancel();
     sendEvent("user.text", { message });
     appendMessage("Vos", message, "user");
@@ -961,9 +966,6 @@ messageForm.addEventListener("submit", event => {
 });
 micButton.addEventListener("click", toggleMicrophone);
 audioButton.addEventListener("click", toggleAssistantAudio);
-document.addEventListener("pointerdown", registerUserActivity);
-document.addEventListener("keydown", registerUserActivity);
-document.addEventListener("input", registerUserActivity);
 window.addEventListener("pagehide", () => {
     inactivityMonitor.stop();
     voice.dispose();

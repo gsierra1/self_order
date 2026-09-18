@@ -97,10 +97,11 @@ como `Extras`. El resumen omite precios por línea, que ya están en el carrito,
 comunica una sola vez el total y las opciones para continuar.
 
 La interfaz administra además la inactividad sin consultar al LLM. Después de
-la primera acción de la persona, `InactivityMonitor` pregunta `¿Seguís ahí?` tras
-veinte segundos, advierte el cierre veinte segundos después y crea una sesión
-vacía tras otros veinte segundos. Una acción reinicia la secuencia; una sesión
-nueva sin interacción no inicia el monitor y el conteo se detiene mientras voz o
+un mensaje escrito enviado o de una transcripción final de voz,
+`InactivityMonitor` pregunta `¿Seguís ahí?` tras veinte segundos, advierte el cierre
+veinte segundos después y crea una sesión vacía tras otros veinte segundos. Un
+nuevo mensaje reinicia la secuencia; una sesión nueva, un movimiento del mouse o
+un clic que no envía un pedido no inician el monitor y el conteo se detiene mientras voz o
 texto se procesan.
 
 ## Tools y reglas

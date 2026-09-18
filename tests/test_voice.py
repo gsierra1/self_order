@@ -3,6 +3,7 @@
 import asyncio
 import unittest
 from contextlib import asynccontextmanager
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -294,7 +295,27 @@ class ConversationTests(unittest.TestCase):
         self.assertIn("no-store", page_response.headers["cache-control"])
         self.assertIn("no-store", script_response.headers["cache-control"])
         self.assertIn("app.js?v=20260917-6", page_response.text)
-        self.assertIn("styles.css?v=20260918-2", page_response.text)
+        self.assertIn("styles.css?v=20260918-3", page_response.text)
+
+    def test_frontend_inactivity_requires_a_confirmed_message(self) -> None:
+        """No arma el cierre por eventos generales de la interfaz.
+
+        El navegador puede recibir clics, foco, teclas o movimiento mientras la
+        pantalla está esperando a la siguiente persona. Esta verificación de
+        integración estática asegura que esos eventos no queden conectados al
+        monitor y que los únicos puntos que registran uso sean texto enviado y
+        una transcripción final.
+        """
+        frontend_source = (Path(__file__).parents[1] / "frontend" / "app.js").read_text(
+            encoding="utf-8",
+        )
+
+        self.assertIn("function registerUserMessage()", frontend_source)
+        self.assertIn("if (data.final) {\n            registerUserMessage()", frontend_source)
+        self.assertIn("function sendMessage(message) {\n    if (phase !== \"ready\" || sessionClosed) return;\n    registerUserMessage()", frontend_source)
+        self.assertNotIn('document.addEventListener("pointerdown"', frontend_source)
+        self.assertNotIn('document.addEventListener("keydown"', frontend_source)
+        self.assertNotIn('document.addEventListener("input"', frontend_source)
 
     def test_cancel_immediately_releases_reservation(self) -> None:
         """Cancelar sin esperar voice.ready no deja la sesión bloqueada."""
