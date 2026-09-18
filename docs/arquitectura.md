@@ -41,7 +41,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | Archivo | Responsabilidad y puntos de entrada |
 | --- | --- |
 | `backend/domain/product.py` | `Product`, `ModifierGroup`, `ModifierOption`: estructura del catálogo y adicionales de precio. |
-| `backend/domain/menu.py` | `load_menu()` convierte JSON a objetos; `Menu.get_product()` busca por identificador y `Menu.get_modifier_details()` transforma una seleccion interna ya validada en datos visibles para el frontend. |
+| `backend/domain/menu.py` | `load_menu()` convierte JSON a objetos y rechaza IDs o referencias duplicadas/inválidas; `Menu.get_product()` busca por identificador y `Menu.get_modifier_details()` transforma una seleccion interna ya validada en datos visibles para el frontend. |
 | `backend/domain/cart_item.py` | `CartItem`: una línea con producto, cantidad, configuración y precio unitario. |
 | `backend/domain/cart.py` | `Cart.total`: suma precio unitario por cantidad de cada línea. |
 | `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
@@ -425,6 +425,11 @@ Los grupos compartidos se declaran una sola vez en `modifier_groups` de
 `config/menu.json`; cada producto los referencia con `modifier_group_ids`. Por
 ejemplo, ambas hamburguesas usan el mismo grupo `drink`. Cambiar la disponibilidad
 de Coca-Cola, tomate o cualquier extra afecta a todos los productos que lo usan.
+
+Al cargar el archivo, `load_menu()` rechaza IDs repetidos de productos, grupos u
+opciones; también rechaza referencias a grupos compartidos inexistentes o
+repetidas dentro de un mismo producto. Esto evita que una edición del JSON
+sobrescriba silenciosamente un producto o cobre dos veces el mismo grupo.
 
 ### Recuperacion automatica del WebSocket
 

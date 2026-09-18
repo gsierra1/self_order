@@ -2,6 +2,9 @@
 
 import unittest
 from dataclasses import asdict
+import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -296,6 +299,53 @@ class OrderRulesTests(unittest.TestCase):
                 {"drink": "COCA", "unknown": "VALUE"},
             )
         self.assertFalse(self.service.get_cart().items)
+
+    def test_menu_rejects_duplicate_or_invalid_group_references(self) -> None:
+        """Evita que un JSON duplicado altere precios o reglas del pedido."""
+        catalog = json.loads(Path("config/menu.json").read_text(encoding="utf-8"))
+        invalid_catalogs = {
+            "producto duplicado": {
+                **catalog,
+                "products": [*catalog["products"], catalog["products"][0]],
+            },
+            "grupo compartido duplicado": {
+                **catalog,
+                "modifier_groups": [
+                    *catalog["modifier_groups"],
+                    catalog["modifier_groups"][0],
+                ],
+            },
+            "referencia repetida": {
+                **catalog,
+                "products": [
+                    {
+                        **catalog["products"][0],
+                        "modifier_group_ids": ["drink", "drink"],
+                    },
+                    catalog["products"][1],
+                ],
+            },
+            "referencia inexistente": {
+                **catalog,
+                "products": [
+                    {
+                        **catalog["products"][0],
+                        "modifier_group_ids": ["missing_group"],
+                    },
+                    catalog["products"][1],
+                ],
+            },
+        }
+        with TemporaryDirectory() as temporary_directory:
+            catalog_path = Path(temporary_directory) / "menu.json"
+            for name, invalid_catalog in invalid_catalogs.items():
+                with self.subTest(name=name):
+                    catalog_path.write_text(
+                        json.dumps(invalid_catalog),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaises(ValueError):
+                        load_menu(catalog_path)
 
     def test_gemini_interpreter_executes_multiple_requested_operations(self) -> None:
         """Ejecuta dos tools distintas del mismo turno en el orden recibido."""
