@@ -17,6 +17,7 @@ from backend.ai.contracts import (
 )
 from backend.ai.factories import create_speech_to_text
 from backend.ai.order_tools_runtime import OrderToolsRuntime
+from backend.api.input_validation import normalize_user_message
 from backend.api.conversation_guards import (
     get_ambiguous_mutation_message,
     is_cart_query,
@@ -421,9 +422,10 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     raise ValueError("Tipo de evento no soportado.")
                 if runtime.service.session.state == SessionState.CONFIRMED:
                     raise ValueError("El pedido ya fue confirmado.")
-                text = data.get("message") if event_type == "user.text" else None
-                if event_type == "user.text" and (not isinstance(text, str) or not text.strip()):
-                    raise ValueError("El mensaje debe contener texto.")
+                text = (
+                    normalize_user_message(data.get("message"))
+                    if event_type == "user.text" else None
+                )
                 if not runtime.turn_lock.acquire(blocking=False):
                     raise ValueError("Hay un turno en curso. Esperá su respuesta.")
                 try:
@@ -435,7 +437,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     runtime.turn_lock.release()
                     raise ValueError(str(exc)) from exc
                 turn_task = asyncio.create_task(process_turn(
-                    text.strip() if text is not None else None, transcriber,
+                    text, transcriber,
                 ))
                 turn_task.add_done_callback(lambda task, audio=transcriber: release_turn(task, audio))
             except (ValueError, json.JSONDecodeError) as exc:

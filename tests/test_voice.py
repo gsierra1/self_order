@@ -163,6 +163,26 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 429)
         self.assertEqual(response.json()["error"]["source"], "Groq")
 
+    def test_text_length_limit_blocks_http_and_websocket_before_the_llm(self) -> None:
+        """Rechaza un turno excesivo sin reservar IA ni modificar el carrito."""
+        oversized = "a" * 1001
+
+        http_response = self.client.post(
+            f"/api/sessions/{self.session.session_id}/messages",
+            json={"message": oversized},
+        )
+
+        self.assertEqual(http_response.status_code, 422)
+        self.assertIn("1000 caracteres", http_response.json()["detail"]["message"])
+        with self.client.websocket_connect(self.url) as ws:
+            self.assertEqual(ws.receive_json()["type"], "connection.ready")
+            ws.send_json({"type": "user.text", "data": {"message": oversized}})
+            websocket_response = ws.receive_json()
+        self.assertEqual(websocket_response["type"], "client.error")
+        self.assertIn("1000 caracteres", websocket_response["data"]["message"])
+        self.assistant.send_message.assert_not_called()
+        self.assertFalse(self.runtime.service.get_cart().items)
+
     def test_ambiguous_removal_preserves_all_matching_lines(self) -> None:
         """Pide distinguir dobles configuradas distinto antes de borrar una línea."""
         service = self.runtime.service

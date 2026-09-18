@@ -58,6 +58,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/ai/factories.py` | `create_speech_to_text()` y `create_order_interpreter()` seleccionan el adaptador configurado. |
 | `backend/ai/list_gemini_models.py`, `list_openai_models.py`, `list_groq_models.py` | Consultas de diagnóstico de los modelos visibles para cada cuenta, sin imprimir credenciales. |
 | `backend/api/app.py` | Sirve frontend, crea `SessionRuntime` con `OrderInterpreter`, expone HTTP y WebSocket y serializa estado. |
+| `backend/api/input_validation.py` | Normaliza turnos escritos y limita cada mensaje a 1.000 caracteres antes de reservar el intérprete o consumir cuota. |
 | `backend/api/conversation_guards.py` | Detecta solicitudes de eliminación ambiguas y consultas explícitas del carrito antes del LLM; usa únicamente datos ya validados por `OrderService`. |
 | `backend/api/websocket_manager.py` | Registra una conexión por sesión y publica eventos, incluso desde código en otro thread. |
 | `backend/logging/event_logger.py` | `log_event()`, formatters y handlers: JSONL detallado, texto legible y consola, con rotación. |
@@ -246,7 +247,7 @@ identificadores tecnicos ni duplicar el catalogo.
 | `GET /api/health` | Estado del proceso; no verifica disponibilidad de los proveedores de IA. |
 | `POST /api/sessions` | Devuelve `session_id`, `state`, `cart`. |
 | `GET /api/sessions/{id}/cart` | Snapshot `{items, total, state}`. |
-| `POST /api/sessions/{id}/messages` | Recibe `{message}`; devuelve texto, carrito, estado de cierre o error estructurado. El frontend actual usa WebSocket para el chat. |
+| `POST /api/sessions/{id}/messages` | Recibe `{message}` de hasta 1.000 caracteres; devuelve texto, carrito, estado de cierre o error estructurado. El frontend actual usa WebSocket para el chat. |
 | `DELETE /api/sessions/{id}/cart/items/{line_id}` | Elimina una línea completa del carrito validado. |
 | `DELETE /api/sessions/{id}/cart/items/{line_id}/modifiers/{group_id}` | Quita un modificador opcional y recalcula la línea mediante `OrderService`. |
 | `/ws/sessions/{id}` | Recibe JSON de texto y bytes de audio; publica los eventos siguientes. |

@@ -21,6 +21,7 @@ from backend.api.conversation_guards import (
 )
 from backend.api.websocket_manager import WebSocketManager
 from backend.api.conversation_socket import handle_conversation
+from backend.api.input_validation import normalize_user_message
 from backend.domain.menu import load_menu
 from backend.domain.session import Session, SessionState
 from backend.logging.event_logger import log_event
@@ -523,19 +524,16 @@ def send_message(
         "message"
     )
 
-    if (
-        not isinstance(message, str)
-        or not message.strip()
-    ):
+    try:
+        text = normalize_user_message(message)
+    except ValueError as exc:
         raise HTTPException(
             status_code=422,
             detail={
                 "error_type": "INVALID_MESSAGE",
-                "message": (
-                    "El campo 'message' debe contener texto."
-                ),
+                "message": str(exc),
             },
-        )
+        ) from exc
 
     try:
         if not runtime.turn_lock.acquire(blocking=False):
@@ -545,7 +543,6 @@ def send_message(
         try:
             if service.session.state == SessionState.CONFIRMED:
                 return JSONResponse(status_code=409, content={"ok": False})
-            text = message.strip()
             ambiguous_mutation = get_ambiguous_mutation_message(service, text)
             if ambiguous_mutation is not None:
                 assistant_text = ambiguous_mutation
