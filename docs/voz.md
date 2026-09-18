@@ -35,10 +35,11 @@ por los parlantes. Al hablar se cancela la lectura del asistente.
 al carrito. Publican hipótesis y devuelven texto al cerrar el turno.
 Vosk procesa localmente y evita la latencia de red, pero el modelo pequeño de
 español no garantiza reconocimiento rioplatense: se observaron confusiones de
-vocabulario como «esprit» o «esperáis» por «Sprite». El adaptador corrige esas
-variantes puntuales y «debida» por «bebida» antes de mostrar o interpretar el
-texto. Esta normalización no decide productos ni modifica el carrito; una prueba
-real con micrófono debe evaluar si el modelo sigue siendo aceptable para la demo.
+vocabulario como «esprit», «esperáis» o «espiral» por «Sprite». El adaptador
+corrige esas variantes puntuales, «debida» por «bebida» y «concurre» o «q erre» por
+«QR» antes de mostrar o interpretar el texto. Esta normalización no decide
+productos ni modifica el carrito; una prueba real con micrófono debe evaluar si el
+modelo sigue siendo aceptable para la demo.
 `backend/api/conversation_socket.py` valida eventos y entrega ese texto al
 `OrderInterpreter` elegido por `LLM_PROVIDER`. Las reglas del servicio se conservan.
 
@@ -106,10 +107,10 @@ cancela la lectura, manteniendo el texto disponible.
 
 ## Configuración y decisión
 
-`GEMINI_TRANSCRIPTION_MODEL` usa `gemini-3.5-transcribe-live` en la
-configuración recomendada. También se puede elegir `STT_PROVIDER=vosk`, que
-usa el modelo local indicado por `STT_MODEL_PATH` y no requiere API key para la
-transcripción. La demo usa Groq para el chat mediante
+El `.env.example` usa `STT_PROVIDER=vosk`, que requiere el modelo local indicado
+por `STT_MODEL_PATH` y no necesita API key para la transcripción. También se
+puede elegir Gemini mediante `GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live`.
+La demo usa Groq para el chat mediante
 `GROQ_CHAT_MODEL=openai/gpt-oss-20b`; también se puede elegir Gemini u OpenAI
 con sus variables propias. Los nombres se pueden cambiar en `.env` sin modificar
 el código y las credenciales quedan en backend. La descarga, verificación y

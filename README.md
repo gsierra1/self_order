@@ -50,14 +50,13 @@ que cada instalación local debe elegir y guardar fuera de Git. Las instruccione
 completas para esa alternativa están en [Usar Vosk como STT local](#usar-vosk-como-stt-local).
 
 Crear `.env` a partir de `.env.example` solo si todavía no existe. La
-configuración recomendada para esta demo usa Gemini para transcribir la voz y
-Groq para interpretar el pedido:
+configuración recomendada para esta demo local usa Vosk para transcribir la voz
+en la computadora y Groq para interpretar el pedido:
 
 ```dotenv
-STT_PROVIDER=gemini
+STT_PROVIDER=vosk
 LLM_PROVIDER=groq
-GEMINI_API_KEY=tu_clave_de_google_ai_studio
-GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live
+STT_MODEL_PATH=.models/vosk-model-small-es-0.42
 GROQ_API_KEY=tu_clave_de_groq
 GROQ_CHAT_MODEL=openai/gpt-oss-20b
 # Alternativa probada: qwen/qwen3.8-27b (menos consistente en algunas tools).
@@ -92,9 +91,9 @@ adicional. `http://127.0.0.1:8000/docs` muestra los endpoints HTTP.
 
 `STT_PROVIDER` decide el proveedor que transforma audio en texto y
 `LLM_PROVIDER` el que interpreta el pedido. Si se omiten, el código usa Gemini
-para ambas capas. La configuración recomendada del `.env.example` usa Groq para
-el chat debido al saldo agotado de OpenAI y a la saturación observada en Gemini
-Chat. Gemini usa una sola
+para ambas capas. La configuración recomendada del `.env.example` usa Vosk para
+la voz local y Groq para el chat debido al saldo agotado de OpenAI y a la
+saturación observada en Gemini Chat. Gemini usa una sola
 `GEMINI_API_KEY` para las dos capas; sus modelos se configuran con
 `GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
 
