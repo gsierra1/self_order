@@ -14,6 +14,11 @@ from fastapi.staticfiles import StaticFiles
 from backend.ai.errors import AIProviderError
 from backend.ai.contracts import OrderInterpreter
 from backend.ai.factories import create_order_interpreter
+from backend.ai.order_tools_runtime import OrderToolsRuntime
+from backend.api.conversation_guards import (
+    get_ambiguous_removal_message,
+    is_cart_query,
+)
 from backend.api.websocket_manager import WebSocketManager
 from backend.api.conversation_socket import handle_conversation
 from backend.domain.menu import load_menu
@@ -540,7 +545,14 @@ def send_message(
         try:
             if service.session.state == SessionState.CONFIRMED:
                 return JSONResponse(status_code=409, content={"ok": False})
-            assistant_text = assistant.send_message(message.strip())
+            text = message.strip()
+            ambiguous_removal = get_ambiguous_removal_message(service, text)
+            if ambiguous_removal is not None:
+                assistant_text = ambiguous_removal
+            elif is_cart_query(text):
+                assistant_text = OrderToolsRuntime(service).get_cart_summary()
+            else:
+                assistant_text = assistant.send_message(text)
         finally:
             runtime.turn_lock.release()
 

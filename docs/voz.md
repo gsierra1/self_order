@@ -33,6 +33,12 @@ por los parlantes. Al hablar se cancela la lectura del asistente.
 `GeminiLiveTranscriber` en `backend/ai/gemini_transcriber.py` y
 `VoskTranscriber` en `backend/ai/vosk_transcriber.py` no tienen tools ni acceso
 al carrito. Publican hipótesis y devuelven texto al cerrar el turno.
+Vosk procesa localmente y evita la latencia de red, pero el modelo pequeño de
+español no garantiza reconocimiento rioplatense: se observaron confusiones de
+vocabulario como «esprit» o «esperáis» por «Sprite». El adaptador corrige esas
+variantes puntuales y «debida» por «bebida» antes de mostrar o interpretar el
+texto. Esta normalización no decide productos ni modifica el carrito; una prueba
+real con micrófono debe evaluar si el modelo sigue siendo aceptable para la demo.
 `backend/api/conversation_socket.py` valida eventos y entrega ese texto al
 `OrderInterpreter` elegido por `LLM_PROVIDER`. Las reglas del servicio se conservan.
 

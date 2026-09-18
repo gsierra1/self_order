@@ -16,6 +16,11 @@ from backend.ai.contracts import (
     SpeechToTextFinalizationTimeout,
 )
 from backend.ai.factories import create_speech_to_text
+from backend.ai.order_tools_runtime import OrderToolsRuntime
+from backend.api.conversation_guards import (
+    get_ambiguous_removal_message,
+    is_cart_query,
+)
 from backend.domain.session import SessionState
 from backend.logging.event_logger import log_event
 
@@ -109,6 +114,34 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
             text: Mensaje escrito o transcripción definitiva del usuario.
         """
         started_at = time.perf_counter()
+        if runtime.service.session.state is SessionState.ACTIVE:
+            ambiguous_removal = get_ambiguous_removal_message(runtime.service, text)
+            if ambiguous_removal is not None:
+                await publish("assistant.text", {
+                    "text": ambiguous_removal,
+                    "cart": snapshot(runtime.service),
+                    "session_closed": False,
+                })
+                log_event(
+                    "INFO",
+                    "conversation.ambiguous_removal",
+                    session_id=session_id,
+                    input_length=len(text),
+                )
+                return
+            if is_cart_query(text):
+                await publish("assistant.text", {
+                    "text": OrderToolsRuntime(runtime.service).get_cart_summary(),
+                    "cart": snapshot(runtime.service),
+                    "session_closed": False,
+                })
+                log_event(
+                    "INFO",
+                    "conversation.cart_query",
+                    session_id=session_id,
+                    input_length=len(text),
+                )
+                return
         if runtime.service.session.state in {SessionState.ACTIVE, SessionState.PAYMENT_PENDING}:
             if _is_payment_methods_question(text):
                 await publish("assistant.text", {

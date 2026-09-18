@@ -137,6 +137,70 @@ class ConversationTests(unittest.TestCase):
         self.assertIsNone(response["data"]["cart"]["payment_method"])
         self.assistant.send_message.assert_not_called()
 
+    def test_ambiguous_removal_preserves_all_matching_lines(self) -> None:
+        """Pide distinguir dobles configuradas distinto antes de borrar una línea."""
+        service = self.runtime.service
+        service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+        service.add_item(
+            "BURGER_DOBLE",
+            1,
+            {"drink": "WATER", "extra_ham": "ADD_HAM"},
+        )
+        service.add_item(
+            "BURGER_DOBLE",
+            1,
+            {"drink": "SPRITE", "extra_lettuce": "ADD_LETTUCE"},
+        )
+
+        with self.client.websocket_connect(self.url) as ws:
+            self.assertEqual(ws.receive_json()["type"], "connection.ready")
+            ws.send_json({
+                "type": "user.text",
+                "data": {"message": "eliminame por favor la hamburguesa doble"},
+            })
+            response = ws.receive_json()
+
+        self.assertEqual(response["type"], "assistant.text")
+        self.assertIn("¿Cuál querés eliminar?", response["data"]["text"])
+        self.assertIn("Agua", response["data"]["text"])
+        self.assertIn("Sprite", response["data"]["text"])
+        self.assertEqual(len(response["data"]["cart"]["items"]), 3)
+        self.assistant.send_message.assert_not_called()
+
+    def test_cart_query_uses_the_validated_cart_without_llm(self) -> None:
+        """Enumera el carrito real aunque un proveedor pudiera describirlo mal."""
+        self.runtime.service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+
+        with self.client.websocket_connect(self.url) as ws:
+            self.assertEqual(ws.receive_json()["type"], "connection.ready")
+            ws.send_json({
+                "type": "user.text",
+                "data": {"message": "a ver, decime qué tiene mi carrito"},
+            })
+            response = ws.receive_json()
+
+        self.assertEqual(response["type"], "assistant.text")
+        self.assertIn("Burger Clásica", response["data"]["text"])
+        self.assertIn("Agua", response["data"]["text"])
+        self.assertIn("$8.500", response["data"]["text"])
+        self.assistant.send_message.assert_not_called()
+
+    def test_http_ambiguous_removal_preserves_all_matching_lines(self) -> None:
+        """Aplica la misma barrera si un cliente usa el endpoint HTTP legado."""
+        service = self.runtime.service
+        service.add_item("BURGER_DOBLE", 1, {"drink": "WATER"})
+        service.add_item("BURGER_DOBLE", 1, {"drink": "SPRITE"})
+
+        response = self.client.post(
+            f"/api/sessions/{self.session.session_id}/messages",
+            json={"message": "eliminá la hamburguesa doble"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("¿Cuál querés eliminar?", response.json()["assistant_text"])
+        self.assertEqual(len(response.json()["cart"]["items"]), 2)
+        self.assistant.send_message.assert_not_called()
+
     def test_direct_payment_from_active_skips_llm_and_selector(self) -> None:
         """Elige caja desde ACTIVE sin mostrar ni delegar la lista al LLM."""
         self.runtime.service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})

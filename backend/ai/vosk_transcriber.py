@@ -4,6 +4,7 @@ import asyncio
 import json
 import threading
 import time
+import re
 from pathlib import Path
 
 from vosk import KaldiRecognizer, Model
@@ -17,6 +18,15 @@ from backend.logging.event_logger import log_event
 
 _MODEL_CACHE: dict[str, Model] = {}
 _MODEL_LOCK = threading.Lock()
+
+_MENU_SPEECH_CORRECTIONS = {
+    "debida": "bebida",
+    "esprit": "Sprite",
+    "espirit": "Sprite",
+    "esperais": "Sprite",
+    "esperáis": "Sprite",
+    "esperaís": "Sprite",
+}
 
 
 def _load_model(model_path: str) -> Model:
@@ -78,6 +88,30 @@ def _read_result(result: str, field: str) -> str:
     except (TypeError, json.JSONDecodeError):
         return ""
     return value.strip() if isinstance(value, str) else ""
+
+
+def _normalize_menu_vocabulary(text: str) -> str:
+    """Corrige variantes frecuentes del STT para términos visibles del menú.
+
+    La corrección se limita a variantes acústicas observadas de palabras del
+    menú. No agrega productos, modificadores ni operaciones: el intérprete y
+    ``OrderService`` continúan validando el pedido completo.
+
+    Args:
+        text: Hipótesis parcial o texto final producido por Vosk.
+
+    Returns:
+        Texto con equivalencias acotadas de vocabulario del menú.
+    """
+    normalized = text
+    for spoken, canonical in _MENU_SPEECH_CORRECTIONS.items():
+        normalized = re.sub(
+            rf"\b{re.escape(spoken)}\b",
+            canonical,
+            normalized,
+            flags=re.IGNORECASE,
+        )
+    return normalized
 
 
 class VoskTranscriber(SpeechToText):
@@ -205,13 +239,17 @@ class VoskTranscriber(SpeechToText):
                 break
             accepted = await asyncio.to_thread(recognizer.AcceptWaveform, chunk)
             if accepted:
-                segment = _read_result(await asyncio.to_thread(recognizer.Result), "text")
+                segment = _normalize_menu_vocabulary(
+                    _read_result(await asyncio.to_thread(recognizer.Result), "text"),
+                )
                 if segment:
                     final_parts.append(segment)
             else:
-                partial = _read_result(
-                    await asyncio.to_thread(recognizer.PartialResult),
-                    "partial",
+                partial = _normalize_menu_vocabulary(
+                    _read_result(
+                        await asyncio.to_thread(recognizer.PartialResult),
+                        "partial",
+                    ),
                 )
                 visible_text = " ".join([*final_parts, partial]).strip()
                 if visible_text and visible_text != last_partial:
@@ -220,9 +258,11 @@ class VoskTranscriber(SpeechToText):
                         "text": visible_text,
                         "final": False,
                     })
-        final_segment = _read_result(
-            await asyncio.to_thread(recognizer.FinalResult),
-            "text",
+        final_segment = _normalize_menu_vocabulary(
+            _read_result(
+                await asyncio.to_thread(recognizer.FinalResult),
+                "text",
+            ),
         )
         if final_segment:
             final_parts.append(final_segment)

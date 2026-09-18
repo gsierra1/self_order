@@ -216,10 +216,17 @@ CATALOGO ACTUAL:
             Respuesta original o resumen determinista con extras, continuidad y
             confirmación según el carrito validado.
         """
+        cart = self.service.get_cart()
+        if cart.items and re.search(
+            r"\bcarrito\b.{0,60}\bvac[ií]o\b",
+            text,
+            flags=re.IGNORECASE | re.DOTALL,
+        ):
+            return self.get_cart_summary()
         if (
             not transaction_applied
             or self.service.session.state is not SessionState.ACTIVE
-            or not self.service.get_cart().items
+            or not cart.items
         ):
             return text
 
@@ -227,10 +234,10 @@ CATALOGO ACTUAL:
             not group.required
             and group.id not in item.selected_modifiers
             and any(option.available for option in group.options)
-            for item in self.service.get_cart().items
+            for item in cart.items
             for group in self.service.menu.get_product(item.product_id).modifier_groups
         )
-        summary = "Pedido actualizado.\n" + self._build_cart_summary()
+        summary = "Pedido actualizado.\n" + self.get_cart_summary()
         if has_available_extra:
             question = (
                 "¿Querés agregar algún extra, pedir algo más o confirmar el pedido?"
@@ -238,6 +245,14 @@ CATALOGO ACTUAL:
         else:
             question = "¿Querés pedir algo más o confirmar el pedido?"
         return f"{summary}\n{question}"
+
+    def get_cart_summary(self) -> str:
+        """Expone un resumen construido desde el carrito validado.
+
+        Returns:
+            Descripción visible de las líneas, sus modificadores y el total real.
+        """
+        return self._build_cart_summary()
 
     def _build_cart_summary(self) -> str:
         """Construye una descripción visible desde el carrito validado.

@@ -405,6 +405,18 @@ class ProviderFactoryTests(unittest.TestCase):
         self.assertIn("Agua", text)
         self.assertIn("$8.500 pesos argentinos", text)
 
+    def test_runtime_replaces_a_false_empty_cart_claim_with_real_state(self) -> None:
+        """Evita que una respuesta del proveedor contradiga el carrito validado."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+        runtime = OrderToolsRuntime(service)
+
+        text = runtime.ensure_next_step("Ahora el carrito está vacío.", False)
+
+        self.assertIn("Burger Clásica", text)
+        self.assertIn("$8.500", text)
+        self.assertNotIn("vacío", text)
+
     def test_clear_cart_tool_removes_all_lines_in_one_operation(self) -> None:
         """La tool clear_cart vacía varias líneas sin encadenar eliminaciones."""
         service = OrderService(load_menu("config/menu.json"), Session())

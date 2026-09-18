@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from backend.ai.contracts import SpeechToTextConfigurationError
-from backend.ai.vosk_transcriber import VoskTranscriber
+from backend.ai.vosk_transcriber import VoskTranscriber, _normalize_menu_vocabulary
 
 
 class FakeRecognizer:
@@ -108,6 +108,17 @@ class VoskTranscriberTests(unittest.IsolatedAsyncioTestCase):
         ):
             with self.assertRaises(SpeechToTextConfigurationError):
                 await transcriber.transcribe(publish)
+
+    def test_normalizes_observed_menu_words_without_inventing_an_operation(self) -> None:
+        """Corrige variantes de bebida y conserva el resto de la transcripción."""
+        text = _normalize_menu_vocabulary(
+            "quiero otra burguer doble pero la debida tiene que ser esperáis",
+        )
+
+        self.assertEqual(
+            text,
+            "quiero otra burguer doble pero la bebida tiene que ser Sprite",
+        )
 
 
 if __name__ == "__main__":

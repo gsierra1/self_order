@@ -58,6 +58,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/ai/factories.py` | `create_speech_to_text()` y `create_order_interpreter()` seleccionan el adaptador configurado. |
 | `backend/ai/list_gemini_models.py`, `list_openai_models.py`, `list_groq_models.py` | Consultas de diagnóstico de los modelos visibles para cada cuenta, sin imprimir credenciales. |
 | `backend/api/app.py` | Sirve frontend, crea `SessionRuntime` con `OrderInterpreter`, expone HTTP y WebSocket y serializa estado. |
+| `backend/api/conversation_guards.py` | Detecta solicitudes de eliminación ambiguas y consultas explícitas del carrito antes del LLM; usa únicamente datos ya validados por `OrderService`. |
 | `backend/api/websocket_manager.py` | Registra una conexión por sesión y publica eventos, incluso desde código en otro thread. |
 | `backend/logging/event_logger.py` | `log_event()`, formatters y handlers: JSONL detallado, texto legible y consola, con rotación. |
 | `config/settings.py` | Carga `.env`, selecciona proveedores y obtiene la credencial/modelo de cada capa. |
@@ -130,6 +131,14 @@ presentes en el catálogo. Si ya se indicó el producto y cada grupo obligatorio
 el intérprete debe solicitar `add_item` sin inventar subtipos, presentaciones o
 distinciones adicionales. `OrderService` vuelve a validar los identificadores
 recibidos antes de modificar el carrito.
+
+Antes de invocar al LLM, `conversation_socket.py` y el endpoint HTTP heredado usan
+las guardas compartidas de `conversation_guards.py` para dos casos cerrados: si una frase pide eliminar un
+producto que aparece en más de una línea con configuraciones distintas, responde
+las alternativas reales sin borrar ninguna; si pide ver el carrito, construye el
+resumen desde `OrderService`. Esto evita que una respuesta o una tool propuesta
+por un proveedor elimine varias líneas o afirme que el carrito está vacío cuando
+los datos validados indican lo contrario.
 
 El orquestador desactiva la ejecución automática de funciones del SDK. Admite
 varias function calls distintas por respuesta y las ejecuta en el orden recibido,
