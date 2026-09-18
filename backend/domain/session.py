@@ -39,6 +39,7 @@ class Session:
         order_number: Numero generado al preparar el pago; se conserva hasta
             que el pedido se confirma o se vuelve a editar.
         payment_method: Metodo elegido durante ``PAYMENT_PENDING``.
+        next_line_id: Próximo identificador de línea reservado para esta sesión.
     """
 
     session_id: str = field(
@@ -48,3 +49,4 @@ class Session:
     state: SessionState = SessionState.ACTIVE
     order_number: str | None = None
     payment_method: str | None = None
+    next_line_id: int = 1

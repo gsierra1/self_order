@@ -275,14 +275,19 @@ vuelven ambiguas frases como «quitá una». Una cantidad absoluta obliga al LLM
 calcular el nuevo valor y aumenta el riesgo de usar un estado desactualizado.
 
 **Decisión adoptada:** `OrderService.add_item()` suma cantidades cuando producto,
-modificadores y precio unitario coinciden. Productos con bebidas o extras
-distintos permanecen separados. La tool `adjust_quantity` recibe un `delta`:
+modificadores y precio unitario coinciden. `change_modifier()` y `replace_item()`
+aplican la misma consolidación si una modificación vuelve idénticas dos líneas.
+Los identificadores de línea se asignan mediante un contador por sesión y no se
+reutilizan después de una eliminación. Productos con bebidas o extras distintos
+permanecen separados. La tool `adjust_quantity` recibe un `delta`:
 `-1` quita una unidad y un valor positivo agrega unidades. `remove_item` se usa
 solo para eliminar toda la línea; un ajuste que llevaría la cantidad a cero o
 menos se rechaza sin modificar el carrito.
 
 **Consecuencias:** el frontend muestra una única línea, por ejemplo «4 × Burger
-Doble», y calcula el total con la misma lógica existente. La regla vive en
+Doble», incluso después de quitar un extra o reemplazar un producto. Un evento
+atrasado que cite un `line_id` eliminado falla en vez de afectar una línea nueva.
+La regla vive en
 `OrderService`, por lo que se aplica igual a texto, voz y futuros canales. Si la
 persona tiene dos líneas con configuraciones diferentes, todavía debe indicar
 cuál desea ajustar o el intérprete debe pedir una aclaración.

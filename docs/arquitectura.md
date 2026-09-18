@@ -214,12 +214,16 @@ Hoy los enteros representan pesos argentinos completos, según catálogo y rende
 No hay convención de centavos ni soporte explícito de múltiples monedas.
 Una línea puede tener varias unidades solo si comparten configuración. Cuando
 `add_item` recibe nuevamente el mismo producto con los mismos modificadores,
-`OrderService` suma la cantidad sobre la línea existente. Dos hamburguesas con
-bebidas o extras diferentes se mantienen en líneas distintas.
+`OrderService` suma la cantidad sobre la línea existente. Si `change_modifier`
+o `replace_item` vuelven idéntica una línea a otra que ya existe, también las
+consolida. Dos hamburguesas con bebidas o extras diferentes se mantienen en
+líneas distintas.
 
-`line_id` usa `max(ids presentes) + 1`, por lo que puede reutilizar valores al
-eliminar líneas. `replace_item` conserva ID y cantidad, valida el destino y
-recién después modifica producto, opciones y precio.
+Cada sesión conserva un contador monotónico `next_line_id`: una línea nueva
+recibe un identificador que no se reutiliza aunque se haya eliminado otra. Así,
+un click o evento atrasado no puede afectar por error a un producto creado más
+tarde con el mismo identificador. `replace_item` conserva cantidad, valida el
+destino antes de mutar y puede terminar consolidando su resultado.
 
 El recorrido vigente usa `prepare_payment()` y `complete_payment()` para pasar
 por los tres estados de pago. Despues de `CONFIRMED` las mutaciones estan
@@ -411,6 +415,11 @@ una linea. Si un grupo obligatorio queda sin opciones disponibles, las tools
 devuelven `unavailable_required_modifier` y no piden una seleccion imposible.
 El LLM recibe el estado del catalogo para explicarlo, pero la autoridad final
 sigue en el servicio.
+
+Antes de pasar de `ACTIVE` a `PAYMENT_PENDING`, `prepare_payment()` vuelve a
+verificar que cada producto y opción ya incorporados siga disponible. Conserva
+el precio aceptado de la línea, pero bloquea el pago si el catálogo cambió a
+agotado mientras la persona revisaba el carrito.
 
 Los grupos compartidos se declaran una sola vez en `modifier_groups` de
 `config/menu.json`; cada producto los referencia con `modifier_group_ids`. Por

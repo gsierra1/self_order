@@ -167,6 +167,74 @@ class OrderService:
                 "The order has already been confirmed and cannot be modified"
             )
 
+    def _next_line_id(self) -> int:
+        """Reserva un identificador de línea que no se reutiliza en la sesión.
+
+        Returns:
+            Identificador entero nuevo para un ``CartItem``.
+
+        Effects:
+            Incrementa el contador de la sesión únicamente cuando se necesita
+            crear una línea distinta, incluso si luego se elimina otra línea.
+        """
+        line_id = self.session.next_line_id
+        self.session.next_line_id += 1
+        return line_id
+
+    def _merge_identical_item(self, cart_item: CartItem) -> CartItem:
+        """Consolida una línea modificada si ahora coincide con otra existente.
+
+        Args:
+            cart_item: Línea cuya configuración ya fue validada y actualizada.
+
+        Returns:
+            La línea que conserva la cantidad total. Puede ser ``cart_item`` si
+            no existe otra configuración idéntica.
+
+        Effects:
+            Suma cantidades y retira ``cart_item`` cuando una modificación o un
+            reemplazo producen la misma configuración que una línea previa.
+        """
+        matching_item = next(
+            (
+                item
+                for item in self.session.cart.items
+                if item is not cart_item
+                and item.product_id == cart_item.product_id
+                and item.selected_modifiers == cart_item.selected_modifiers
+                and item.unit_price == cart_item.unit_price
+            ),
+            None,
+        )
+        if matching_item is None:
+            return cart_item
+        matching_item.quantity += cart_item.quantity
+        self.session.cart.items.remove(cart_item)
+        return matching_item
+
+    def _validate_cart_before_payment(self) -> None:
+        """Comprueba que las líneas existentes sigan disponibles antes de pagar.
+
+        Una fuente de catálogo futura puede cambiar disponibilidad mientras el
+        usuario aún revisa el pedido. El precio ya aceptado se conserva, pero el
+        producto y cada opción seleccionada deben seguir siendo válidos.
+
+        Raises:
+            ValueError: Si un producto u opción del carrito dejó de estar
+                disponible o ya no pertenece al catálogo.
+        """
+        for item in self.session.cart.items:
+            product = self.menu.get_product(item.product_id)
+            if product is None:
+                raise ValueError(
+                    f"El producto «{item.product_name}» ya no está disponible"
+                )
+            if not product.available:
+                raise ValueError(
+                    f"El producto «{product.name}» ya no está disponible en este momento"
+                )
+            self._calculate_unit_price(product, item.selected_modifiers)
+
     def _calculate_unit_price(
         self,
         product,
@@ -281,9 +349,9 @@ class OrderService:
                 f"El producto «{product.name}» no está disponible en este momento"
             )
 
-        if quantity <= 0:
+        if not isinstance(quantity, int) or isinstance(quantity, bool) or quantity <= 0:
             raise ValueError(
-                "Quantity must be greater than zero"
+                "Quantity must be a positive integer"
             )
 
         unit_price = self._calculate_unit_price(
@@ -310,20 +378,8 @@ class OrderService:
             )
             return matching_item
 
-        next_line_id = (
-            max(
-                (
-                    item.line_id
-                    for item
-                    in self.session.cart.items
-                ),
-                default=0,
-            )
-            + 1
-        )
-
         cart_item = CartItem(
-            line_id=next_line_id,
+            line_id=self._next_line_id(),
             product_id=product.id,
             product_name=product.name,
             quantity=quantity,
@@ -408,9 +464,9 @@ class OrderService:
         """
         self._ensure_active()
 
-        if quantity <= 0:
+        if not isinstance(quantity, int) or isinstance(quantity, bool) or quantity <= 0:
             raise ValueError(
-                "Quantity must be greater than zero"
+                "Quantity must be a positive integer"
             )
 
         cart_item = next(
@@ -457,7 +513,7 @@ class OrderService:
         """
         self._ensure_active()
 
-        if delta == 0:
+        if not isinstance(delta, int) or isinstance(delta, bool) or delta == 0:
             raise ValueError("Quantity adjustment cannot be zero")
 
         cart_item = next(
@@ -563,13 +619,9 @@ class OrderService:
 
         new_unit_price = self._calculate_unit_price(product, new_modifiers)
 
-        cart_item.selected_modifiers = (
-            new_modifiers
-        )
-
-        cart_item.unit_price = (
-            new_unit_price
-        )
+        cart_item.selected_modifiers = new_modifiers
+        cart_item.unit_price = new_unit_price
+        cart_item = self._merge_identical_item(cart_item)
 
         self._log_cart_updated(
             "change_modifier",
@@ -639,21 +691,11 @@ class OrderService:
         # Todas las validaciones terminaron correctamente.
         # Recién ahora se modifica la línea original.
 
-        cart_item.product_id = (
-            new_product.id
-        )
-
-        cart_item.product_name = (
-            new_product.name
-        )
-
-        cart_item.selected_modifiers = (
-            selected_modifiers.copy()
-        )
-
-        cart_item.unit_price = (
-            new_unit_price
-        )
+        cart_item.product_id = new_product.id
+        cart_item.product_name = new_product.name
+        cart_item.selected_modifiers = selected_modifiers.copy()
+        cart_item.unit_price = new_unit_price
+        cart_item = self._merge_identical_item(cart_item)
 
         self._log_cart_updated(
             "replace_item",
@@ -715,6 +757,7 @@ class OrderService:
         self._ensure_active()
         if not self.session.cart.items:
             raise ValueError("Cannot prepare payment for an empty cart")
+        self._validate_cart_before_payment()
 
         self.session.state = SessionState.PAYMENT_PENDING
         self.session.order_number = str(uuid4().int % 900000 + 100000)

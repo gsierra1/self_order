@@ -81,6 +81,65 @@ class OrderRulesTests(unittest.TestCase):
             [1, 3],
         )
 
+    def test_modifier_change_merges_identical_configurations(self) -> None:
+        """Consolida líneas cuando quitar un extra las vuelve equivalentes."""
+        plain = self.service.add_item("BURGER_CLASICA", 2, self.options)
+        with_tomato = self.service.add_item(
+            "BURGER_CLASICA",
+            1,
+            {**self.options, "extra_tomato": "ADD_TOMATO"},
+        )
+
+        merged = self.service.change_modifier(
+            with_tomato.line_id,
+            "extra_tomato",
+            None,
+        )
+
+        self.assertIs(merged, plain)
+        self.assertEqual(merged.quantity, 3)
+        self.assertEqual(len(self.service.get_cart().items), 1)
+
+    def test_replacement_merges_identical_configurations(self) -> None:
+        """Consolida una línea reemplazada cuando iguala otra configuración."""
+        classic = self.service.add_item("BURGER_CLASICA", 2, self.options)
+        double = self.service.add_item("BURGER_DOBLE", 1, self.options)
+
+        merged = self.service.replace_item(
+            double.line_id,
+            "BURGER_CLASICA",
+            self.options,
+        )
+
+        self.assertIs(merged, classic)
+        self.assertEqual(merged.quantity, 3)
+        self.assertEqual(len(self.service.get_cart().items), 1)
+
+    def test_line_identifiers_are_not_reused_after_deletion(self) -> None:
+        """Evita que una acción atrasada alcance una línea nueva del carrito."""
+        removed = self.service.add_item("BURGER_CLASICA", 1, self.options)
+        self.service.remove_item(removed.line_id)
+
+        created = self.service.add_item("BURGER_DOBLE", 1, self.options)
+
+        self.assertGreater(created.line_id, removed.line_id)
+        with self.assertRaises(ValueError):
+            self.service.remove_item(removed.line_id)
+        self.assertEqual(self.service.get_cart().items, [created])
+
+    def test_quantities_must_be_integers(self) -> None:
+        """Rechaza cantidades fraccionarias o booleanas antes de cotizar."""
+        for quantity in (1.5, True, "2"):
+            with self.subTest(quantity=quantity):
+                with self.assertRaisesRegex(ValueError, "positive integer"):
+                    self.service.add_item("BURGER_CLASICA", quantity, self.options)
+        item = self.service.add_item("BURGER_CLASICA", 2, self.options)
+        for delta in (0.5, False, "-1"):
+            with self.subTest(delta=delta):
+                with self.assertRaisesRegex(ValueError, "cannot be zero"):
+                    self.service.adjust_quantity(item.line_id, delta)
+        self.assertEqual(item.quantity, 2)
+
     def test_relative_quantity_removes_one_unit_without_removing_line(self) -> None:
         """Resta una unidad y rechaza un ajuste que borraría toda la línea."""
         item = self.service.add_item("BURGER_DOBLE", 4, self.options)
@@ -326,6 +385,18 @@ class OrderRulesTests(unittest.TestCase):
         self.assertEqual(self.service.session.state.value, "CONFIRMED")
         with self.assertRaises(ValueError):
             self.service.add_item("BURGER_CLASICA", 1, self.options)
+
+    def test_payment_rechecks_availability_after_cart_was_created(self) -> None:
+        """No prepara pago si una opción se agota mientras se revisa el carrito."""
+        item = self.service.add_item("BURGER_CLASICA", 1, self.options)
+        drink = self.service.menu.get_product(item.product_id).modifier_groups[0]
+        drink.options[0].available = False
+
+        with self.assertRaisesRegex(ValueError, "Coca-Cola"):
+            self.service.prepare_payment()
+
+        self.assertEqual(self.service.session.state.value, "ACTIVE")
+        self.assertEqual(self.service.get_cart().items, [item])
 
     def test_repeated_payment_confirmation_preserves_pending_order(self) -> None:
         """Una confirmación repetida no cambia ni duplica el pedido pendiente."""
