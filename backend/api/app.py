@@ -16,7 +16,7 @@ from backend.ai.contracts import OrderInterpreter
 from backend.ai.factories import create_order_interpreter
 from backend.ai.order_tools_runtime import OrderToolsRuntime
 from backend.api.conversation_guards import (
-    get_ambiguous_removal_message,
+    get_ambiguous_mutation_message,
     is_cart_query,
 )
 from backend.api.websocket_manager import WebSocketManager
@@ -546,9 +546,9 @@ def send_message(
             if service.session.state == SessionState.CONFIRMED:
                 return JSONResponse(status_code=409, content={"ok": False})
             text = message.strip()
-            ambiguous_removal = get_ambiguous_removal_message(service, text)
-            if ambiguous_removal is not None:
-                assistant_text = ambiguous_removal
+            ambiguous_mutation = get_ambiguous_mutation_message(service, text)
+            if ambiguous_mutation is not None:
+                assistant_text = ambiguous_mutation
             elif is_cart_query(text):
                 assistant_text = OrderToolsRuntime(service).get_cart_summary()
             else:

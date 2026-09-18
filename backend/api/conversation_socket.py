@@ -18,7 +18,7 @@ from backend.ai.contracts import (
 from backend.ai.factories import create_speech_to_text
 from backend.ai.order_tools_runtime import OrderToolsRuntime
 from backend.api.conversation_guards import (
-    get_ambiguous_removal_message,
+    get_ambiguous_mutation_message,
     is_cart_query,
 )
 from backend.domain.session import SessionState
@@ -115,16 +115,16 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
         """
         started_at = time.perf_counter()
         if runtime.service.session.state is SessionState.ACTIVE:
-            ambiguous_removal = get_ambiguous_removal_message(runtime.service, text)
-            if ambiguous_removal is not None:
+            ambiguous_mutation = get_ambiguous_mutation_message(runtime.service, text)
+            if ambiguous_mutation is not None:
                 await publish("assistant.text", {
-                    "text": ambiguous_removal,
+                    "text": ambiguous_mutation,
                     "cart": snapshot(runtime.service),
                     "session_closed": False,
                 })
                 log_event(
                     "INFO",
-                    "conversation.ambiguous_removal",
+                    "conversation.ambiguous_mutation",
                     session_id=session_id,
                     input_length=len(text),
                 )

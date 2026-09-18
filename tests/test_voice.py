@@ -12,6 +12,7 @@ from google.genai import types
 from starlette.websockets import WebSocketDisconnect
 
 import backend.api.app as api
+from backend.api.conversation_guards import get_ambiguous_mutation_message
 from backend.api.conversation_socket import _detect_payment_method, _is_payment_methods_question
 from backend.ai.contracts import (
     SpeechToTextConfigurationError,
@@ -184,6 +185,60 @@ class ConversationTests(unittest.TestCase):
         self.assertIn("Agua", response["data"]["text"])
         self.assertIn("$8.500", response["data"]["text"])
         self.assistant.send_message.assert_not_called()
+
+    def test_ambiguous_extra_removal_preserves_every_matching_burger(self) -> None:
+        """Pide identificar la hamburguesa antes de quitar tomate repetido."""
+        service = self.runtime.service
+        service.add_item(
+            "BURGER_CLASICA",
+            1,
+            {"drink": "WATER", "extra_tomato": "ADD_TOMATO"},
+        )
+        service.add_item(
+            "BURGER_DOBLE",
+            1,
+            {"drink": "SPRITE", "extra_tomato": "ADD_TOMATO"},
+        )
+
+        with self.client.websocket_connect(self.url) as ws:
+            self.assertEqual(ws.receive_json()["type"], "connection.ready")
+            ws.send_json({
+                "type": "user.text",
+                "data": {"message": "eliminá el tomate"},
+            })
+            response = ws.receive_json()
+
+        self.assertEqual(response["type"], "assistant.text")
+        self.assertIn("Tenés Tomate en más de una hamburguesa", response["data"]["text"])
+        self.assertIn("Burger Clásica", response["data"]["text"])
+        self.assertIn("Burger Doble", response["data"]["text"])
+        self.assertEqual(len(response["data"]["cart"]["items"]), 2)
+        self.assertTrue(all(
+            "extra_tomato" in item["selected_modifiers"]
+            for item in response["data"]["cart"]["items"]
+        ))
+        self.assistant.send_message.assert_not_called()
+
+    def test_specific_extra_removal_is_not_blocked_as_ambiguous(self) -> None:
+        """Permite continuar cuando la frase distingue producto y modificador."""
+        service = self.runtime.service
+        service.add_item(
+            "BURGER_CLASICA",
+            1,
+            {"drink": "WATER", "extra_tomato": "ADD_TOMATO"},
+        )
+        service.add_item(
+            "BURGER_DOBLE",
+            1,
+            {"drink": "SPRITE", "extra_tomato": "ADD_TOMATO"},
+        )
+
+        message = get_ambiguous_mutation_message(
+            service,
+            "eliminá el tomate de la hamburguesa doble",
+        )
+
+        self.assertIsNone(message)
 
     def test_http_ambiguous_removal_preserves_all_matching_lines(self) -> None:
         """Aplica la misma barrera si un cliente usa el endpoint HTTP legado."""

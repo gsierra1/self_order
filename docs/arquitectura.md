@@ -133,9 +133,10 @@ distinciones adicionales. `OrderService` vuelve a validar los identificadores
 recibidos antes de modificar el carrito.
 
 Antes de invocar al LLM, `conversation_socket.py` y el endpoint HTTP heredado usan
-las guardas compartidas de `conversation_guards.py` para dos casos cerrados: si una frase pide eliminar un
-producto que aparece en más de una línea con configuraciones distintas, responde
-las alternativas reales sin borrar ninguna; si pide ver el carrito, construye el
+las guardas compartidas de `conversation_guards.py` para dos casos cerrados: si
+una frase quiere eliminar o cambiar un producto, bebida o extra que aparece en
+más de una línea y no identifica una configuración única, responde las
+alternativas reales sin borrar ninguna; si pide ver el carrito, construye el
 resumen desde `OrderService`. Esto evita que una respuesta o una tool propuesta
 por un proveedor elimine varias líneas o afirme que el carrito está vacío cuando
 los datos validados indican lo contrario.
