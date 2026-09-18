@@ -208,7 +208,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 "type": exc.error_type,
                 "transaction_applied": exc.transaction_applied,
                 "stage": exc.stage,
-                "source": runtime.assistant.provider_name,
+                "source": exc.provider,
                 "status_code": exc.status_code,
                 "retryable": exc.retryable,
                 "last_tool": exc.last_tool,

@@ -45,7 +45,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/domain/cart_item.py` | `CartItem`: una línea con producto, cantidad, configuración y precio unitario. |
 | `backend/domain/cart.py` | `Cart.total`: suma precio unitario por cantidad de cada línea. |
 | `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
-| `backend/services/order_service.py` | Validación y mutación mediante `add_item`, `remove_item`, `change_quantity`, `adjust_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_payment_methods`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
+| `backend/services/order_service.py` | Validación y mutación mediante `add_item`, `remove_item`, `adjust_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_payment_methods`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
 | `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para el LLM configurado. Incluye `clear_cart` para vaciar el carrito en una sola operación. |
 | `backend/ai/order_tools_runtime.py` | Comparte instrucciones, ejecución segura, detección de mutaciones y sanitización de respuestas entre proveedores; transforma tablas Markdown del carrito en listas legibles. |
 | `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |

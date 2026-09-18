@@ -584,7 +584,7 @@ def send_message(
                 "ok": False,
                 "session_id": session_id,
                 "error": {
-                    "source": "gemini",
+                    "source": exc.provider,
                     "type": exc.error_type,
                     "status_code": exc.status_code,
                     "stage": exc.stage,

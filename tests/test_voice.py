@@ -140,6 +140,29 @@ class ConversationTests(unittest.TestCase):
         self.assertIsNone(response["data"]["cart"]["payment_method"])
         self.assistant.send_message.assert_not_called()
 
+    def test_http_error_preserves_the_actual_ai_provider(self) -> None:
+        """No atribuye a Gemini un error devuelto por otro adaptador LLM."""
+        provider_error = AIProviderError(
+            provider="Groq",
+            model="openai/gpt-oss-20b",
+            error_type="RATE_LIMIT",
+            stage="ORDER_INTERPRETATION",
+            retryable=True,
+            transaction_applied=False,
+            technical_message="rate limit",
+            user_message="Groq alcanzó temporalmente el límite de uso.",
+            status_code=429,
+        )
+        self.assistant.send_message.side_effect = provider_error
+
+        response = self.client.post(
+            f"/api/sessions/{self.session.session_id}/messages",
+            json={"message": "Quiero una hamburguesa clásica con agua."},
+        )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.json()["error"]["source"], "Groq")
+
     def test_ambiguous_removal_preserves_all_matching_lines(self) -> None:
         """Pide distinguir dobles configuradas distinto antes de borrar una línea."""
         service = self.runtime.service

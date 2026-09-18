@@ -443,55 +443,6 @@ class OrderService:
 
         return cart_item
 
-    def change_quantity(
-        self,
-        line_id: int,
-        quantity: int,
-    ) -> CartItem:
-        """
-        Modifica la cantidad de un CartItem.
-
-        Args:
-            line_id: Identificador único de la línea que se desea modificar.
-            quantity: Nueva cantidad de unidades.
-
-        Returns:
-            El CartItem actualizado.
-
-        Raises:
-            ValueError: Si la cantidad no es mayor que cero.
-            ValueError: Si no existe el CartItem indicado.
-        """
-        self._ensure_active()
-
-        if not isinstance(quantity, int) or isinstance(quantity, bool) or quantity <= 0:
-            raise ValueError(
-                "Quantity must be a positive integer"
-            )
-
-        cart_item = next(
-            (
-                item
-                for item in self.session.cart.items
-                if item.line_id == line_id
-            ),
-            None,
-        )
-
-        if cart_item is None:
-            raise ValueError(
-                f"Cart item not found: {line_id}"
-            )
-
-        cart_item.quantity = quantity
-
-        self._log_cart_updated(
-            "change_quantity",
-            line_id=cart_item.line_id,
-        )
-
-        return cart_item
-
     def adjust_quantity(
         self,
         line_id: int,
