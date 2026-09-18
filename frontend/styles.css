@@ -594,6 +594,13 @@ body {
 
 .brand-heading { position: relative; }
 
+.heading-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+}
+
 .brand-line {
     display: flex;
     align-items: center;

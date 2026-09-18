@@ -295,7 +295,7 @@ class ConversationTests(unittest.TestCase):
         self.assertIn("no-store", page_response.headers["cache-control"])
         self.assertIn("no-store", script_response.headers["cache-control"])
         self.assertIn("app.js?v=20260917-6", page_response.text)
-        self.assertIn("styles.css?v=20260918-3", page_response.text)
+        self.assertIn("styles.css?v=20260918-4", page_response.text)
 
     def test_frontend_inactivity_requires_a_confirmed_message(self) -> None:
         """No arma el cierre por eventos generales de la interfaz.
