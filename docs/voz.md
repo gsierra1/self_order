@@ -106,7 +106,9 @@ usa el modelo local indicado por `STT_MODEL_PATH` y no requiere API key para la
 transcripción. La demo usa Groq para el chat mediante
 `GROQ_CHAT_MODEL=openai/gpt-oss-20b`; también se puede elegir Gemini u OpenAI
 con sus variables propias. Los nombres se pueden cambiar en `.env` sin modificar
-el código y las credenciales quedan en backend.
+el código y las credenciales quedan en backend. La descarga, verificación y
+configuración del modelo Vosk están explicadas paso a paso en el
+[README principal](../README.md#usar-vosk-como-stt-local).
 Para consultar los modelos Gemini habilitados para la cuenta local, ejecutar
 `python -m backend.ai.list_gemini_models` con el entorno virtual activo. La salida es
 informativa y muestra todos los modelos junto con sus acciones: `generateContent`

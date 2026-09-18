@@ -44,6 +44,11 @@ En la carpeta .venv instalá ahi las dependencias del proyecto sin mezclarlas co
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
+`requirements.txt` instala la biblioteca Python `vosk`, pero no descarga el
+modelo de español: el modelo es un archivo de datos separado, mucho más grande,
+que cada instalación local debe elegir y guardar fuera de Git. Las instrucciones
+completas para esa alternativa están en [Usar Vosk como STT local](#usar-vosk-como-stt-local).
+
 Crear `.env` a partir de `.env.example` solo si todavía no existe. La
 configuración recomendada para esta demo usa Gemini para transcribir la voz y
 Groq para interpretar el pedido:
@@ -171,20 +176,32 @@ compartas ni subas `.env` al repositorio.
 
 Vosk procesa el audio en tu computadora: no necesita `GEMINI_API_KEY` para la
 transcripción y no cobra por minuto. Requiere instalar la dependencia del
-proyecto y descargar una vez un modelo de idioma. El modelo pequeño de español
-es una opción práctica para la demo; el modelo grande puede dar otra calidad,
-pero ocupa mucho más espacio. Ambos modelos se descargan fuera de Git.
+proyecto y descargar una vez un **modelo de idioma**. `vosk==0.3.45` ya figura
+en `requirements.txt`; el paso adicional es descargar el modelo pequeño de
+español `vosk-model-small-es-0.42`. Es una opción práctica para la demo. Los
+modelos se guardan en `.models/`, carpeta excluida de Git para que no se
+publiquen junto al código.
 
-Desde la raíz del repositorio, descargá y descomprimí el modelo pequeño:
+Desde la raíz del repositorio, después de instalar las dependencias, ejecutá:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 New-Item -ItemType Directory -Force .models
 Invoke-WebRequest -Uri "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip" -OutFile ".models\vosk-model-small-es-0.42.zip"
 Expand-Archive -LiteralPath ".models\vosk-model-small-es-0.42.zip" -DestinationPath ".models" -Force
+Test-Path ".models\vosk-model-small-es-0.42\am"
 ```
 
-Luego modificá solamente tu `.env` local:
+El último comando debe devolver `True`: confirma que `STT_MODEL_PATH` podrá
+apuntar al directorio correcto, que es la carpeta descomprimida, no el `.zip`.
+Después de comprobarlo podés borrar el comprimido para recuperar espacio:
+
+```powershell
+Remove-Item ".models\vosk-model-small-es-0.42.zip"
+```
+
+Luego creá o modificá solamente tu `.env` local. Esta combinación deja la voz
+en Vosk local y conserva Groq para interpretar el texto del pedido:
 
 ```dotenv
 STT_PROVIDER=vosk
@@ -197,7 +214,9 @@ GROQ_CHAT_MODEL=openai/gpt-oss-20b
 Vosk recibe PCM16 de 16 kHz, publica hipótesis mientras hablás y entrega el
 texto final al terminar el turno. El modelo se carga una vez y queda reutilizado
 en memoria. La transcripción será local, aunque el LLM seguirá siendo cloud si
-dejás `LLM_PROVIDER=groq`. Ver [modelos de Vosk](https://alphacephei.com/vosk/models/).
+dejás `LLM_PROVIDER=groq`. Si el modelo no existe o la ruta es incorrecta, la
+pantalla indicará revisar `STT_MODEL_PATH` y el pedido no se modificará. Ver
+[modelos de Vosk](https://alphacephei.com/vosk/models/).
 
 Para consultar los modelos visibles para la cuenta OpenAI, sin imprimir la
 clave (sólo aplica a `LLM_PROVIDER=openai`):
