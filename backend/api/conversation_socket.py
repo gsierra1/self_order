@@ -9,7 +9,11 @@ from contextlib import suppress
 from fastapi import WebSocket, WebSocketDisconnect
 
 from backend.ai.errors import AIProviderError
-from backend.ai.contracts import SpeechToText
+from backend.ai.contracts import (
+    SpeechToText,
+    SpeechToTextConnectionTimeout,
+    SpeechToTextFinalizationTimeout,
+)
 from backend.ai.factories import create_speech_to_text
 from backend.domain.session import SessionState
 from backend.logging.event_logger import log_event
@@ -168,60 +172,122 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 "cart": snapshot(runtime.service),
             })
 
-    async def process_turn(text: str | None, audio: SpeechToText | None) -> None:
+    async def process_turn(text: str | None, audio: SpeechToText | None) -> bool:
         """Procesa una sola entrada y libera la reserva incluso ante errores.
 
         Args:
             text: Mensaje escrito, o None para un turno hablado.
             audio: Transcriptor del turno, o None para entrada escrita.
-        """
-        if audio is not None:
-            try:
-                text = await audio.transcribe(publish)
-            except asyncio.CancelledError:
-                raise
-            except AIProviderError as exc:
-                log_event(
-                    "WARN",
-                    "voice.provider_error",
-                    session_id=session_id,
-                    **exc.to_dict(),
-                )
-                await publish("voice.error", {
-                    "message": exc.user_message,
-                    "type": exc.error_type,
-                    "source": audio.provider_name,
-                    "status_code": exc.status_code,
-                    "retryable": exc.retryable,
-                    "stage": exc.stage,
-                })
-                return
-            except Exception as exc:
-                log_event("WARN", "voice.error", session_id=session_id,
-                          exception_type=type(exc).__name__)
-                message = (
-                    "La transcripción tardó demasiado en responder. El pedido "
-                    "no cambió; podés intentar nuevamente o escribir."
-                    if isinstance(exc, TimeoutError)
-                    else "No se pudo transcribir el audio. El pedido no cambió; "
-                    "podés escribir o volver a hablar."
-                )
-                await publish("voice.error", {
-                    "message": message,
-                })
-                return
-            await publish("voice.transcript", {"text": text, "final": True})
-            log_event("INFO", "voice.turn_transcribed", session_id=session_id, transcript_length=len(text))
-            audio.processing_order = True
-        await execute(text)
 
-    def release_turn(task: asyncio.Task) -> None:
+        Returns:
+            True si el frontend debe esperar la liberación explícita del turno
+            antes de permitir un nuevo audio; False en los demás casos.
+
+        Raises:
+            asyncio.CancelledError: Si el navegador cancela un turno que todavía
+                no llegó a interpretar el pedido.
+
+        Effects:
+            Cierra el transcriptor aun si el proveedor falla, sin alterar el
+            carrito antes de disponer de texto final.
+        """
+        try:
+            if audio is not None:
+                try:
+                    text = await audio.transcribe(publish)
+                except SpeechToTextConnectionTimeout as exc:
+                    log_event(
+                        "WARN",
+                        "voice.connection_timeout",
+                        session_id=session_id,
+                        provider=audio.provider_name,
+                    )
+                    await publish("voice.error", {
+                        "message": (
+                            "No se pudo conectar con Gemini para iniciar la "
+                            "transcripción. El pedido no cambió; podés volver a "
+                            "hablar o escribir."
+                        ),
+                        "stage": "VOICE_CONNECTION",
+                        "retryable": True,
+                    })
+                    return True
+                except SpeechToTextFinalizationTimeout as exc:
+                    log_event(
+                        "WARN",
+                        "voice.finalization_timeout",
+                        session_id=session_id,
+                        provider=audio.provider_name,
+                    )
+                    await publish("voice.error", {
+                        "message": (
+                            "Gemini recibió el audio, pero no devolvió una "
+                            "transcripción final a tiempo. El pedido no cambió; "
+                            "podés volver a hablar o escribir."
+                        ),
+                        "stage": "VOICE_FINALIZATION",
+                        "retryable": True,
+                    })
+                    return True
+                except asyncio.CancelledError:
+                    raise
+                except AIProviderError as exc:
+                    log_event(
+                        "WARN",
+                        "voice.provider_error",
+                        session_id=session_id,
+                        **exc.to_dict(),
+                    )
+                    await publish("voice.error", {
+                        "message": exc.user_message,
+                        "type": exc.error_type,
+                        "source": audio.provider_name,
+                        "status_code": exc.status_code,
+                        "retryable": exc.retryable,
+                        "stage": exc.stage,
+                    })
+                    return False
+                except Exception as exc:
+                    log_event("WARN", "voice.error", session_id=session_id,
+                              exception_type=type(exc).__name__)
+                    await publish("voice.error", {
+                        "message": "No se pudo transcribir el audio. El pedido no cambió; podés escribir o volver a hablar.",
+                    })
+                    return False
+                await publish("voice.transcript", {"text": text, "final": True})
+                log_event("INFO", "voice.turn_transcribed", session_id=session_id, transcript_length=len(text))
+                audio.processing_order = True
+            await execute(text)
+            return False
+        finally:
+            if audio is not None:
+                await audio.close()
+
+    def release_turn(task: asyncio.Task, audio: SpeechToText | None) -> None:
         """Libera la reserva incluso si se cancela antes de iniciar la coroutine.
 
         Args:
             task: Tarea del turno que ya terminó.
+            audio: Adaptador asociado a la tarea terminada, si era un turno de voz.
+
+        Returns:
+            None.
+
+        Effects:
+            Libera la exclusión de turnos y descarta la referencia al adaptador
+            finalizado sin afectar un turno posterior.
         """
+        nonlocal transcriber
         runtime.turn_lock.release()
+        if transcriber is audio:
+            transcriber = None
+        retry_ready = (
+            not task.cancelled()
+            and task.exception() is None
+            and task.result()
+        )
+        if retry_ready:
+            asyncio.create_task(publish("voice.retry_ready", {}))
         if not task.cancelled() and task.exception() is not None:
             log_event("WARN", "conversation.delivery_failed", session_id=session_id,
                       exception_type=type(task.exception()).__name__)
@@ -261,13 +327,14 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 data = message.get("data", {})
                 if event_type == "audio.cancel":
                     if transcriber is not None and turn_task is not None and not turn_task.done():
-                        if transcriber.processing_order:
+                        audio_to_cancel = transcriber
+                        if audio_to_cancel.processing_order:
                             raise ValueError("El pedido ya se está procesando; esperá la respuesta.")
-                        transcriber.cancel()
+                        audio_to_cancel.cancel()
                         turn_task.cancel()
                         with suppress(asyncio.CancelledError):
                             await turn_task
-                        await transcriber.close()
+                        await audio_to_cancel.close()
                     transcriber = None
                     await publish("voice.cancelled", {})
                     continue
@@ -302,7 +369,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 turn_task = asyncio.create_task(process_turn(
                     text.strip() if text is not None else None, transcriber,
                 ))
-                turn_task.add_done_callback(release_turn)
+                turn_task.add_done_callback(lambda task, audio=transcriber: release_turn(task, audio))
             except (ValueError, json.JSONDecodeError) as exc:
                 await publish("client.error", {"message": str(exc)})
     except WebSocketDisconnect:

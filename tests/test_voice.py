@@ -13,6 +13,7 @@ from starlette.websockets import WebSocketDisconnect
 
 import backend.api.app as api
 from backend.api.conversation_socket import _detect_payment_method, _is_payment_methods_question
+from backend.ai.contracts import SpeechToTextFinalizationTimeout
 from backend.ai.live_transcriber import LiveTranscriber
 from backend.ai.errors import AIProviderError
 from backend.domain.session import Session
@@ -36,6 +37,23 @@ class FakeTranscriber(LiveTranscriber):
         while await self.chunks.get() is not None:
             pass
         return "Quiero una Burger Clásica con Coca"
+
+
+class FinalizationTimeoutTranscriber(FakeTranscriber):
+    """Simula un proveedor que recibe audio pero no entrega texto final."""
+
+    async def transcribe(self, publish) -> str:
+        """Anuncia disponibilidad y falla al cerrar el turno de STT.
+
+        Args:
+            publish: Callback utilizado para enviar eventos de voz a la prueba.
+
+        Raises:
+            SpeechToTextFinalizationTimeout: Siempre, para comprobar la
+                recuperación de un turno agotado.
+        """
+        await publish("voice.ready", {})
+        raise SpeechToTextFinalizationTimeout("El proveedor no terminó el turno.")
 
 
 class ConversationTests(unittest.TestCase):
@@ -150,6 +168,34 @@ class ConversationTests(unittest.TestCase):
             ws.send_json({"type": "user.text", "data": {"message": "hola"}})
             self.assertEqual(ws.receive_json()["type"], "assistant.text")
         self.assistant.send_message.assert_called_once_with("hola")
+
+    def test_finalization_timeout_releases_voice_for_a_new_turn(self) -> None:
+        """Un STT agotado se cierra y permite iniciar otro turno de voz."""
+        transcribers = iter((FinalizationTimeoutTranscriber(), FakeTranscriber()))
+        with patch(
+            "backend.api.conversation_socket.create_speech_to_text",
+            side_effect=lambda **_: next(transcribers),
+        ):
+            with self.client.websocket_connect(self.url) as ws:
+                self.assertEqual(ws.receive_json()["type"], "connection.ready")
+                ws.send_json({"type": "audio.start"})
+                self.assertEqual(ws.receive_json()["type"], "voice.ready")
+                timeout = ws.receive_json()
+                self.assertEqual(timeout["type"], "voice.error")
+                self.assertEqual(timeout["data"]["stage"], "VOICE_FINALIZATION")
+                self.assertTrue(timeout["data"]["retryable"])
+                self.assertEqual(ws.receive_json()["type"], "voice.retry_ready")
+
+                ws.send_json({"type": "audio.start"})
+                self.assertEqual(ws.receive_json()["type"], "voice.ready")
+                self.assertFalse(ws.receive_json()["data"]["final"])
+                ws.send_bytes(b"\x00\x00" * 1600)
+                ws.send_json({"type": "audio.stop"})
+                self.assertTrue(ws.receive_json()["data"]["final"])
+                self.assertEqual(ws.receive_json()["type"], "assistant.text")
+
+        self.assertFalse(self.runtime.turn_lock.locked())
+        self.assistant.send_message.assert_called_once_with("Quiero una Burger Clásica con Coca")
 
     def test_http_and_text_blocked_while_recording(self) -> None:
         """La reserva de voz impide procesar una segunda entrada concurrente."""
@@ -294,7 +340,7 @@ class ConversationTests(unittest.TestCase):
 
         self.assertIn("no-store", page_response.headers["cache-control"])
         self.assertIn("no-store", script_response.headers["cache-control"])
-        self.assertIn("app.js?v=20260917-6", page_response.text)
+        self.assertIn("app.js?v=20260918-7", page_response.text)
         self.assertIn("styles.css?v=20260918-5", page_response.text)
 
     def test_frontend_inactivity_requires_a_confirmed_message(self) -> None:

@@ -379,3 +379,30 @@ la persona. La sesión nueva comienza con un carrito vacío.
 **Límites:** el navegador controla esta experiencia de demo. Un piloto con
 varias pantallas deberá complementar el mecanismo con expiración y limpieza de
 sesiones en el backend o en el almacenamiento durable.
+
+## 16. Recuperar un turno STT fallido antes de aceptar el siguiente
+
+**Estado:** adoptada e implementada el 18/09/2026.
+
+**Contexto comprobado:** una corrida real confirmó que Gemini Live puede recibir
+audio y no emitir una transcripción final dentro de la espera. El turno devolvía
+un error genérico y los intentos posteriores podían quedar asociados a recursos
+del adaptador anterior, dificultando volver a usar el micrófono.
+
+**Alternativas consideradas:** conservar el error genérico; reintentar el mismo
+audio automáticamente; o cerrar el adaptador fallido y permitir un turno nuevo.
+Reintentar podría repetir una acción si el texto llegara tarde, y no elimina la
+dependencia de una respuesta de proveedor que ya excedió el límite.
+
+**Decisión adoptada:** `SpeechToText` expresa por separado la demora de conexión
+y la demora al confirmar el texto final. `conversation_socket.py` informa esas
+etapas como `VOICE_CONNECTION` y `VOICE_FINALIZATION`; siempre cierra el
+adaptador al terminar la tarea y libera su referencia antes del próximo turno.
+
+**Consecuencias:** el frontend explica si no se pudo conectar con Gemini o si
+Gemini recibió audio pero no finalizó la transcripción. Ambos errores son
+recuperables, no llaman al LLM y no modifican el carrito.
+
+**Límites:** esto recupera la sesión local, pero no acelera ni garantiza la
+respuesta de Gemini Live. La selección de otro STT requiere un adaptador y una
+evaluación real de calidad, latencia, costo y estabilidad.

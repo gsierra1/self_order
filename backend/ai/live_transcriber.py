@@ -6,7 +6,12 @@ from contextlib import suppress
 
 from google.genai import errors, types
 
-from backend.ai.contracts import SpeechToText, VoiceEventPublisher
+from backend.ai.contracts import (
+    SpeechToText,
+    SpeechToTextConnectionTimeout,
+    SpeechToTextFinalizationTimeout,
+    VoiceEventPublisher,
+)
 from backend.ai.errors import (
     AIProviderError,
     classify_gemini_api_error,
@@ -120,6 +125,7 @@ class GeminiLiveTranscriber(SpeechToText):
         receiver = None
         final_parts: list[str] = []
         end_sent = asyncio.Event()
+        connection_ready = False
         config = types.LiveConnectConfig(
             response_modalities=["TEXT"],
             input_audio_transcription=types.AudioTranscriptionConfig(
@@ -175,6 +181,7 @@ class GeminiLiveTranscriber(SpeechToText):
 
                     receiver = asyncio.create_task(receive())
                     await publish("voice.ready", {})
+                    connection_ready = True
                     while True:
                         chunk = await asyncio.wait_for(self.chunks.get(), timeout=65)
                         if receiver.done():
@@ -195,7 +202,12 @@ class GeminiLiveTranscriber(SpeechToText):
                         audio_duration_ms=round((audio_finished_at - started_at) * 1000),
                     )
                     await session.send_realtime_input(activity_end=types.ActivityEnd())
-                    text = await asyncio.wait_for(receiver, timeout=20)
+                    try:
+                        text = await asyncio.wait_for(receiver, timeout=20)
+                    except TimeoutError as exc:
+                        raise SpeechToTextFinalizationTimeout(
+                            "Gemini no confirmó la transcripción final a tiempo.",
+                        ) from exc
                     if not text:
                         raise ValueError("No se reconoció voz. Podés volver a hablar o escribir.")
                     log_event(
@@ -214,6 +226,12 @@ class GeminiLiveTranscriber(SpeechToText):
                 stage="VOICE_TRANSCRIPTION",
                 transaction_applied=False,
             ) from exc
+        except TimeoutError as exc:
+            if not connection_ready:
+                raise SpeechToTextConnectionTimeout(
+                    "Gemini no abrió el turno de transcripción a tiempo.",
+                ) from exc
+            raise
         except Exception as exc:
             provider_error = classify_gemini_transport_error(
                 exc,

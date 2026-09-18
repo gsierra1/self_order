@@ -318,6 +318,8 @@ function updateControls() {
         ? "Enviar audio"
         : ["preparing", "reconnecting"].includes(phase)
             ? "Conectando..."
+            : phase === "recovering"
+                ? "Liberando..."
             : "\u{1F3A4} Hablar";
     micButton.classList.toggle("active", phase === "recording");
     audioButton.textContent = assistantAudioEnabled ? "\u{1F50A} Voz ON" : "\u{1F507} Voz OFF";
@@ -360,6 +362,9 @@ function sendAudio(buffer) {
 /**
  * Cancela el turno de audio ante un error local y conserva la opción de escribir.
  * @param {Error} error Error de captura o transporte.
+ * @returns {void}
+ * @effects Libera el micrófono, cancela el turno remoto pendiente y muestra una
+ * causa recuperable sin alterar el carrito.
  */
 function failVoice(error) {
     clearTimeout(voiceTimer);
@@ -368,11 +373,18 @@ function failVoice(error) {
     voice.dispose();
     try { sendEvent("audio.cancel"); } catch (_) { /* La conexión ya está cerrada. */ }
     transcript.textContent = "Audio cancelado; el pedido no fue enviado.";
-    appendMessage("Sistema", error.message, "error");
-    phase = socket?.readyState === WebSocket.OPEN ? "ready" : "disconnected";
-    setStatus("No se pudo enviar el audio", "error");
+    const message = error.message.includes("conexión de voz")
+        ? "No se pudo conectar con Gemini para iniciar la transcripción. El pedido no fue enviado."
+        : error.message;
+    appendMessage("Sistema", message, "error");
+    phase = socket?.readyState === WebSocket.OPEN ? "recovering" : "disconnected";
+    setStatus(
+        error.message.includes("conexión de voz")
+            ? "No se pudo conectar con Gemini"
+            : "No se pudo enviar el audio",
+        "error",
+    );
     updateControls();
-    restartInactivityTimer();
 }
 
 
@@ -769,6 +781,10 @@ function onServerMessage(event) {
     } else if (type === "voice.ready" && phase === "preparing") {
         voiceBackendReady = true;
         maybeStartRecording();
+    } else if (type === "voice.retry_ready") {
+        phase = "ready";
+        if (!sessionClosed) setStatus("Listo");
+        restartInactivityTimer();
     } else if (type === "voice.transcript") {
         transcript.textContent = data.final ? "Audio enviado." : `Escuchando (provisional): ${data.text}`;
         if (data.final) {
@@ -788,10 +804,19 @@ function onServerMessage(event) {
     } else if (["voice.error", "backend.error", "ai.error", "client.error", "voice.cancelled"].includes(type)) {
         clearTimeout(voiceTimer);
         voice.dispose();
-        phase = "ready";
+        const pendingVoiceRelease = type === "voice.error"
+            && ["VOICE_CONNECTION", "VOICE_FINALIZATION"].includes(data.stage);
+        phase = pendingVoiceRelease ? "recovering" : "ready";
         transcript.textContent = "";
         if (data.message) appendMessage("Sistema", data.message, "error");
-        if (!sessionClosed) setStatus(type === "voice.cancelled" ? "Listo" : "Error", type === "voice.cancelled" ? "ready" : "error");
+        const voiceStatus = pendingVoiceRelease
+            ? "Liberando el turno de voz"
+            : data.stage === "VOICE_CONNECTION"
+            ? "No se pudo conectar con Gemini"
+            : data.stage === "VOICE_FINALIZATION"
+                ? "Gemini no finalizó la transcripción"
+                : type === "voice.cancelled" ? "Listo" : "Error";
+        if (!sessionClosed) setStatus(voiceStatus, type === "voice.cancelled" ? "ready" : "error");
         restartInactivityTimer();
     }
     updateControls();

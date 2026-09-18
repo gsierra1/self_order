@@ -59,6 +59,7 @@ vuelve a habilitarse al terminar, salvo si el pedido quedó confirmado.
 | `audio.cancel` | Navegador → backend: descarta transcripción que aún no llegó al intérprete LLM. |
 | `voice.cancelled` | Backend → navegador: cancelación atendida. |
 | `voice.error` | Backend → navegador: falla de transcripción; el audio no ejecutó un pedido. Si el proveedor informa detalles, incluye tipo, código, etapa y si se puede reintentar. |
+| `voice.retry_ready` | Backend → navegador: terminó de liberar un turno de STT fallido; se puede iniciar otro. |
 
 Se conservan eventos escritos, carrito, confirmación y errores de IA.
 `assistant.text` y errores de interpretación incluyen snapshot del carrito.
@@ -68,6 +69,11 @@ El backend envía `activity_start` y `activity_end` al proveedor. Acepta cierre
 mediante `turn_complete`, `generation_complete` o `input_transcription.finished`
 después de terminar la entrada. La prueba real observó `generation_complete`
 después del texto definitivo. Una hipótesis nunca sustituye un final faltante.
+Si el proveedor no abre el turno se publica `voice.error` con etapa
+`VOICE_CONNECTION`; si recibió el audio pero no confirma el texto final, la
+etapa es `VOICE_FINALIZATION`. En los dos casos el backend cierra el adaptador,
+libera la reserva de turno y conserva el carrito para que se pueda volver a
+hablar o escribir.
 
 ## Límites y recuperación
 
@@ -77,7 +83,7 @@ transcriptor a 85 segundos y espera el cierre hasta 20 segundos. La interfaz
 también limita el tiempo de preparación. Una cola saturada produce un error;
 no se descartan fragmentos silenciosamente.
 
-Cancelar o desconectar descarta transcripciones pendientes y libera recursos.
+Cancelar, fallar o desconectar descarta transcripciones pendientes y libera recursos.
 Si ya comenzó la interpretación, se espera su resultado: cancelar una coroutine
 no detiene el thread ni revierte una tool. La reserva se libera al terminar,
 incluyendo cancelaciones previas al inicio de la tarea. No hay reintentos de

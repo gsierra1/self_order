@@ -247,7 +247,7 @@ Ejemplo de entrada WebSocket:
 | `cart.updated` | `action`, `line_id`, `cart`. |
 | `payment.pending`, `payment.method_selected` | Numero de pedido, metodo cuando corresponde y `cart` con el estado actualizado. |
 | `order.confirmed` | `cart` con estado confirmado. |
-| `voice.ready`, `voice.transcript`, `voice.error`, `voice.cancelled` | Protocolo de voz detallado en `voz.md`; reemplaza el acuse experimental `audio.received`. |
+| `voice.ready`, `voice.transcript`, `voice.error`, `voice.cancelled`, `voice.retry_ready` | Protocolo de voz detallado en `voz.md`; `voice.retry_ready` confirma que se liberó un fallo de STT antes de aceptar otro turno. Reemplazan el acuse experimental `audio.received`. |
 | `ai.error` | Tipo, código, etapa, `retryable`, `transaction_applied`, última tool y mensaje. |
 | `client.error`, `backend.error` | Mensaje y, según el caso, tipo/origen. |
 

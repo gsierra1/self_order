@@ -7,6 +7,14 @@ from collections.abc import Awaitable, Callable
 VoiceEventPublisher = Callable[[str, dict], Awaitable[None]]
 
 
+class SpeechToTextConnectionTimeout(TimeoutError):
+    """Indica que el proveedor STT no pudo abrir el turno de voz a tiempo."""
+
+
+class SpeechToTextFinalizationTimeout(TimeoutError):
+    """Indica que el proveedor STT recibió audio pero no confirmó texto final."""
+
+
 class SpeechToText(ABC):
     """Define un turno de voz por streaming sin conocer carrito ni tools."""
 
