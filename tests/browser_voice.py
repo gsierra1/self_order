@@ -178,6 +178,22 @@ class BrowserVoiceTests(unittest.TestCase):
                             "element => getComputedStyle(element).animationName"
                         )
                         self.assertEqual(first_track_animation, "showcase-scroll")
+                        track_motion = page.locator(".showcase-track").first.evaluate("""
+                            async element => {
+                                const animation = element.getAnimations()[0];
+                                const before = animation.currentTime;
+                                await new Promise(resolve => setTimeout(resolve, 300));
+                                return { before, after: animation.currentTime };
+                            }
+                        """)
+                        self.assertGreater(
+                            track_motion["after"],
+                            track_motion["before"],
+                        )
+                        conversation_height = page.locator("#conversation").evaluate(
+                            "element => element.getBoundingClientRect().height"
+                        )
+                        self.assertGreater(conversation_height, 200)
                         page.wait_for_timeout(20500)
                         initial_message_count = page.locator(".assistant-message").count()
                         self.assertEqual(

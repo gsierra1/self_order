@@ -580,6 +580,7 @@ body {
 }
 
 .conversation-panel {
+    position: relative;
     border-right-color: var(--sia-line);
     background: linear-gradient(180deg, #fff 0%, #fdfcff 100%);
 }
@@ -655,35 +656,33 @@ h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.05; }
    ========================================================= */
 
 .menu-showcase {
-    flex-shrink: 0;
-    padding: 13px 30px 15px;
-    border-bottom: 1px solid var(--sia-line);
-    background:
-        linear-gradient(105deg, rgba(255, 229, 0, .13), transparent 39%),
-        #fff;
+    position: absolute;
+    top: 28px;
+    right: 100px;
+    left: 320px;
+    z-index: 2;
+    height: 56px;
+    overflow: hidden;
 }
 
 .showcase-row {
     display: grid;
-    grid-template-columns: 118px minmax(0, 1fr);
+    grid-template-columns: 72px minmax(0, 1fr);
     align-items: center;
-    gap: 15px;
+    min-height: 27px;
+    gap: 7px;
 }
 
 .showcase-row + .showcase-row {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(115, 50, 250, .08);
+    margin-top: 2px;
+    padding-top: 2px;
+    border-top: 1px solid rgba(115, 50, 250, .12);
 }
 
-.showcase-label .eyebrow {
-    margin-bottom: 1px;
-    font-size: 9px;
-    letter-spacing: .12em;
-}
+.showcase-label .eyebrow { display: none; }
 
 .showcase-label h2 {
-    font-size: 15px;
+    font-size: 11px;
     line-height: 1.1;
 }
 
@@ -696,27 +695,28 @@ h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.05; }
 .showcase-track {
     display: flex;
     width: max-content;
-    animation: showcase-scroll 15s linear infinite;
+    will-change: transform;
+    animation: showcase-scroll 11s linear infinite running;
 }
 
-.showcase-track--extras { animation-duration: 20s; }
+.showcase-track--extras { animation-duration: 15s; }
 
 .showcase-option {
-    width: 102px;
-    flex: 0 0 102px;
+    width: 82px;
+    flex: 0 0 82px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     color: var(--sia-ink);
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
     white-space: nowrap;
 }
 
 .showcase-image {
-    width: 34px;
-    height: 42px;
-    flex: 0 0 34px;
+    width: 21px;
+    height: 25px;
+    flex: 0 0 21px;
     background-image: url("/static/assets/menu-options.png");
     background-repeat: no-repeat;
     background-size: 700% 100%;
@@ -733,12 +733,12 @@ h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.05; }
 
 .order-introduction {
     flex-shrink: 0;
-    padding: 18px 30px 14px;
+    padding: 14px 30px 10px;
     background: #fff;
 }
 
 .order-introduction h2 {
-    font-size: 21px;
+    font-size: 18px;
 }
 
 .order-introduction p {
@@ -845,15 +845,17 @@ h1 { font-size: clamp(28px, 3vw, 38px); line-height: 1.05; }
 
 @media (max-width: 850px) {
     .panel-header { min-height: 116px; padding: 22px; }
-    .menu-showcase { padding: 12px 22px; }
+    .menu-showcase {
+        position: static;
+        height: auto;
+        margin: 0 22px;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--sia-line);
+    }
     .order-introduction { padding: 16px 22px 12px; }
-    .showcase-row { grid-template-columns: 100px minmax(0, 1fr); gap: 9px; }
+    .showcase-row { grid-template-columns: 90px minmax(0, 1fr); gap: 9px; }
     .showcase-option { width: 92px; flex-basis: 92px; font-size: 11px; }
     .conversation { padding: 22px; }
     .message-form { padding: 16px; }
     .brand-logo { width: 58px; height: 43px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .showcase-track { animation: none; }
 }
