@@ -463,7 +463,9 @@ separación se implementó el 16/09/2026 y no modifica `OrderService`,
 
 ```mermaid
 flowchart LR
-    A[Audio PCM] --> CS[conversation_socket.py]
+    A[Audio PCM Gemini o Vosk] --> CS[conversation_socket.py]
+    WB[Audio Whisper en navegador] --> WW[whisper-browser.js y Worker]
+    WW -->|voice.text final| CS
     CS --> F1[create_speech_to_text]
     F1 --> C1[SpeechToText]
     C1 --> G1[GeminiLiveTranscriber]
@@ -492,13 +494,23 @@ flowchart LR
   `OrderService`.
 
 `backend/ai/factories.py` lee `STT_PROVIDER` y `LLM_PROVIDER` mediante
-`config/settings.py`. Para voz, la fábrica implementa `gemini` y `vosk`, y
+`config/settings.py`. Para voz que llega como PCM al backend, la fábrica implementa `gemini` y `vosk`, y
 construye respectivamente `GeminiLiveTranscriber` o `VoskTranscriber`. Para chat, implementa `gemini`, `openai` y
 `groq`, que construyen respectivamente `GeminiOrderInterpreter`,
 `OpenAIOrderInterpreter` y `GroqOrderInterpreter`.
 Los nombres históricos `LiveTranscriber` y `OrderConversationOrchestrator`
 no se conservan en el código actual: los módulos y clases explícitos identifican
 proveedor y tipo de IA. El código de borde depende de los contratos.
+
+`STT_PROVIDER=whisper_browser` es una tercera ruta implementada. No se crea en
+la fábrica porque el audio no atraviesa el backend: `BrowserWhisperInput` y
+`whisper-browser-worker.js` capturan y transcriben localmente en el navegador.
+Al terminar, publican `voice.text`; `conversation_socket.py` aplica el mismo
+límite de entrada, reserva de turno, presentación de transcripción final e
+intérprete LLM. La configuración pública del modelo se envía en
+`connection.ready`, sin claves ni rutas privadas. Al elegir esta ruta no se abre
+el `AudioWorklet` de Gemini/Vosk, por lo que nunca hay dos capturas del mismo
+micrófono.
 
 Si se configura un proveedor futuro antes de agregar su adaptador, la fábrica
 muestra un error explícito y no intenta leer claves de otro proveedor. Así una
@@ -513,13 +525,15 @@ implementada.
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=groq` | `GEMINI_API_KEY` y `GROQ_API_KEY` | `GEMINI_TRANSCRIPTION_MODEL`, `GROQ_CHAT_MODEL` |
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=openai` | `GEMINI_API_KEY` y `OPENAI_API_KEY` | `GEMINI_TRANSCRIPTION_MODEL`, `OPENAI_CHAT_MODEL` |
 | `STT_PROVIDER=vosk`, `LLM_PROVIDER=groq` | `STT_MODEL_PATH` y `GROQ_API_KEY` | Ruta de modelo Vosk, `GROQ_CHAT_MODEL` |
+| `STT_PROVIDER=whisper_browser`, `LLM_PROVIDER=groq` | `GROQ_API_KEY`; Whisper no requiere clave | `WHISPER_BROWSER_MODEL`, `WHISPER_BROWSER_DEVICE`, `GROQ_CHAT_MODEL` |
 | Gemini + LLM futuro | `GEMINI_API_KEY` y la clave del LLM elegido al implementar su adaptador | Modelo Gemini STT y variable del LLM futuro |
 | STT futuro + Gemini | Credencial o modelo local del STT y `GEMINI_API_KEY` | Variable STT futura y `GEMINI_CHAT_MODEL` |
 | Ambos futuros | Solo credenciales o archivos de los proveedores seleccionados | Variables propias de los adaptadores |
-| STT local | No necesita clave cloud para STT; sí `STT_MODEL_PATH` y el modelo instalado | Ruta, idioma y parámetros del motor local |
+| STT local Vosk | No necesita clave cloud para STT; sí `STT_MODEL_PATH` y el modelo instalado | Ruta, idioma y parámetros del motor local |
+| STT local Whisper navegador | No necesita clave cloud ni ruta de servidor; requiere descargar el modelo en caché del navegador | `WHISPER_BROWSER_MODEL`, `WHISPER_BROWSER_DEVICE` |
 
-`.env.example` presenta la combinación activa recomendada Gemini STT + Groq LLM
-y anota cómo cambiar a Vosk, Gemini Chat u OpenAI. Las claves reales y los
+`.env.example` presenta la combinación activa recomendada Vosk STT + Groq LLM
+y anota cómo cambiar a Whisper en navegador, Gemini Chat u OpenAI. Las claves reales y los
 modelos locales continúan fuera de Git. Anthropic y otros proveedores futuros
 se documentan en el README y en `docs/pendientes.md`, pero todavía no son
 configuraciones que el código acepte.
@@ -531,7 +545,7 @@ configuraciones que el código acepte.
 | STT cloud | OpenAI Realtime o transcripción | `OPENAI_API_KEY`, elegir protocolo de streaming, convertir parciales/finales a `SpeechToText` | Investigado; sin código ni prueba real. |
 | STT cloud | Google Cloud Speech-to-Text | Credenciales de Google Cloud y cliente de streaming, distinto de la clave Gemini | Investigado; sin código ni prueba real. |
 | STT cloud | Azure Speech | Clave o identidad de Azure, región y cliente de reconocimiento continuo | Investigado; sin código ni prueba real. |
-| STT local | Whisper o faster-whisper | `STT_MODEL_PATH`, modelo descargado, CPU/GPU y segmentación de audio | Investigado; sin código ni prueba real. |
+| STT local navegador | Whisper con Transformers.js | Modelo de Hugging Face, WebGPU o WebAssembly, Worker y texto final al WebSocket | Implementado con `onnx-community/whisper-tiny`; pruebas simuladas de transporte, falta comparación real de calidad y latencia. |
 | STT local | Vosk | `STT_MODEL_PATH`, modelo Vosk y PCM16 a 16 kHz | Adaptador implementado y probado con simulaciones; falta prueba real con modelo y micrófono. |
 | LLM cloud | OpenAI | `OPENAI_API_KEY`, mapeo de function calling a las mismas tools autorizadas | Adaptador implementado y probado con simulaciones; la prueba real quedó bloqueada por falta de saldo API. |
 | LLM cloud | Anthropic | `ANTHROPIC_API_KEY`, mapeo de tool use a las mismas tools autorizadas | Investigado; sin código ni prueba real. |

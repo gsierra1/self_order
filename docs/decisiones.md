@@ -474,3 +474,52 @@ un modelo Vosk real ni calidad con micrófono, español rioplatense o ruido. La
 primera carga del modelo puede demorar y consume memoria/CPU local. Usar Vosk
 solo hace local el STT: el LLM seguirá usando red si se configura Groq, Gemini u
 OpenAI.
+
+## 19. Incorporar Whisper local en un Worker del navegador
+
+**Estado:** adoptada e implementada con simulaciones el 19/09/2026.
+
+**Contexto comprobado:** el ejemplo técnico recibido para evaluar voz contiene
+dos opciones: Web Speech API nativa y Whisper local. Su modo inicial es Web
+Speech API; su alternativa Whisper usa `onnx-community/whisper-tiny` mediante
+Transformers.js, captura un `MediaStream` propio y realiza inferencia en un
+Worker. El proyecto ya tenía una captura diferente: `VoiceInput` y
+`pcm-worklet.js` envían PCM16 al backend para Gemini o Vosk. Abrir ambas rutas a
+la vez podría pedir dos veces el micrófono, duplicar audio o dejar recursos sin
+liberar.
+
+**Alternativas consideradas:** agregar Whisper como dependencia Python y un
+adaptador `SpeechToText` de backend; copiar el ejemplo con su propia interfaz;
+usar Web Speech API; o integrar Whisper en el frontend actual como una ruta
+exclusiva. La opción Python conservaría el contrato de PCM, pero exigiría instalar
+modelo y usar CPU/GPU del servidor. Web Speech API depende del navegador y no
+da un modelo controlado para comparar. Copiar la interfaz duplicaría conversación
+y micrófono. La ruta local del navegador aprovecha el código comprobado del
+ejemplo y mantiene el backend transaccional sin cambios.
+
+**Decisión adoptada:** `STT_PROVIDER=whisper_browser` configura
+`BrowserWhisperInput` y `whisper-browser-worker.js`. El Worker descarga y
+ejecuta `onnx-community/whisper-tiny` mediante Transformers.js, intenta WebGPU
+o cae a WebAssembly. La captura remuestrea a 16 kHz, aplica el detector de
+silencio ya usado por la demo y acumula un turno de hasta sesenta segundos. Al
+terminar, el navegador publica solamente `voice.text` con la transcripción final.
+`conversation_socket.py` acepta ese evento solo para ese proveedor, lo valida
+con el mismo límite de texto, lo muestra como voz y lo envía al intérprete LLM.
+Gemini y Vosk conservan `audio.start`, PCM, `SpeechToText` y `audio.stop`.
+
+**Consecuencias:** `OrderService`, herramientas, menú, precios, disponibilidad,
+carrito, pagos y LLM permanecen iguales. Whisper no necesita API key ni expone
+una clave en el navegador; la primera carga necesita descargar el módulo y el
+modelo desde internet y se reutiliza desde la caché del navegador. La fábrica
+Python no intenta crear un adaptador para este proveedor porque nunca recibe su
+audio. `connection.ready` entrega al frontend únicamente proveedor, modelo y
+modo de ejecución, sin rutas ni credenciales.
+
+**Límites:** a diferencia de Gemini y Vosk, esta primera integración no muestra
+hipótesis mientras la persona habla: el modelo se invoca al finalizar el turno.
+La precisión, latencia, consumo de memoria y compatibilidad WebGPU dependen del
+navegador y del equipo. Las pruebas automáticas verifican la selección, el
+aislamiento de la captura y que el texto final recorra el mismo intérprete; no
+descargan el modelo, no llaman Hugging Face y no miden audio real. Antes de
+elegirlo para una demostración o kiosco debe compararse contra Gemini y Vosk con
+frases del menú, español rioplatense, QR, Sprite, ruido y el hardware real.

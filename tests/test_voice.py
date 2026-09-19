@@ -344,6 +344,60 @@ class ConversationTests(unittest.TestCase):
         self.assertFalse(self.runtime.turn_lock.locked())
         self.assertNotIn(self.session.session_id, api.websocket_manager.connections)
 
+    def test_browser_whisper_text_uses_the_same_interpreter_once(self) -> None:
+        """Acepta texto final local sin abrir un transcriptor en el servidor.
+
+        Whisper en navegador conserva el evento visual de voz, pero entrega solo
+        su texto final al WebSocket. La prueba confirma que esa diferencia de
+        transporte no duplica herramientas ni cambia la autoridad del servicio.
+        """
+        configuration = {
+            "provider": "whisper_browser",
+            "model": "onnx-community/whisper-tiny",
+            "device": "auto",
+        }
+        with patch(
+            "backend.api.conversation_socket.get_stt_provider",
+            return_value="whisper_browser",
+        ), patch(
+            "backend.api.conversation_socket.get_public_stt_configuration",
+            return_value=configuration,
+        ), patch(
+            "backend.api.conversation_socket.create_speech_to_text",
+        ) as factory:
+            with self.client.websocket_connect(self.url) as ws:
+                ready = ws.receive_json()
+                self.assertEqual(ready["data"]["voice"], configuration)
+                ws.send_json({
+                    "type": "voice.text",
+                    "data": {"message": "Quiero una Burger Clásica con Agua"},
+                })
+                transcript = ws.receive_json()
+                response = ws.receive_json()
+
+        self.assertEqual(transcript["type"], "voice.transcript")
+        self.assertTrue(transcript["data"]["final"])
+        self.assertEqual(response["type"], "assistant.text")
+        self.assistant.send_message.assert_called_once_with(
+            "Quiero una Burger Clásica con Agua",
+        )
+        factory.assert_not_called()
+
+    def test_browser_whisper_rejects_pcm_backend_turn(self) -> None:
+        """Evita que Whisper local y el AudioWorklet abran el micrófono a la vez."""
+        with patch(
+            "backend.api.conversation_socket.get_stt_provider",
+            return_value="whisper_browser",
+        ):
+            with self.client.websocket_connect(self.url) as ws:
+                ws.receive_json()
+                ws.send_json({"type": "audio.start"})
+                error = ws.receive_json()
+
+        self.assertEqual(error["type"], "client.error")
+        self.assertIn("Whisper local", error["data"]["message"])
+        self.assistant.send_message.assert_not_called()
+
     def test_cancel_preserves_cart_and_allows_text(self) -> None:
         """Cancelar descarta voz y permite continuar escribiendo en la sesión."""
         with self.client.websocket_connect(self.url) as ws:
@@ -545,7 +599,7 @@ class ConversationTests(unittest.TestCase):
 
         self.assertIn("no-store", page_response.headers["cache-control"])
         self.assertIn("no-store", script_response.headers["cache-control"])
-        self.assertIn("app.js?v=20260918-8", page_response.text)
+        self.assertIn("app.js?v=20260919-1", page_response.text)
         self.assertIn("styles.css?v=20260918-5", page_response.text)
 
     def test_frontend_inactivity_requires_a_confirmed_message(self) -> None:

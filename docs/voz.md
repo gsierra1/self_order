@@ -6,8 +6,10 @@ Implementación inicial: 14/09/2026. Texto y voz comparten conversación y carri
 
 ```mermaid
 flowchart LR
-    M[Micrófono] --> V[voice.js / pcm-worklet.js]
-    V -->|PCM16| W[conversation_socket.py]
+    M[Micrófono] --> V{STT configurado}
+    V -->|Gemini o Vosk: voice.js / pcm-worklet.js| W[conversation_socket.py]
+    V -->|Whisper local: whisper-browser.js / Worker| BT[Texto final]
+    BT -->|voice.text| W
     W --> T[SpeechToText]
     T --> GT[Adaptador STT configurado]
     GT <--> G[Modelo STT configurado]
@@ -29,7 +31,7 @@ little-endian mono a 16 kHz de 100 ms y vacía el último bloque antes de cerrar
 El contexto solicita 16 kHz y comprueba la frecuencia. No reproduce el micrófono
 por los parlantes. Al hablar se cancela la lectura del asistente.
 
-`backend/ai/contracts.py` define `SpeechToText`; los adaptadores actuales
+`backend/ai/contracts.py` define `SpeechToText`; los adaptadores de backend actuales
 `GeminiLiveTranscriber` en `backend/ai/gemini_transcriber.py` y
 `VoskTranscriber` en `backend/ai/vosk_transcriber.py` no tienen tools ni acceso
 al carrito. Publican hipótesis y devuelven texto al cerrar el turno.
@@ -40,6 +42,15 @@ corrige esas variantes puntuales, «debida» por «bebida» y «concurre» o «q
 «QR» antes de mostrar o interpretar el texto. Esta normalización no decide
 productos ni modifica el carrito; una prueba real con micrófono debe evaluar si el
 modelo sigue siendo aceptable para la demo.
+Cuando `STT_PROVIDER=whisper_browser`, `frontend/whisper-browser.js` es dueño
+exclusivo del micrófono: remuestrea el audio a 16 kHz, detecta el mismo silencio
+local, acumula como máximo sesenta segundos y pide el texto final a
+`whisper-browser-worker.js`. El Worker descarga y ejecuta
+`onnx-community/whisper-tiny` mediante Transformers.js, primero con WebGPU o con
+WebAssembly si corresponde. No se crea `VoiceInput`, no se emiten frames PCM y
+no se crea un `SpeechToText` Python para ese turno. Solo después de tener texto
+final, el navegador publica `voice.text`; el backend lo valida, lo muestra como
+voz y lo entrega al mismo intérprete LLM.
 `backend/api/conversation_socket.py` valida eventos y entrega ese texto al
 `OrderInterpreter` elegido por `LLM_PROVIDER`. Las reglas del servicio se conservan.
 
@@ -64,6 +75,7 @@ vuelve a habilitarse al terminar, salvo si el pedido quedó confirmado.
 | `voice.transcript` | Backend → navegador: `{text, final}`; una hipótesis solo se muestra. |
 | `audio.stop` | Navegador → backend: finaliza; repetirlo no ejecuta nuevamente el pedido. |
 | `audio.cancel` | Navegador → backend: descarta transcripción que aún no llegó al intérprete LLM. |
+| `voice.text` | Navegador → backend: texto final de Whisper local. Solo se acepta con `STT_PROVIDER=whisper_browser`; no contiene audio. |
 | `voice.cancelled` | Backend → navegador: cancelación atendida. |
 | `voice.error` | Backend → navegador: falla de transcripción; el audio no ejecutó un pedido. Si el proveedor informa detalles, incluye tipo, código, etapa y si se puede reintentar. |
 | `voice.retry_ready` | Backend → navegador: terminó de liberar un turno de STT fallido; se puede iniciar otro. |
@@ -114,6 +126,9 @@ cancela la lectura, manteniendo el texto disponible.
 El `.env.example` usa `STT_PROVIDER=vosk`, que requiere el modelo local indicado
 por `STT_MODEL_PATH` y no necesita API key para la transcripción. También se
 puede elegir Gemini mediante `GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live`.
+También se puede elegir `STT_PROVIDER=whisper_browser` con
+`WHISPER_BROWSER_MODEL=onnx-community/whisper-tiny` y
+`WHISPER_BROWSER_DEVICE=auto`, `webgpu` o `wasm`.
 La demo usa Groq para el chat mediante
 `GROQ_CHAT_MODEL=openai/gpt-oss-20b`; también se puede elegir Gemini u OpenAI
 con sus variables propias. Los nombres se pueden cambiar en `.env` sin modificar
@@ -243,19 +258,22 @@ con `finish()`, publica parciales y devuelve el texto definitivo con
 `transcribe()`, y permite `cancel()` y `close()` al abandonar el turno o el
 WebSocket.
 
-Las implementaciones efectivas son `GeminiLiveTranscriber` en
+Las implementaciones efectivas de backend son `GeminiLiveTranscriber` en
 `backend/ai/gemini_transcriber.py` y `VoskTranscriber` en
-`backend/ai/vosk_transcriber.py`. `STT_PROVIDER` admite `gemini` o `vosk`.
+`backend/ai/vosk_transcriber.py`. `STT_PROVIDER` admite `gemini`, `vosk` o
+`whisper_browser`. Este último se implementa en
+`frontend/whisper-browser.js`, no recibe PCM en la fábrica y publica solo
+`voice.text` cuando Whisper termina.
 Vosk carga el modelo local una vez, procesa PCM16 a 16 kHz, publica hipótesis
 con `PartialResult()` y solo entrega `FinalResult()` después de `audio.stop`.
 Configurar por ahora `whisper`, `openai`, `google-cloud` o `azure` devuelve un
 error claro antes de abrir el turno.
 
-Un futuro adaptador debe conservar el contrato completo: preparar su conexión,
+Un futuro adaptador que procese audio en el backend debe conservar el contrato completo: preparar su conexión,
 aceptar fragmentos, publicar hipótesis separadas del final, no entregar texto
 incompleto al pedido, cancelar sin mutar y cerrar sus recursos. Vosk ya usa el
-modelo local definido en `STT_MODEL_PATH`; Whisper requeriría su propio modelo
-local y los servicios cloud la credencial del proveedor seleccionado. La elección
+modelo local definido en `STT_MODEL_PATH`; un Whisper de backend requeriría su
+propio modelo local y los servicios cloud la credencial del proveedor seleccionado. La elección
 se debe hacer con una matriz de prueba real de latencia, ruido, costo, hardware e
 interrupciones; esta arquitectura permite esa comparación sin reescribir
 `OrderService`.

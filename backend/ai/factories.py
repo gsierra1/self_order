@@ -37,9 +37,15 @@ def create_speech_to_text(session_id: str | None = None) -> SpeechToText:
             session_id=session_id,
             model_path=get_stt_model_path(),
         )
+    if provider == "whisper_browser":
+        raise RuntimeError(
+            "STT_PROVIDER='whisper_browser' ejecuta Whisper en el navegador; "
+            "no admite audio.start en el backend."
+        )
     raise RuntimeError(
         f"STT_PROVIDER={provider!r} todavía no tiene un adaptador implementado. "
-        "Usá 'gemini', 'vosk' o agregá el adaptador y sus pruebas antes de seleccionarlo."
+        "Usá 'gemini', 'vosk', 'whisper_browser' o agregá el adaptador y sus "
+        "pruebas antes de seleccionarlo."
     )
 
 

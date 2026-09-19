@@ -26,6 +26,13 @@ registrar la corrida final.
   habla continua, pausas naturales y una persona que duda antes de decidir si
   el intervalo se conserva o se aumenta. El botón de envío manual debe seguir
   disponible durante la evaluación.
+- **Matriz manual de Whisper local en navegador:** `whisper_browser` quedó
+  implementado con el modelo `onnx-community/whisper-tiny`, WebGPU o CPU y
+  pruebas simuladas de transporte. Falta ejecutar y registrar una comparación
+  real contra Gemini y Vosk con el mismo micrófono: frases con «Sprite», «QR» y
+  modificadores, español rioplatense, pausas, ruido y pedidos largos. Registrar
+  por separado la primera carga del modelo, los turnos siguientes, el dispositivo
+  realmente usado, el texto final y el tiempo hasta que el carrito responde.
 - **Inicio de escucha y privacidad:** evaluar si una experiencia manos libres
   puede evitar que la persona pulse «Hablar» en cada turno. El botón actual
   puede resultar incómodo en una conversación larga, pero también hace visible
@@ -58,10 +65,11 @@ registrar la corrida final.
   evaluado porque su reconocimiento incremental se adapta naturalmente a los
   fragmentos y parciales de `SpeechToText`; el adaptador quedó implementado el
   18/09/2026 con pruebas simuladas. Falta medir su precisión con español
-  rioplatense, ruido y el micrófono real. Whisper/faster-whisper puede
-  conservar el contrato y el resto del bot, pero inicialmente convendría
-  transcribir al recibir `audio.stop`; los parciales requerirían una estrategia
-  adicional de ventanas de audio.
+  rioplatense, ruido y el micrófono real. `whisper_browser` ya implementa
+  Whisper al finalizar el turno, sin enviar PCM al servidor; falta su matriz
+  real. Whisper/faster-whisper en backend seguirían siendo alternativas futuras
+  que requerirían modelo instalado, adaptador `SpeechToText` y una estrategia de
+  parciales o ventanas de audio.
 
   Entre las alternativas cloud con cuota inicial, Google Cloud Speech-to-Text
   ofrece 60 minutos mensuales sin cargo y streaming bidireccional, aunque exige

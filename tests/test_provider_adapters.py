@@ -15,7 +15,11 @@ from backend.ai.order_tools_runtime import OrderToolsRuntime
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
 from backend.services.order_service import OrderService
-from config.settings import get_llm_provider, get_stt_provider
+from config.settings import (
+    get_llm_provider,
+    get_public_stt_configuration,
+    get_stt_provider,
+)
 
 
 class AlternateSpeechToText(SpeechToText):
@@ -169,6 +173,27 @@ class ProviderFactoryTests(unittest.TestCase):
 
         self.assertEqual(models, ["a-model", "z-model"])
         client.close.assert_called_once_with()
+
+    def test_browser_whisper_exposes_only_safe_frontend_configuration(self) -> None:
+        """Publica modelo y dispositivo sin incluir credenciales o rutas locales."""
+        with patch.dict(os.environ, {
+            "STT_PROVIDER": "whisper_browser",
+            "WHISPER_BROWSER_MODEL": "onnx-community/whisper-tiny",
+            "WHISPER_BROWSER_DEVICE": "webgpu",
+        }, clear=False):
+            configuration = get_public_stt_configuration()
+
+        self.assertEqual(configuration, {
+            "provider": "whisper_browser",
+            "model": "onnx-community/whisper-tiny",
+            "device": "webgpu",
+        })
+
+    def test_browser_whisper_is_not_constructed_as_a_backend_stt_adapter(self) -> None:
+        """Distingue el STT local de navegador de los adaptadores que reciben PCM."""
+        with patch.dict(os.environ, {"STT_PROVIDER": "whisper_browser"}, clear=False):
+            with self.assertRaisesRegex(RuntimeError, "navegador"):
+                create_speech_to_text("session-test")
 
     def test_llm_prompts_forbid_clarifications_absent_from_catalog(self) -> None:
         """Impide que los intérpretes inventen variantes al pedir una aclaración."""

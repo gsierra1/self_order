@@ -97,8 +97,10 @@ saturación observada en Gemini Chat. Gemini usa una sola
 `GEMINI_API_KEY` para las dos capas; sus modelos se configuran con
 `GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
 
-Gemini está implementado para STT y LLM. Vosk está implementado como STT local;
-Groq y OpenAI están implementados solo para LLM. Groq ofrece Whisper mediante un endpoint de
+Gemini está implementado para STT y LLM. Vosk y `whisper_browser` están
+implementados como STT local; Groq y OpenAI están implementados solo para LLM.
+`whisper_browser` ejecuta Whisper en un Worker del navegador y entrega texto
+final al WebSocket, mientras Vosk y Gemini reciben audio en el backend. Groq ofrece Whisper mediante un endpoint de
 archivo, pero no el streaming de fragmentos que necesita esta interfaz; por eso
 no se puede cambiar solo una variable sin crear otro adaptador. El `.env.example` selecciona Groq porque la
 cuenta gratuita de Groq permitió probar las tools del carrito. No se instala un
@@ -161,13 +163,16 @@ OPENAI_CHAT_MODEL=gpt-4.1-mini
 de la cuenta ayuda a revisar acceso, pero la compatibilidad con tools y el saldo
 se confirman mediante una solicitud real.
 
-`whisper`, `anthropic`, `google-cloud`, `azure` u otro valor no
-implementado se informa claramente y no intenta usar una clave ajena.
+`whisper` —distinto de `whisper_browser`—, `anthropic`, `google-cloud`, `azure`
+u otro valor no implementado se informa claramente y no intenta usar una clave
+ajena.
 
 Los proveedores se seleccionan mediante `STT_PROVIDER` y `LLM_PROVIDER`. Hoy
-STT admite `gemini` y `vosk`; LLM admite `gemini`, `groq` y `openai`. Cada proveedor
+STT admite `gemini`, `vosk` y `whisper_browser`; LLM admite `gemini`, `groq` y `openai`. Cada proveedor
 requiere sus propias variables: Gemini usa `GEMINI_API_KEY`, Groq usa
-`GROQ_API_KEY`, OpenAI usa `OPENAI_API_KEY` y Vosk usa `STT_MODEL_PATH`.
+`GROQ_API_KEY`, OpenAI usa `OPENAI_API_KEY`, Vosk usa `STT_MODEL_PATH` y
+Whisper local en navegador usa `WHISPER_BROWSER_MODEL` y
+`WHISPER_BROWSER_DEVICE`, sin API key.
 Solo se exige la credencial o el modelo del proveedor elegido para esa capa. No
 compartas ni subas `.env` al repositorio.
 
@@ -216,6 +221,39 @@ en memoria. La transcripción será local, aunque el LLM seguirá siendo cloud s
 dejás `LLM_PROVIDER=groq`. Si el modelo no existe o la ruta es incorrecta, la
 pantalla indicará revisar `STT_MODEL_PATH` y el pedido no se modificará. Ver
 [modelos de Vosk](https://alphacephei.com/vosk/models/).
+
+### Usar Whisper local en el navegador
+
+Whisper local no agrega una dependencia Python ni requiere una API key. Al elegir
+esta alternativa, el frontend abre el micrófono, lo procesa exclusivamente en un
+Worker y envía al backend solo el texto final. Por eso no se mezcla con la captura
+PCM de Gemini o Vosk y las reglas de `OrderService` no cambian.
+
+En tu `.env` local configurá:
+
+```dotenv
+STT_PROVIDER=whisper_browser
+WHISPER_BROWSER_MODEL=onnx-community/whisper-tiny
+WHISPER_BROWSER_DEVICE=auto
+LLM_PROVIDER=groq
+GROQ_API_KEY=tu_clave_de_groq
+GROQ_CHAT_MODEL=openai/gpt-oss-20b
+```
+
+`auto` intenta WebGPU y usa WebAssembly sobre CPU si el navegador no lo admite.
+También se puede escribir `webgpu` o `wasm` para forzar un modo. La primera vez,
+el Worker descarga el modelo desde Hugging Face y el navegador lo conserva en su
+caché; por eso requiere red y puede tardar. Los turnos siguientes reutilizan el
+Worker mientras la sesión siga abierta. Si se borra la caché del navegador, el
+modelo se descargará otra vez. La transcripción puede funcionar sin red después
+de esa descarga, pero el LLM configurado seguirá necesitando red si es Groq,
+Gemini u OpenAI.
+
+Esta implementación usa el mismo modelo `onnx-community/whisper-tiny` del
+ejemplo entregado para el proyecto. No prueba todavía que sea más preciso que
+Gemini o Vosk con español rioplatense, marcas del menú, ruido o el hardware del
+kiosco: esa comparación debe hacerse con la matriz manual indicada en
+`docs/pendientes.md`.
 
 Para consultar los modelos visibles para la cuenta OpenAI, sin imprimir la
 clave (sólo aplica a `LLM_PROVIDER=openai`):

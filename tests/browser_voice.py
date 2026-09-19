@@ -132,11 +132,15 @@ class BrowserVoiceTests(unittest.TestCase):
         server = uvicorn.Server(uvicorn.Config(api.app, log_level="error"))
         previous = set(api.sessions)
         with patch("backend.logging.event_logger.LOGGER.disabled", True), \
-             patch(
-                 "backend.api.app.create_order_interpreter",
-                 side_effect=create_browser_assistant,
-             ), \
-             patch("backend.api.conversation_socket.create_speech_to_text", BrowserTranscriber):
+            patch(
+                "backend.api.app.create_order_interpreter",
+                side_effect=create_browser_assistant,
+            ), \
+            patch("backend.api.conversation_socket.create_speech_to_text", BrowserTranscriber), \
+            patch(
+                "backend.api.conversation_socket.get_public_stt_configuration",
+                return_value={"provider": "gemini"},
+            ):
             thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
             thread.start()
             try:
@@ -246,7 +250,7 @@ class BrowserVoiceTests(unittest.TestCase):
                         )
                         detector_result = page.evaluate("""
                             async () => {
-                                const { EndOfSpeechDetector } = await import('/static/voice.js?v=20260917-5');
+                                const { EndOfSpeechDetector } = await import('/static/voice.js?v=20260919-1');
                                 const detector = new EndOfSpeechDetector({
                                     speechThreshold: 0.01,
                                     minimumSpeechMs: 200,
@@ -266,6 +270,47 @@ class BrowserVoiceTests(unittest.TestCase):
                             detector_result,
                             [False, False, False, False, True, False],
                         )
+                        whisper_worker_result = page.evaluate("""
+                            async () => {
+                                class FakeWhisperWorker {
+                                    constructor() { this.onmessage = null; }
+                                    postMessage(message) {
+                                        if (message.type === 'load') {
+                                            queueMicrotask(() => this.onmessage?.({
+                                                data: { type: 'ready', device: 'wasm' },
+                                            }));
+                                        }
+                                        if (message.type === 'transcribe') {
+                                            queueMicrotask(() => this.onmessage?.({
+                                                data: { type: 'complete', text: 'texto local simulado' },
+                                            }));
+                                        }
+                                    }
+                                    terminate() {}
+                                }
+                                const OriginalWorker = window.Worker;
+                                window.Worker = FakeWhisperWorker;
+                                try {
+                                    const { BrowserWhisperInput } = await import(
+                                        '/static/whisper-browser.js?v=20260919-1'
+                                    );
+                                    const input = new BrowserWhisperInput({
+                                        onProgress: () => {},
+                                        onError: () => {},
+                                        onSpeechEnded: () => {},
+                                    });
+                                    await input.ensureWorker();
+                                    const text = await input.requestTranscription(
+                                        new Float32Array([0, 0.1, -0.1]),
+                                    );
+                                    input.dispose();
+                                    return text;
+                                } finally {
+                                    window.Worker = OriginalWorker;
+                                }
+                            }
+                        """)
+                        self.assertEqual(whisper_worker_result, "texto local simulado")
                         session_id = next(iter(set(api.sessions) - previous))
                         current_socket = api.websocket_manager.connections[session_id]
                         close_future = asyncio.run_coroutine_threadsafe(

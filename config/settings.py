@@ -58,6 +58,52 @@ def get_stt_model_path() -> str:
     return os.getenv("STT_MODEL_PATH", "").strip()
 
 
+def get_whisper_browser_model() -> str:
+    """Obtiene el modelo Whisper que se descargará y ejecutará en el navegador.
+
+    Returns:
+        Identificador del modelo compatible con Transformers.js. Solo se usa
+        cuando ``STT_PROVIDER`` es ``whisper_browser``.
+
+    Effects:
+        Carga el archivo .env local antes de consultar la configuración.
+    """
+    load_dotenv()
+    return os.getenv("WHISPER_BROWSER_MODEL", "onnx-community/whisper-tiny").strip()
+
+
+def get_whisper_browser_device() -> str:
+    """Obtiene el modo de ejecución local preferido para Whisper en navegador.
+
+    Returns:
+        ``auto``, ``webgpu`` o ``wasm``. Los valores no reconocidos vuelven a
+        ``auto`` para evitar publicar una configuración incompatible.
+
+    Effects:
+        Carga el archivo .env local antes de consultar la configuración.
+    """
+    load_dotenv()
+    device = os.getenv("WHISPER_BROWSER_DEVICE", "auto").strip().lower()
+    return device if device in {"auto", "webgpu", "wasm"} else "auto"
+
+
+def get_public_stt_configuration() -> dict[str, str]:
+    """Construye la configuración de voz segura que puede recibir el navegador.
+
+    Returns:
+        Proveedor de STT y, para Whisper local, modelo y modo de ejecución.
+        No incorpora claves ni rutas privadas del servidor.
+    """
+    provider = get_stt_provider()
+    configuration = {"provider": provider}
+    if provider == "whisper_browser":
+        configuration.update({
+            "model": get_whisper_browser_model(),
+            "device": get_whisper_browser_device(),
+        })
+    return configuration
+
+
 def get_chat_model() -> str:
     """Obtiene el modelo Gemini que interpreta y redacta los pedidos.
 

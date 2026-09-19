@@ -305,8 +305,9 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         <article class="step frontend">
           <h3>4. La persona toca Hablar</h3>
           <a href="../frontend/app.js"><code>frontend/app.js</code></a>
-          <small><code>toggleMicrophone()</code> env&iacute;a <code>audio.start</code>; <code>VoiceInput</code> prepara
-            el micr&oacute;fono y espera que el backend confirme <code>voice.ready</code>.</small>
+          <small>Con Gemini o Vosk, <code>toggleMicrophone()</code> env&iacute;a <code>audio.start</code> y
+            <code>VoiceInput</code> espera <code>voice.ready</code>. Con <code>whisper_browser</code>,
+            prepara el Worker local y el micr&oacute;fono sin enviar audio al backend.</small>
         </article>
         <article class="step frontend">
           <h3>5. Audio del micr&oacute;fono</h3>
@@ -319,8 +320,10 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         <article class="step ai">
           <h3>6. STT: voz a texto</h3>
           <a href="../backend/ai/factories.py"><code>backend/ai/factories.py</code></a>
-          <small><code>SpeechToText</code> selecciona <code>GeminiLiveTranscriber</code> o
-            <code>VoskTranscriber</code> seg&uacute;n <code>STT_PROVIDER</code>; publica hip&oacute;tesis y devuelve el texto final.</small>
+          <small>Para Gemini o Vosk, <code>SpeechToText</code> selecciona
+            <code>GeminiLiveTranscriber</code> o <code>VoskTranscriber</code>. Con
+            <code>whisper_browser</code>, <code>whisper-browser.js</code> y su Worker transcriben localmente
+            y env&iacute;an <code>voice.text</code> final al mismo WebSocket.</small>
         </article>
         <article class="step backend">
           <h3>7. El texto entra al mismo flujo que escritura</h3>

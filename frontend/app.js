@@ -1,4 +1,5 @@
-import { VoiceInput, speak } from "/static/voice.js?v=20260917-5";
+import { VoiceInput, speak } from "/static/voice.js?v=20260919-1";
+import { BrowserWhisperInput } from "/static/whisper-browser.js?v=20260919-1";
 import { InactivityMonitor } from "/static/inactivity.js?v=20260917-1";
 
 let sessionId = null;
@@ -33,7 +34,8 @@ const paymentContent = document.getElementById("payment-content");
 const paymentOptions = paymentPanel.querySelector(".payment-options");
 const paymentTitle = paymentPanel.querySelector("h3");
 
-const voice = new VoiceInput(sendAudio, failVoice, finishVoiceAfterSilence);
+let voice = createServerVoiceInput();
+let voiceProvider = "gemini";
 
 const inactivityMonitor = new InactivityMonitor({
     onPrompt: () => showInactivityMessage("¿Seguís ahí?"),
@@ -78,6 +80,47 @@ function registerUserMessage() {
     if (sessionClosed) return;
     hasUserInteracted = true;
     inactivityMonitor.stop();
+}
+
+/**
+ * Construye la captura que envía PCM al STT configurado en el backend.
+ * @returns {VoiceInput} Capturador remoto para Gemini o Vosk.
+ */
+function createServerVoiceInput() {
+    return new VoiceInput(sendAudio, failVoice, finishVoiceAfterSilence);
+}
+
+/**
+ * Informa avances locales de Whisper sin enviar una operación al pedido.
+ * @param {string} message Estado de carga o transcripción del modelo local.
+ * @returns {void} Actualiza únicamente el texto provisional de voz.
+ */
+function showWhisperProgress(message) {
+    transcript.textContent = message;
+}
+
+/**
+ * Configura una única estrategia de captura según el proveedor publicado por la sesión.
+ * @param {Object} configuration Configuración pública incluida en `connection.ready`.
+ * @returns {void} Reemplaza el capturador solo cuando el proveedor cambió.
+ * @effects Libera el micrófono anterior antes de crear otro para evitar capturas simultáneas.
+ */
+function configureVoiceProvider(configuration = {}) {
+    const nextProvider = configuration.provider || "gemini";
+    if (nextProvider === voiceProvider && !(nextProvider === "whisper_browser" && !voice.model)) return;
+    voice.dispose();
+    voiceProvider = nextProvider;
+    if (nextProvider === "whisper_browser") {
+        voice = new BrowserWhisperInput({
+            model: configuration.model,
+            device: configuration.device,
+            onProgress: showWhisperProgress,
+            onError: failVoice,
+            onSpeechEnded: finishVoiceAfterSilence,
+        });
+        return;
+    }
+    voice = createServerVoiceInput();
 }
 
 /** Formatea un importe del carrito en pesos argentinos.
@@ -640,8 +683,13 @@ async function finishVoiceTurn(trigger) {
     }
     setStatus("Procesando audio...", "processing");
     try {
-        await voice.finish();
-        sendEvent("audio.stop");
+        const localText = await voice.finish();
+        if (voiceProvider === "whisper_browser") {
+            if (trigger === "silence") transcript.textContent = "Audio local terminado. Enviando texto…";
+            sendEvent("voice.text", { message: localText });
+        } else {
+            sendEvent("audio.stop");
+        }
     } catch (error) {
         failVoice(error);
     }
@@ -676,8 +724,12 @@ async function toggleMicrophone() {
     setStatus("Preparando micrófono y conexión...", "processing");
     transcript.textContent = "No hables hasta que aparezca «Escuchando».";
     try {
-        sendEvent("audio.start");
-        voiceTimer = setTimeout(() => failVoice(new Error("La conexión de voz tardó demasiado.")), 20000);
+        if (voiceProvider !== "whisper_browser") {
+            sendEvent("audio.start");
+            voiceTimer = setTimeout(() => failVoice(new Error("La conexión de voz tardó demasiado.")), 20000);
+        } else {
+            voiceBackendReady = true;
+        }
         await voice.prepare();
         voicePrepared = true;
         maybeStartRecording();
@@ -776,6 +828,7 @@ function onServerMessage(event) {
         const restored = phase === "reconnecting";
         reconnectAttempts = 0;
         phase = "ready";
+        configureVoiceProvider(data.voice);
         if (!sessionClosed) setStatus(restored ? "Conexi\u00f3n restablecida" : "Listo");
         restartInactivityTimer();
     } else if (type === "voice.ready" && phase === "preparing") {

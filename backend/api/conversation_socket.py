@@ -24,6 +24,7 @@ from backend.api.conversation_guards import (
 )
 from backend.domain.session import SessionState
 from backend.logging.event_logger import log_event
+from config.settings import get_public_stt_configuration, get_stt_provider
 
 
 def _detect_payment_method(text: str) -> str | None:
@@ -85,7 +86,7 @@ def _get_stt_label(audio: SpeechToText) -> str:
     Returns:
         Nombre breve y legible del proveedor de voz seleccionado.
     """
-    labels = {"gemini": "Gemini", "vosk": "Vosk"}
+    labels = {"gemini": "Gemini", "vosk": "Vosk", "whisper_browser": "Whisper local"}
     return labels.get(audio.provider_name, audio.provider_name.capitalize())
 
 
@@ -223,12 +224,19 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 "cart": snapshot(runtime.service),
             })
 
-    async def process_turn(text: str | None, audio: SpeechToText | None) -> bool:
+    async def process_turn(
+        text: str | None,
+        audio: SpeechToText | None,
+        is_browser_voice: bool = False,
+    ) -> bool:
         """Procesa una sola entrada y libera la reserva incluso ante errores.
 
         Args:
             text: Mensaje escrito, o None para un turno hablado.
-            audio: Transcriptor del turno, o None para entrada escrita.
+            audio: Transcriptor del turno, o None para entrada escrita o voz
+                cuya transcripción ocurrió localmente en el navegador.
+            is_browser_voice: Indica que ``text`` proviene del STT local del
+                navegador y debe conservarse como una entrada de voz visible.
 
         Returns:
             True si el frontend debe esperar la liberación explícita del turno
@@ -326,6 +334,15 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 await publish("voice.transcript", {"text": text, "final": True})
                 log_event("INFO", "voice.turn_transcribed", session_id=session_id, transcript_length=len(text))
                 audio.processing_order = True
+            elif is_browser_voice:
+                await publish("voice.transcript", {"text": text, "final": True})
+                log_event(
+                    "INFO",
+                    "voice.turn_transcribed",
+                    session_id=session_id,
+                    transcript_length=len(text or ""),
+                    provider="whisper_browser",
+                )
             await execute(text)
             return False
         finally:
@@ -362,10 +379,12 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                       exception_type=type(task.exception()).__name__)
 
     try:
+        stt_configuration = get_public_stt_configuration()
         await publish("connection.ready", {
             "session_id": session_id,
             "cart": snapshot(runtime.service),
             "state": runtime.service.session.state.value,
+            "voice": stt_configuration,
         })
         while True:
             incoming = await websocket.receive()
@@ -418,13 +437,21 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                             transcriber = None
                             await publish("voice.error", {"message": str(exc)})
                     continue
-                if event_type not in {"audio.start", "user.text"}:
+                if event_type not in {"audio.start", "user.text", "voice.text"}:
                     raise ValueError("Tipo de evento no soportado.")
                 if runtime.service.session.state == SessionState.CONFIRMED:
                     raise ValueError("El pedido ya fue confirmado.")
+                if event_type == "audio.start" and get_stt_provider() == "whisper_browser":
+                    raise ValueError(
+                        "Whisper local se prepara en el navegador; no envía audio al backend."
+                    )
+                if event_type == "voice.text" and get_stt_provider() != "whisper_browser":
+                    raise ValueError(
+                        "La transcripción local no coincide con el proveedor de voz configurado."
+                    )
                 text = (
                     normalize_user_message(data.get("message"))
-                    if event_type == "user.text" else None
+                    if event_type in {"user.text", "voice.text"} else None
                 )
                 if not runtime.turn_lock.acquire(blocking=False):
                     raise ValueError("Hay un turno en curso. Esperá su respuesta.")
@@ -437,7 +464,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     runtime.turn_lock.release()
                     raise ValueError(str(exc)) from exc
                 turn_task = asyncio.create_task(process_turn(
-                    text, transcriber,
+                    text, transcriber, event_type == "voice.text",
                 ))
                 turn_task.add_done_callback(lambda task, audio=transcriber: release_turn(task, audio))
             except (ValueError, json.JSONDecodeError) as exc:
