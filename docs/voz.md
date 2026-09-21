@@ -124,7 +124,7 @@ cancela la lectura, manteniendo el texto disponible.
 ## Configuración y decisión
 
 El `.env.example` usa `STT_PROVIDER=vosk`, que requiere el modelo local indicado
-por `STT_MODEL_PATH` y no necesita API key para la transcripción. También se
+por `VOSK_MODEL_PATH` y no necesita API key para la transcripción. También se
 puede elegir Gemini mediante `GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live`.
 También se puede elegir `STT_PROVIDER=whisper_browser` con
 `WHISPER_BROWSER_MODEL=onnx-community/whisper-tiny` y
@@ -272,7 +272,7 @@ error claro antes de abrir el turno.
 Un futuro adaptador que procese audio en el backend debe conservar el contrato completo: preparar su conexión,
 aceptar fragmentos, publicar hipótesis separadas del final, no entregar texto
 incompleto al pedido, cancelar sin mutar y cerrar sus recursos. Vosk ya usa el
-modelo local definido en `STT_MODEL_PATH`; un Whisper de backend requeriría su
+modelo local definido en `VOSK_MODEL_PATH`; un Whisper de backend requeriría su
 propio modelo local y los servicios cloud la credencial del proveedor seleccionado. La elección
 se debe hacer con una matriz de prueba real de latencia, ruido, costo, hardware e
 interrupciones; esta arquitectura permite esa comparación sin reescribir
@@ -291,3 +291,9 @@ Si la persona dice directamente «quiero pagar con QR», «tarjeta» o «en caja
 la tool de selección prepara el estado `PAYMENT_PENDING` cuando todavía estaba
 `ACTIVE` y registra el método en el mismo turno. Esto evita depender de dos
 frases separadas (confirmar primero y elegir después).
+
+Si el texto parece referirse al pago, pero no permite reconocer un método
+explícito, el WebSocket no lo delega al LLM ni elige una opción por defecto.
+Mantiene el carrito y el estado, e indica que se debe decir QR, tarjeta o en
+caja. Esta guarda cubre, entre otros casos, transcripciones imprecisas como
+«compuerre» por «con QR».

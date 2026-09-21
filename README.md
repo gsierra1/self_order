@@ -56,7 +56,7 @@ en la computadora y Groq para interpretar el pedido:
 ```dotenv
 STT_PROVIDER=vosk
 LLM_PROVIDER=groq
-STT_MODEL_PATH=.models/vosk-model-small-es-0.42
+VOSK_MODEL_PATH=.models/vosk-model-small-es-0.42
 GROQ_API_KEY=tu_clave_de_groq
 GROQ_CHAT_MODEL=openai/gpt-oss-20b
 # Alternativa probada: qwen/qwen3.8-27b (menos consistente en algunas tools).
@@ -170,7 +170,7 @@ ajena.
 Los proveedores se seleccionan mediante `STT_PROVIDER` y `LLM_PROVIDER`. Hoy
 STT admite `gemini`, `vosk` y `whisper_browser`; LLM admite `gemini`, `groq` y `openai`. Cada proveedor
 requiere sus propias variables: Gemini usa `GEMINI_API_KEY`, Groq usa
-`GROQ_API_KEY`, OpenAI usa `OPENAI_API_KEY`, Vosk usa `STT_MODEL_PATH` y
+`GROQ_API_KEY`, OpenAI usa `OPENAI_API_KEY`, Vosk usa `VOSK_MODEL_PATH` y
 Whisper local en navegador usa `WHISPER_BROWSER_MODEL` y
 `WHISPER_BROWSER_DEVICE`, sin API key.
 Solo se exige la credencial o el modelo del proveedor elegido para esa capa. No
@@ -196,7 +196,7 @@ Expand-Archive -LiteralPath ".models\vosk-model-small-es-0.42.zip" -DestinationP
 Test-Path ".models\vosk-model-small-es-0.42\am"
 ```
 
-El último comando debe devolver `True`: confirma que `STT_MODEL_PATH` podrá
+El último comando debe devolver `True`: confirma que `VOSK_MODEL_PATH` podrá
 apuntar al directorio correcto, que es la carpeta descomprimida, no el `.zip`.
 Después de comprobarlo podés borrar el comprimido para recuperar espacio:
 
@@ -209,7 +209,7 @@ en Vosk local y conserva Groq para interpretar el texto del pedido:
 
 ```dotenv
 STT_PROVIDER=vosk
-STT_MODEL_PATH=.models/vosk-model-small-es-0.42
+VOSK_MODEL_PATH=.models/vosk-model-small-es-0.42
 LLM_PROVIDER=groq
 GROQ_API_KEY=tu_clave_de_groq
 GROQ_CHAT_MODEL=openai/gpt-oss-20b
@@ -219,7 +219,7 @@ Vosk recibe PCM16 de 16 kHz, publica hipótesis mientras hablás y entrega el
 texto final al terminar el turno. El modelo se carga una vez y queda reutilizado
 en memoria. La transcripción será local, aunque el LLM seguirá siendo cloud si
 dejás `LLM_PROVIDER=groq`. Si el modelo no existe o la ruta es incorrecta, la
-pantalla indicará revisar `STT_MODEL_PATH` y el pedido no se modificará. Ver
+pantalla indicará revisar `VOSK_MODEL_PATH` y el pedido no se modificará. Ver
 [modelos de Vosk](https://alphacephei.com/vosk/models/).
 
 ### Usar Whisper local en el navegador

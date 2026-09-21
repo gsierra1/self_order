@@ -650,7 +650,7 @@ class ProviderFactoryTests(unittest.TestCase):
         sentinel = object()
         with patch.dict(
             os.environ,
-            {"STT_PROVIDER": "vosk", "STT_MODEL_PATH": "models/test"},
+            {"STT_PROVIDER": "vosk", "VOSK_MODEL_PATH": "models/test"},
             clear=False,
         ), patch(
             "backend.ai.factories.VoskTranscriber",

@@ -51,7 +51,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/ai/order_tools_runtime.py` | Comparte instrucciones, ejecución segura, detección de mutaciones y sanitización de respuestas entre proveedores; transforma tablas Markdown del carrito en listas legibles. |
 | `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |
 | `backend/ai/gemini_transcriber.py` | `GeminiLiveTranscriber`: implementación Gemini del contrato STT. |
-| `backend/ai/vosk_transcriber.py` | `VoskTranscriber`: implementación STT local que reutiliza un modelo indicado por `STT_MODEL_PATH`. |
+| `backend/ai/vosk_transcriber.py` | `VoskTranscriber`: implementación STT local que reutiliza un modelo indicado por `VOSK_MODEL_PATH`. |
 | `backend/ai/gemini_llm_interpreter.py` | `GeminiOrderInterpreter`: implementación Gemini de `OrderInterpreter`, conservada para `LLM_PROVIDER=gemini`. |
 | `backend/ai/openai_llm_interpreter.py` | `OpenAIOrderInterpreter`: implementación OpenAI de `OrderInterpreter`; requiere saldo de API. |
 | `backend/ai/groq_llm_interpreter.py` | `GroqOrderInterpreter`: implementación Groq de `OrderInterpreter`, usada por la demo. |
@@ -524,12 +524,12 @@ implementada.
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=gemini` | `GEMINI_API_KEY` una sola vez | `GEMINI_TRANSCRIPTION_MODEL`, `GEMINI_CHAT_MODEL` |
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=groq` | `GEMINI_API_KEY` y `GROQ_API_KEY` | `GEMINI_TRANSCRIPTION_MODEL`, `GROQ_CHAT_MODEL` |
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=openai` | `GEMINI_API_KEY` y `OPENAI_API_KEY` | `GEMINI_TRANSCRIPTION_MODEL`, `OPENAI_CHAT_MODEL` |
-| `STT_PROVIDER=vosk`, `LLM_PROVIDER=groq` | `STT_MODEL_PATH` y `GROQ_API_KEY` | Ruta de modelo Vosk, `GROQ_CHAT_MODEL` |
+| `STT_PROVIDER=vosk`, `LLM_PROVIDER=groq` | `VOSK_MODEL_PATH` y `GROQ_API_KEY` | Ruta de modelo Vosk, `GROQ_CHAT_MODEL` |
 | `STT_PROVIDER=whisper_browser`, `LLM_PROVIDER=groq` | `GROQ_API_KEY`; Whisper no requiere clave | `WHISPER_BROWSER_MODEL`, `WHISPER_BROWSER_DEVICE`, `GROQ_CHAT_MODEL` |
 | Gemini + LLM futuro | `GEMINI_API_KEY` y la clave del LLM elegido al implementar su adaptador | Modelo Gemini STT y variable del LLM futuro |
 | STT futuro + Gemini | Credencial o modelo local del STT y `GEMINI_API_KEY` | Variable STT futura y `GEMINI_CHAT_MODEL` |
 | Ambos futuros | Solo credenciales o archivos de los proveedores seleccionados | Variables propias de los adaptadores |
-| STT local Vosk | No necesita clave cloud para STT; sí `STT_MODEL_PATH` y el modelo instalado | Ruta, idioma y parámetros del motor local |
+| STT local Vosk | No necesita clave cloud para STT; sí `VOSK_MODEL_PATH` y el modelo instalado | Ruta, idioma y parámetros del motor local |
 | STT local Whisper navegador | No necesita clave cloud ni ruta de servidor; requiere descargar el modelo en caché del navegador | `WHISPER_BROWSER_MODEL`, `WHISPER_BROWSER_DEVICE` |
 
 `.env.example` presenta la combinación activa recomendada Vosk STT + Groq LLM
@@ -546,7 +546,7 @@ configuraciones que el código acepte.
 | STT cloud | Google Cloud Speech-to-Text | Credenciales de Google Cloud y cliente de streaming, distinto de la clave Gemini | Investigado; sin código ni prueba real. |
 | STT cloud | Azure Speech | Clave o identidad de Azure, región y cliente de reconocimiento continuo | Investigado; sin código ni prueba real. |
 | STT local navegador | Whisper con Transformers.js | Modelo de Hugging Face, WebGPU o WebAssembly, Worker y texto final al WebSocket | Implementado con `onnx-community/whisper-tiny`; pruebas simuladas de transporte, falta comparación real de calidad y latencia. |
-| STT local | Vosk | `STT_MODEL_PATH`, modelo Vosk y PCM16 a 16 kHz | Adaptador implementado y probado con simulaciones; falta prueba real con modelo y micrófono. |
+| STT local | Vosk | `VOSK_MODEL_PATH`, modelo Vosk y PCM16 a 16 kHz | Adaptador implementado y probado con simulaciones; falta prueba real con modelo y micrófono. |
 | LLM cloud | OpenAI | `OPENAI_API_KEY`, mapeo de function calling a las mismas tools autorizadas | Adaptador implementado y probado con simulaciones; la prueba real quedó bloqueada por falta de saldo API. |
 | LLM cloud | Anthropic | `ANTHROPIC_API_KEY`, mapeo de tool use a las mismas tools autorizadas | Investigado; sin código ni prueba real. |
 | LLM local | Ollama con un modelo compatible | Servicio/modelo local y adaptación de tool calling; no API key cloud por defecto | Investigado; sin código ni prueba real. |

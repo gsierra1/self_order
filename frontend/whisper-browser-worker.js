@@ -4,6 +4,7 @@ let pipelineFactory = null;
 let transcriber = null;
 let activeModel = null;
 let activeDevice = null;
+let activeRequestedDevice = null;
 
 /**
  * Importa Transformers.js únicamente dentro del Worker local.
@@ -27,11 +28,17 @@ async function loadTransformers() {
  * @throws {Error} Si el modelo no puede inicializarse en el navegador.
  */
 async function getTranscriber(model, device) {
-    if (transcriber && activeModel === model && activeDevice === device) return activeDevice;
-    const pipeline = await loadTransformers();
     const requestedDevice = device === "auto"
         ? (self.navigator.gpu ? "webgpu" : "wasm")
         : device;
+    if (
+        transcriber
+        && activeModel === model
+        && activeRequestedDevice === requestedDevice
+    ) {
+        return activeDevice;
+    }
+    const pipeline = await loadTransformers();
     const options = {
         device: requestedDevice,
         progress_callback: progress => {
@@ -45,6 +52,7 @@ async function getTranscriber(model, device) {
         transcriber = await pipeline("automatic-speech-recognition", model, options);
         activeModel = model;
         activeDevice = requestedDevice;
+        activeRequestedDevice = requestedDevice;
         return activeDevice;
     } catch (error) {
         if (requestedDevice !== "webgpu") throw error;
@@ -55,6 +63,7 @@ async function getTranscriber(model, device) {
         });
         activeModel = model;
         activeDevice = "wasm";
+        activeRequestedDevice = requestedDevice;
         return activeDevice;
     }
 }

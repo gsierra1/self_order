@@ -1,6 +1,7 @@
 """Regresión local de voz y transporte sin solicitudes al proveedor."""
 
 import asyncio
+import os
 import unittest
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -13,7 +14,11 @@ from starlette.websockets import WebSocketDisconnect
 
 import backend.api.app as api
 from backend.api.conversation_guards import get_ambiguous_mutation_message
-from backend.api.conversation_socket import _detect_payment_method, _is_payment_methods_question
+from backend.api.conversation_socket import (
+    _detect_payment_method,
+    _is_payment_methods_question,
+    _is_unrecognized_payment_request,
+)
 from backend.ai.contracts import (
     SpeechToTextConfigurationError,
     SpeechToTextFinalizationTimeout,
@@ -87,6 +92,8 @@ class ConversationTests(unittest.TestCase):
         """Crea servicio real y orquestador simulado sin credenciales ni red."""
         self.log_patch = patch("backend.logging.event_logger.LOGGER.disabled", True)
         self.log_patch.start()
+        self.provider_patch = patch.dict(os.environ, {"STT_PROVIDER": "gemini"}, clear=False)
+        self.provider_patch.start()
         self.session = Session()
         self.assistant = Mock()
         self.assistant.send_message.return_value = "Respuesta de prueba"
@@ -105,6 +112,7 @@ class ConversationTests(unittest.TestCase):
         api.sessions.pop(self.session.session_id, None)
         api.websocket_manager.disconnect(self.session.session_id)
         self.fake.stop()
+        self.provider_patch.stop()
         self.log_patch.stop()
 
     def test_payment_phrases_are_detected_without_llm(self) -> None:
@@ -115,6 +123,13 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(_detect_payment_method("pago con q erre"), "QR")
         self.assertEqual(_detect_payment_method("pago concurre"), "QR")
         self.assertIsNone(_detect_payment_method("quiero pagar"))
+        self.assertIsNone(_detect_payment_method("quiero para compuerre"))
+
+    def test_unrecognized_payment_phrase_does_not_choose_a_method(self) -> None:
+        """Detiene una transcripción ambigua antes de delegarla al LLM."""
+        self.assertTrue(_is_unrecognized_payment_request("quiero para compuerre"))
+        self.assertTrue(_is_unrecognized_payment_request("quiero pagar con plástico"))
+        self.assertFalse(_is_unrecognized_payment_request("quiero una Burger Clásica"))
 
     def test_payment_questions_do_not_choose_a_method(self) -> None:
         """Distingue una consulta de pago de una selección explícita."""
@@ -136,6 +151,24 @@ class ConversationTests(unittest.TestCase):
 
         self.assertEqual(response["type"], "assistant.text")
         self.assertEqual(response["data"]["text"], "Podés pagar con QR, tarjeta o en caja.")
+        self.assertEqual(response["data"]["cart"]["state"], "ACTIVE")
+        self.assertIsNone(response["data"]["cart"]["payment_method"])
+        self.assistant.send_message.assert_not_called()
+
+    def test_unrecognized_payment_phrase_preserves_state_and_skips_llm(self) -> None:
+        """Pide una opción explícita sin preparar ni seleccionar el pago."""
+        self.runtime.service.add_item("BURGER_CLASICA", 1, {"drink": "WATER"})
+
+        with self.client.websocket_connect(self.url) as ws:
+            self.assertEqual(ws.receive_json()["type"], "connection.ready")
+            ws.send_json({
+                "type": "user.text",
+                "data": {"message": "quiero para compuerre"},
+            })
+            response = ws.receive_json()
+
+        self.assertEqual(response["type"], "assistant.text")
+        self.assertIn("No pude identificar", response["data"]["text"])
         self.assertEqual(response["data"]["cart"]["state"], "ACTIVE")
         self.assertIsNone(response["data"]["cart"]["payment_method"])
         self.assistant.send_message.assert_not_called()

@@ -460,7 +460,7 @@ red.
 **Decisión adoptada:** `VoskTranscriber` implementa `SpeechToText` mediante
 `vosk==0.3.45`. Recibe el mismo PCM16 mono de 16 kHz, usa `PartialResult()` para
 hipótesis y `FinalResult()` al recibir `audio.stop`. `STT_PROVIDER=vosk` y
-`STT_MODEL_PATH` hacen que la fábrica lo seleccione. El modelo se carga una vez
+`VOSK_MODEL_PATH` hacen que la fábrica lo seleccione. El modelo se carga una vez
 por ruta y se reutiliza en memoria; `.models/` se excluye de Git.
 
 **Consecuencias:** Vosk no requiere una clave cloud para la transcripción. El

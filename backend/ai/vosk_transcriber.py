@@ -52,13 +52,13 @@ def _load_model(model_path: str) -> Model:
     """
     if not model_path:
         raise RuntimeError(
-            "Falta STT_MODEL_PATH para usar Vosk. Descargá y descomprimí un "
+            "Falta VOSK_MODEL_PATH para usar Vosk. Descargá y descomprimí un "
             "modelo Vosk antes de seleccionarlo."
         )
     path = Path(model_path).expanduser().resolve()
     if not path.is_dir():
         raise RuntimeError(
-            "STT_MODEL_PATH no apunta a un directorio de modelo Vosk válido."
+            "VOSK_MODEL_PATH no apunta a un directorio de modelo Vosk válido."
         )
     cache_key = str(path)
     with _MODEL_LOCK:
@@ -70,7 +70,7 @@ def _load_model(model_path: str) -> Model:
         except Exception as exc:
             raise RuntimeError(
                 "Vosk no pudo abrir el modelo local configurado. Revisá "
-                "STT_MODEL_PATH y que el modelo esté descomprimido."
+                "VOSK_MODEL_PATH y que el modelo esté descomprimido."
             ) from exc
         _MODEL_CACHE[cache_key] = model
         return model
@@ -225,7 +225,7 @@ class VoskTranscriber(SpeechToText):
             model = await asyncio.to_thread(_load_model, self.model_path)
         except RuntimeError as exc:
             raise SpeechToTextConfigurationError(
-                "Vosk no pudo preparar el modelo local. Revisá STT_MODEL_PATH y "
+                "Vosk no pudo preparar el modelo local. Revisá VOSK_MODEL_PATH y "
                 "que el modelo esté descargado y descomprimido."
             ) from exc
         recognizer = await asyncio.to_thread(KaldiRecognizer, model, 16000)

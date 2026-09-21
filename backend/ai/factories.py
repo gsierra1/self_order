@@ -12,7 +12,7 @@ from config.settings import (
     get_groq_chat_model,
     get_llm_provider,
     get_openai_chat_model,
-    get_stt_model_path,
+    get_vosk_model_path,
     get_stt_provider,
 )
 
@@ -35,7 +35,7 @@ def create_speech_to_text(session_id: str | None = None) -> SpeechToText:
     if provider == "vosk":
         return VoskTranscriber(
             session_id=session_id,
-            model_path=get_stt_model_path(),
+            model_path=get_vosk_model_path(),
         )
     if provider == "whisper_browser":
         raise RuntimeError(

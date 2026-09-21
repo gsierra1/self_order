@@ -77,6 +77,30 @@ def _is_payment_methods_question(text: str) -> bool:
     return any(pattern in normalized for pattern in question_patterns)
 
 
+def _is_unrecognized_payment_request(text: str) -> bool:
+    """Identifica una intención de pago cuyo método no se pudo reconocer.
+
+    Args:
+        text: Texto transcripto o escrito por la persona.
+
+    Returns:
+        ``True`` cuando la frase parece pedir o mencionar un pago, pero no
+        nombra QR, tarjeta ni caja de una forma admitida.
+
+    Effects:
+        Permite detener la interpretación antes del LLM para que una
+        transcripción imprecisa no elija por inferencia un método de pago.
+    """
+    normalized = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().upper()
+    words = normalized.split()
+    compact = "".join(character for character in normalized if character.isalnum())
+    payment_word = any(word.startswith(("PAG", "COBR")) for word in words)
+    # "compuerre" fue una transcripción real de «con QR». No es una opción
+    # válida y se conserva como guarda explícita para no elegir caja por defecto.
+    resembles_qr = "COMPUERRE" in compact
+    return payment_word or resembles_qr
+
+
 def _get_stt_label(audio: SpeechToText) -> str:
     """Convierte el identificador técnico del STT en un nombre visible.
 
@@ -184,6 +208,22 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     # Si la sesión cambió mientras llegaba el turno, conserva
                     # el flujo general y deja que el orquestador informe el estado.
                     pass
+            if _is_unrecognized_payment_request(text):
+                await publish("assistant.text", {
+                    "text": (
+                        "No pude identificar el medio de pago. Podés elegir QR, "
+                        "tarjeta o en caja."
+                    ),
+                    "cart": snapshot(runtime.service),
+                    "session_closed": False,
+                })
+                log_event(
+                    "INFO",
+                    "conversation.unrecognized_payment_method",
+                    session_id=session_id,
+                    input_length=len(text),
+                )
+                return
         worker = asyncio.create_task(asyncio.to_thread(runtime.assistant.send_message, text))
         try:
             response = await asyncio.shield(worker)
