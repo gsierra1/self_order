@@ -26,9 +26,9 @@ inspeccionar solo los archivos necesarios.
 
 ## Commits y seguimiento de cada etapa
 
-- Cada cambio coherente debe quedar acompañado de su commit local, después de
-  revisar el diff y ejecutar las verificaciones apropiadas. El mensaje debe ser
-  una oración breve en español que explique qué cambia y/o por qué se necesita.
+- No crear commits salvo solicitud explícita de la autora. Al finalizar una tarea, 
+  informar los archivos modificados y las verificaciones realizadas. Cuando se solicite 
+  un commit, revisar previamente el diff y ejecutar las verificaciones apropiadas.
 - Incluir código y documentación correspondiente en el mismo commit. Separar
   cambios con objetivos distintos; no incluir modificaciones ajenas por accidente.
 - Informar al finalizar los identificadores de los commits y qué se verificó.
@@ -37,9 +37,10 @@ inspeccionar solo los archivos necesarios.
   potencialmente riesgoso, explicar brevemente el plan. Para cambios locales, 
   proceder directamente. Al finalizar, resumir qué cambió, qué se verificó y 
   cualquier riesgo o pendiente.
-- Entregar comandos exactos para PowerShell en la terminal integrada de VS Code,
-  indicando directorio, URL del frontend, acciones de prueba y resultados esperados.
-  Si el cambio no tiene efecto visual, explicar cómo verificarlo por terminal.
+- Cuando sea necesaria una verificación manual por parte de la autora, proporcionar 
+  los comandos exactos para PowerShell desde la raíz del proyecto, junto con las acciones 
+  y resultados esperados. Si requiere Python, indicar primero la activación del entorno
+  con .\.venv\Scripts\Activate.ps1.
 - Diferenciar pruebas automáticas, pruebas manuales con el proveedor real y
   pruebas con simulaciones. No dar por ejecutadas las pruebas propuestas a la autora.
 
