@@ -71,7 +71,6 @@ inspeccionar solo los archivos necesarios.
   el contexto, salvo que hayan cambiado.
 - Ampliar la exploración solamente cuando aparezca evidencia de que el cambio afecta 
   otros módulos.
-- No releer documentación que ya esté disponible en el contexto y no haya cambiado.
 - No realizar refactors, mejoras, limpieza de código, cambios visuales ni ampliaciones 
   de alcance no solicitadas, salvo que sean imprescindibles para completar correctamente 
   la tarea; en ese caso, explicarlo antes.
