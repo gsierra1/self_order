@@ -43,6 +43,9 @@ inspeccionar solo los archivos necesarios.
   con `.\.venv\Scripts\Activate.ps1`.
 - Diferenciar pruebas automáticas, pruebas manuales con el proveedor real y
   pruebas con simulaciones. No dar por ejecutadas las pruebas propuestas a la autora.
+- Al finalizar una tarea que haya modificado archivos, proponer una única oración breve 
+  en español como mensaje de commit. No crear el commit salvo solicitud explícita de la autora.
+
 
 ## Invariantes de producto
 
