@@ -291,8 +291,8 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         <article class="step frontend">
           <h3>2. Pantalla y sesi&oacute;n</h3>
           <a href="../frontend/app.js"><code>frontend/app.js</code></a>
-          <small><code>createSession()</code> genera un <code>session_id</code> y un carrito vacío.
-            <code>connectWebSocket()</code> abre esa sesión</small>
+          <small><code>createSession()</code> solicita al backend un <code>session_id</code> y un carrito vac&iacute;o.
+            <code>connectWebSocket()</code> abre el canal de esa sesi&oacute;n.</small>
         </article>
         <article class="step backend">
           <h3>3. Backend crea el pedido vac&iacute;o</h3>
@@ -305,22 +305,26 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         <article class="step frontend">
           <h3>4. La persona toca Hablar</h3>
           <a href="../frontend/app.js"><code>frontend/app.js</code></a>
-          <small>Con Gemini o Vosk, <code>toggleMicrophone()</code> env&iacute;a <code>audio.start</code> y
-            <code>VoiceInput</code> espera <code>voice.ready</code>. Con <code>whisper_browser</code> o
-            <code>web_speech_browser</code>, prepara el capturador del navegador sin enviar audio al backend.</small>
+          <small><code>connection.ready</code> informa <code>voice.transport</code>. Si vale
+            <code>backend_pcm</code>, <code>toggleMicrophone()</code> env&iacute;a <code>audio.start</code> y
+            <code>VoiceInput</code> espera <code>voice.ready</code>. Si vale <code>browser_text</code>, prepara el
+            capturador indicado por <code>voice.provider</code> sin enviar audio al backend.</small>
         </article>
         <article class="step frontend">
-          <h3>5. Audio del micr&oacute;fono</h3>
+          <h3>5. Audio PCM cuando corresponde</h3>
           <a href="../frontend/voice.js"><code>frontend/voice.js</code></a> y <a
             href="../frontend/pcm-worklet.js"><code>pcm-worklet.js</code></a>
-          <small>Convierten la captura a PCM16 mono de 16 kHz. <code>sendAudio()</code> manda fragmentos binarios por
-            WebSocket. <code>EndOfSpeechDetector</code> espera voz y luego 1,4 segundos de silencio;
-            <code>finishVoiceTurn()</code> env&iacute;a <code>audio.stop</code>. El bot&oacute;n manual sigue disponible.</small>
+          <small>Con transporte <code>backend_pcm</code>, convierten la captura a PCM16 mono de 16 kHz.
+            <code>sendAudio()</code> manda fragmentos binarios por WebSocket. <code>EndOfSpeechDetector</code> espera
+            voz y luego 1,4 segundos de silencio; <code>finishVoiceTurn()</code> env&iacute;a <code>audio.stop</code>. El
+            bot&oacute;n manual sigue disponible. Los STT de navegador usan sus propios capturadores.</small>
         </article>
         <article class="step ai">
           <h3>6. STT: voz a texto</h3>
-          <a href="../backend/ai/factories.py"><code>backend/ai/factories.py</code></a>
-          <small>Para Gemini o Vosk, <code>SpeechToText</code> selecciona
+          <a href="../backend/ai/factories.py"><code>backend/ai/factories.py</code></a>,
+          <a href="../frontend/whisper-browser.js"><code>whisper-browser.js</code></a> y
+          <a href="../frontend/web-speech-browser.js"><code>web-speech-browser.js</code></a>
+          <small>Para Gemini o Vosk, la f&aacute;brica crea la implementaci&oacute;n de <code>SpeechToText</code>:
             <code>GeminiLiveTranscriber</code> o <code>VoskTranscriber</code>. Con
             <code>whisper_browser</code>, <code>whisper-browser.js</code> y su Worker transcriben localmente
             y env&iacute;an <code>voice.text</code> final al mismo WebSocket. Con
@@ -335,15 +339,21 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
         </article>
         <article class="step ai">
           <h3>8. El LLM interpreta la intenci&oacute;n</h3>
-          <a href="../backend/ai/gemini_llm_interpreter.py"><code>gemini_llm_interpreter.py</code></a>
-          <small><code>send_message()</code> conversa con el proveedor elegido por <code>LLM_PROVIDER</code>.
+          <a href="../backend/ai/factories.py"><code>backend/ai/factories.py</code></a> y
+          <a href="../backend/ai/order_tools_runtime.py"><code>order_tools_runtime.py</code></a>
+          <small><code>create_order_interpreter()</code> elige Gemini, OpenAI o Groq.
+            <code>build_system_instruction()</code> entrega a cualquiera de ellos las mismas reglas y el cat&aacute;logo.
             El LLM propone una tool, no modifica el carrito por s&iacute; mismo.</small>
         </article>
         <article class="step ai">
-          <h3>9. Tool autorizada</h3>
-          <a href="../backend/ai/tools.py"><code>backend/ai/tools.py</code></a>
-          <small><code>create_add_item_tool()</code> crea <code>add_item()</code>, revisa grupos obligatorios y delega
-            la operaci&oacute;n segura.</small>
+          <h3>9. Tool compartida y autorizada</h3>
+          <a href="../backend/ai/order_tool_specs.py"><code>order_tool_specs.py</code></a>,
+          <a href="../backend/ai/order_tools_runtime.py"><code>order_tools_runtime.py</code></a> y
+          <a href="../backend/ai/tools.py"><code>tools.py</code></a>
+          <small>Los esquemas neutrales describen las operaciones para todos los proveedores. El runtime valida el
+            nombre, evita repeticiones y ejecuta la funci&oacute;n ligada a la sesi&oacute;n. Por ejemplo,
+            <code>create_add_item_tool()</code> crea <code>add_item()</code>, revisa grupos obligatorios y delega la
+            operaci&oacute;n segura.</small>
         </article>
         <article class="step domain">
           <h3>10. Reglas y precio</h3>
@@ -387,7 +397,8 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           <tr>
             <td>&laquo;Quiero una pizza.&raquo;</td>
             <td><code>process_turn()</code> de <code>conversation_socket.py</code> env&iacute;a el texto a
-              <code>send_message()</code>. El int&eacute;rprete compara el pedido con los productos del men&uacute; y
+              <code>send_message()</code>. El int&eacute;rprete recibe el cat&aacute;logo desde la instrucci&oacute;n com&uacute;n de
+              <code>OrderToolsRuntime</code>, compara el pedido con los productos del men&uacute; y
               debe
               informar que no existe. Como defensa adicional, si propusiera
               <code>add_item(product_id=&quot;PIZZA&quot;)</code>, <code>Menu.get_product()</code> consultar&iacute;a
@@ -400,7 +411,9 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           </tr>
           <tr>
             <td>&laquo;Quiero una Burger Cl&aacute;sica.&raquo;</td>
-            <td>El int&eacute;rprete propone <code>add_item()</code>. En <code>tools.py</code>,
+            <td>El int&eacute;rprete propone <code>add_item()</code> seg&uacute;n el esquema compartido de
+              <code>order_tool_specs.py</code>. <code>OrderToolsRuntime</code> autoriza la llamada y, en
+              <code>tools.py</code>,
               <code>_get_missing_required_groups()</code> llama a
               <code>Menu.get_product(&quot;BURGER_CLASICA&quot;)</code> y recorre sus
               <code>modifier_groups</code>. La b&uacute;squeda devuelve el producto porque su ID s&iacute; existe;
@@ -416,8 +429,9 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           <tr>
             <td>&laquo;Quiero una Burger Cl&aacute;sica con Sprite y tomate, y una Burger Doble con agua y
               queso.&raquo;</td>
-            <td>Voz o texto llega a <code>process_turn()</code> en <code>conversation_socket.py</code>. El intérprete
-              configurado propone dos <code>add_item()</code> de <code>tools.py</code>; ambos delegan en
+            <td>Voz o texto llega a <code>process_turn()</code> en <code>conversation_socket.py</code>. El int&eacute;rprete
+              configurado propone dos <code>add_item()</code>; <code>OrderToolsRuntime</code> valida que sean llamadas
+              distintas, las ejecuta en orden mediante <code>tools.py</code> y ambas delegan en
               <code>OrderService.add_item()</code>.
             </td>
             <td>Dos l&iacute;neas validadas: Cl&aacute;sica (ARS 9.500) y Doble (ARS 11.500). El total es ARS 21.000.
@@ -439,7 +453,8 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           </tr>
           <tr>
             <td>&laquo;Sac&aacute; la doble.&raquo;</td>
-            <td><code>remove_item()</code> de <code>tools.py</code> delega en <code>OrderService.remove_item()</code>.
+            <td><code>OrderToolsRuntime</code> ejecuta <code>remove_item()</code> de <code>tools.py</code>, que delega en
+              <code>OrderService.remove_item()</code>.
             </td>
             <td>Desaparece la Burger Doble. Solo queda la Cl&aacute;sica con agua por ARS 8.500.</td>
           </tr>
@@ -477,7 +492,7 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
               <code>POST /api/sessions/{session_id}/payment/complete</code>. El endpoint ejecuta
               <code>OrderService.complete_payment()</code> y la sesi&oacute;n pasa a <code>CONFIRMED</code>.
               Despu&eacute;s de
-              quince segundos, <code>startNewSession()</code> solicita otra sesi&oacute;n al backend.
+              diez segundos, <code>startNewSession()</code> solicita otra sesi&oacute;n al backend.
             </td>
             <td>Aparecen &laquo;Pago confirmado&raquo;, el n&uacute;mero de pedido y la cuenta regresiva. Al terminar,
               la

@@ -111,6 +111,19 @@ modelo en la PC: Groq ejecuta `openai/gpt-oss-20b` en la nube mediante una API
 compatible con OpenAI. El nombre `openai/` identifica al modelo, no al servicio
 que procesa la solicitud: el proveedor configurado sigue siendo Groq.
 
+El backend publica junto con la sesión un transporte de voz: `backend_pcm` para
+Gemini y Vosk, o `browser_text` para Whisper y Web Speech API en el navegador.
+Así el frontend elige la captura mediante la configuración recibida y no por una
+segunda lista fija de proveedores.
+
+Los tres intérpretes LLM reciben sus reglas y catálogo desde
+`OrderToolsRuntime.build_system_instruction()`. Los nombres, descripciones y
+JSON Schema de las tools se definen una sola vez en `order_tool_specs.py`; cada
+adaptador traduce ese contrato al formato de su SDK. `OrderService` sigue siendo
+la autoridad que valida y aplica cada operación. Después de una mutación válida,
+el runtime construye la confirmación desde el carrito real sin consumir otra
+llamada al LLM solo para redactarla.
+
 Para generar una clave de Gemini si se elige Gemini para transcripción o chat:
 
 1. Entrá a [Google AI Studio](https://aistudio.google.com/).

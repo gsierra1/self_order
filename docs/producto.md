@@ -36,10 +36,13 @@ Hay dos estados distintos que la interfaz debe representar:
 La implementación actual es una prueba de concepto local. El pedido vive en memoria
 y dispone de un flujo de pago simulado con QR, tarjeta o caja. No existe cobro real,
 envío a cocina, persistencia de pedidos ni integración con un sistema de ventas.
-DEX/POS deberá manejar esas responsabilidades en una etapa futura.
+Una integración futura deberá delegar esas responsabilidades en los sistemas de
+catálogo, stock, POS, cocina y pago que se elijan para el local.
 
-La prioridad fue completar el pedido por voz manteniendo el canal escrito. Ampliar el
-menú y mejorar la estética quedan para después. 
+La prioridad fue completar el pedido por voz manteniendo el canal escrito. El
+frontend actual permite demostrar el recorrido y el menú sigue deliberadamente
+acotado; ampliar el catálogo y realizar ajustes visuales adicionales son etapas
+posteriores.
 
 ## Disponibilidad de productos y opciones
 

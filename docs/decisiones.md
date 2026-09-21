@@ -59,10 +59,14 @@ un efecto permite validar, observar y limitar la ejecución.
 pero dificulta ubicar ciertos controles específicos de esta prueba de concepto.
 
 **Consecuencia:** hay lista explícita, límite de ciclos y detección de repetición
-en un turno. Varias llamadas distintas de una misma respuesta se ejecutan en el
-orden recibido y sus resultados se envían juntos al modelo; una llamada repetida
-se detiene antes de ejecutarse. Las firmas tipadas ayudan
-al SDK a describir las tools; Python no valida esos tipos en ejecución por sí solo.
+en un turno. `order_tool_specs.py` mantiene nombres, descripciones y JSON Schema
+neutrales; cada adaptador los traduce al formato de su SDK. `OrderToolsRuntime`
+verifica que la tool exista, ordena llamadas distintas y detiene un lote que
+repite exactamente una operación antes de ejecutarlo. Las funciones de
+`tools.py` normalizan argumentos y delegan en `OrderService`, que realiza la
+validación transaccional definitiva. Después de una mutación válida, el runtime
+redacta la confirmación desde el carrito real; los resultados sin mutación pueden
+volver al modelo para que explique el error o solicite una aclaración.
 
 
 ## 05. HTTP para inicio y consulta, WebSocket para interacción
@@ -171,8 +175,9 @@ WebSocket y navegador simulado.
 ## 09. Adaptadores de proveedores de voz e interpretación
 
 **Estado:** adoptada e implementada el 16/09/2026. La implementación actual usa
-Gemini o Vosk para STT y permite elegir Gemini, OpenAI o Groq para la
-interpretación LLM. Solo los proveedores adicionales que no aparecen en esa lista continúan
+Gemini o Vosk como STT de backend, Whisper o Web Speech API como STT de
+navegador, y permite elegir Gemini, OpenAI o Groq para la interpretación LLM.
+Solo los proveedores adicionales que no aparecen en esa lista continúan
 pendientes.
 
 **Contexto comprobado:** `conversation_socket.py` construía directamente
@@ -205,14 +210,16 @@ combinación cloud necesita las credenciales de los proveedores seleccionados;
 un STT local necesita modelo instalado y ruta, no una API key cloud para ese
 tramo.
 
-**Límites:** una interfaz no hace interoperables los protocolos por sí sola.
-Al momento de esta decisión Vosk todavía no estaba implementado; la decisión 18
-registra su incorporación posterior. Anthropic, Google Cloud, Azure, Whisper y
-Ollama no están implementados ni probados contra el sistema. La simulación confirma la unión
-interna y la protección de `OrderService`, pero no resuelve los 503 ni demuestra
-latencia, costo, disponibilidad, exactitud con ruido o seguridad de una cuenta
-productiva. Cada adaptador futuro deberá convertir sus tools o resultados al
-mismo límite autorizado y someterse a pruebas manuales y de regresión.
+**Límites:** una interfaz no hace interoperables los protocolos por sí sola. Al
+momento de esta decisión Vosk y Whisper todavía no estaban implementados; las
+decisiones 18 y 19 registran sus incorporaciones posteriores, y la 20 incorpora
+Web Speech API. Anthropic, Google Cloud, Azure, Whisper de backend y Ollama no
+están implementados ni probados contra el sistema. La simulación confirma la
+unión interna y la protección de `OrderService`, pero no resuelve los 503 ni
+demuestra latencia, costo, disponibilidad, exactitud con ruido o seguridad de
+una cuenta productiva. Cada adaptador futuro deberá convertir sus tools o
+resultados al mismo límite autorizado y someterse a pruebas manuales y de
+regresión.
 
 
 ## 10. Primer proveedor alternativo: OpenAI solo para LLM
@@ -369,10 +376,10 @@ conexión WebSocket; o controlar la actividad efectiva en el navegador. El LLM n
 recibe clics ni teclas, y una conexión abierta no demuestra que alguien continúe
 frente al kiosco.
 
-**Decisión adoptada:** `InactivityMonitor` ejecuta tres intervalos consecutivos
-de veinte segundos después del primer mensaje confirmado de la persona. Primero
-pregunta si sigue allí, luego avisa que cerrará la sesión y finalmente usa el
-flujo existente que limpia la pantalla y crea otra sesión. Solo un mensaje de
+**Decisión adoptada:** `InactivityMonitor` espera treinta segundos después del
+último mensaje confirmado de la persona para preguntar si sigue allí. Veinte
+segundos después avisa que cerrará la sesión y, tras otros veinte, usa el flujo
+existente que limpia la pantalla y crea otra sesión. Solo un mensaje de
 texto enviado o una transcripción final de voz reinician el conteo. Una sesión
 nueva, mover el mouse, enfocar un campo o tocar un control sin enviar un mensaje
 permanecen sin temporizador. El procesamiento de voz o texto lo detiene para que la
@@ -410,8 +417,10 @@ Gemini recibió audio pero no finalizó la transcripción. Ambos errores son
 recuperables, no llaman al LLM y no modifican el carrito.
 
 **Límites:** esto recupera la sesión local, pero no acelera ni garantiza la
-respuesta de Gemini Live. La selección de otro STT requiere un adaptador y una
-evaluación real de calidad, latencia, costo y estabilidad.
+respuesta de Gemini Live. Vosk, Whisper en navegador y Web Speech API se
+incorporaron después como alternativas; cualquier STT adicional todavía requiere
+su adaptador o capturador y una evaluación real de calidad, latencia, costo y
+estabilidad.
 
 ## 17. Nombrar los adaptadores de IA por proveedor y función
 
@@ -469,11 +478,12 @@ texto final sigue el mismo recorrido hacia el LLM configurado, las tools y
 modelo falta o la ruta es inválida, la interfaz informa una configuración de voz
 recuperable sin alterar el pedido.
 
-**Límites:** las pruebas automáticas simulan el reconocedor; todavía no prueban
-un modelo Vosk real ni calidad con micrófono, español rioplatense o ruido. La
-primera carga del modelo puede demorar y consume memoria/CPU local. Usar Vosk
-solo hace local el STT: el LLM seguirá usando red si se configura Groq, Gemini u
-OpenAI.
+**Límites:** las pruebas automáticas simulan el reconocedor. Corridas manuales
+posteriores con modelo y micrófono reales mostraron confusiones de español y
+vocabulario del menú, entre ellas «espiral» por «Sprite» y «concurre» por «QR»;
+no constituyen una medición controlada con ruido. La primera carga del modelo
+puede demorar y consume memoria/CPU local. Usar Vosk solo hace local el STT: el
+LLM seguirá usando red si se configura Groq, Gemini u OpenAI.
 
 ## 19. Incorporar Whisper local en un Worker del navegador
 

@@ -7,14 +7,16 @@ Implementación inicial: 14/09/2026. Texto y voz comparten conversación y carri
 ```mermaid
 flowchart LR
     M[Micrófono] --> V{STT configurado}
-    V -->|Gemini o Vosk: voice.js / pcm-worklet.js| W[conversation_socket.py]
-    V -->|Whisper o Web Speech API en navegador| BT[Texto final]
+    V -->|transport = backend_pcm| PCM[voice.js / pcm-worklet.js]
+    PCM --> W[conversation_socket.py]
+    V -->|transport = browser_text| BT[Texto final]
     BT -->|voice.text| W
-    W --> T[SpeechToText]
+    W -->|backend_pcm| T[SpeechToText]
+    W -->|browser_text final| O[Intérprete LLM configurado]
     T --> GT[Adaptador STT configurado]
     GT <--> G[Modelo STT configurado]
     T -->|Hipótesis provisional| UI[Pantalla]
-    T -->|Texto final al cerrar turno| O[Intérprete LLM configurado]
+    T -->|Texto final al cerrar turno| O
     O --> S[OrderService]
     S -->|Snapshot validado| UI
     O -->|Respuesta final| UI
@@ -31,7 +33,10 @@ little-endian mono a 16 kHz de 100 ms y vacía el último bloque antes de cerrar
 El contexto solicita 16 kHz y comprueba la frecuencia. No reproduce el micrófono
 por los parlantes. Al hablar se cancela la lectura del asistente.
 
-`backend/ai/contracts.py` define `SpeechToText`; los adaptadores de backend actuales
+`backend/ai/contracts.py` define `SpeechToText` y
+`backend/ai/pcm_streaming_turn.py` implementa en `PcmStreamingSpeechToText` la
+cola, los límites, la finalización, la cancelación y el cierre que comparten los
+STT que reciben PCM. Los adaptadores de backend actuales
 `GeminiLiveTranscriber` en `backend/ai/gemini_transcriber.py` y
 `VoskTranscriber` en `backend/ai/vosk_transcriber.py` no tienen tools ni acceso
 al carrito. Publican hipótesis y devuelven texto al cerrar el turno.
@@ -51,7 +56,11 @@ WebAssembly si corresponde. No se crea `VoiceInput`, no se emiten frames PCM y
 no se crea un `SpeechToText` Python para ese turno. Solo después de tener texto
 final, el navegador publica `voice.text`; el backend lo valida, lo muestra como
 voz y lo entrega al mismo intérprete LLM.
-`backend/api/conversation_socket.py` valida eventos y entrega ese texto al
+`config/settings.py` publica en `connection.ready` el atributo
+`voice.transport`: `backend_pcm` para Gemini o Vosk y `browser_text` para los
+dos motores del navegador. El frontend selecciona la captura mediante ese dato,
+sin mantener otra lista de proveedores. `backend/api/conversation_socket.py`
+valida que el tipo de evento coincida con el transporte y entrega el texto al
 `OrderInterpreter` elegido por `LLM_PROVIDER`. Las reglas del servicio se conservan.
 
 Cuando `STT_PROVIDER=web_speech_browser`, `frontend/web-speech-browser.js` usa
@@ -75,9 +84,9 @@ vuelve a habilitarse al terminar, salvo si el pedido quedó confirmado.
 
 | Evento | Dirección y significado |
 | --- | --- |
-| `audio.start` | Navegador → backend: reserva turno y abre Live. |
-| `voice.ready` | Backend → navegador: puede empezar a enviar audio. |
-| Frames binarios | Navegador → backend: PCM16 mono a 16 kHz. |
+| `audio.start` | Navegador → backend: con transporte `backend_pcm`, reserva el turno y prepara el adaptador. |
+| `voice.ready` | Backend → navegador: el STT de backend está listo para recibir audio. |
+| Frames binarios | Navegador → backend: con transporte `backend_pcm`, PCM16 mono a 16 kHz. |
 | `voice.transcript` | Backend → navegador: `{text, final}`; una hipótesis solo se muestra. |
 | `audio.stop` | Navegador → backend: finaliza; repetirlo no ejecuta nuevamente el pedido. |
 | `audio.cancel` | Navegador → backend: descarta transcripción que aún no llegó al intérprete LLM. |
@@ -90,10 +99,12 @@ Se conservan eventos escritos, carrito, confirmación y errores de IA.
 `assistant.text` y errores de interpretación incluyen snapshot del carrito.
 `audio.received` era experimental y deja de utilizarse.
 
-El backend envía `activity_start` y `activity_end` al proveedor. Acepta cierre
+El adaptador Gemini envía `activity_start` y `activity_end` y acepta cierre
 mediante `turn_complete`, `generation_complete` o `input_transcription.finished`
 después de terminar la entrada. La prueba real observó `generation_complete`
-después del texto definitivo. Una hipótesis nunca sustituye un final faltante.
+después del texto definitivo. Vosk completa su resultado al cerrar la entrada;
+los motores de navegador entregan directamente `voice.text`. En ninguna ruta
+una hipótesis sustituye un final faltante.
 Si el proveedor no abre el turno se publica `voice.error` con etapa
 `VOICE_CONNECTION`; si recibió el audio pero no confirma el texto final, la
 etapa es `VOICE_FINALIZATION`. En los dos casos el backend cierra el adaptador,
@@ -220,7 +231,7 @@ python -m unittest discover -s tests -p browser_voice.py -v
 ```
 
 La prueba de navegador requiere Edge instalado. Usa servidor temporal, un audio
-sintético con voz y silencio, transcriptor/orquestador simulados y servicio real.
+sintético con voz y silencio, transcriptor e intérprete simulados y servicio real.
 Comprueba el worklet, que el silencio previo no cierre, el cierre automático una
 sola vez, la vista provisional, alta, total, confirmación y solicitud de síntesis. No escucha
 parlantes ni llama a Gemini. La suite local cubre reglas del pedido, cancelación,

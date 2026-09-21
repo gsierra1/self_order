@@ -1,11 +1,12 @@
 # Arquitectura y contratos actuales
 
-Actualizada con [voz por turnos](voz.md) y adaptadores de proveedores el
-16/09/2026.
+Última revisión: 21/09/2026. Incluye [voz por turnos](voz.md), adaptadores de
+proveedores y componentes compartidos de prompts, tools y transporte STT.
 
-La captura y la conexión Live se preparan en paralelo. El frontend no habilita
-el envío hasta recibir `voice.ready` y completar la preparación local, evitando
-perder las primeras palabras por empezar a hablar durante el handshake.
+Con transporte `backend_pcm`, la captura y el adaptador STT se preparan en
+paralelo. El frontend no habilita el envío hasta recibir `voice.ready` y
+completar la preparación local, evitando perder las primeras palabras durante
+el inicio del turno. Los STT de navegador preparan su propio capturador.
 
 ## Visión general
 
@@ -20,9 +21,10 @@ flowchart LR
     U[Persona] --> F[Frontend]
     F -->|HTTP: crear sesión| A[FastAPI]
     F -->|WebSocket: user.text| A
-    A --> O[Orquestador]
+    A --> O[OrderInterpreter configurado]
     O <-->|Mensajes y function calls| G[LLM configurado]
-    O --> T[Tools autorizadas]
+    O --> R[OrderToolsRuntime]
+    R --> T[Tools autorizadas]
     T --> S[OrderService]
     M[menu.json / Menu] --> S
     S --> D[Session / Cart / CartItem]
@@ -30,12 +32,14 @@ flowchart LR
     W -->|cart.updated / order.confirmed| F
     A -->|assistant.text| F
     O --> L[Logging]
+    R --> L
     S --> L
 ```
 
-El texto del asistente y el carrito tienen orígenes diferentes: el LLM configurado
-redacta el primero; el servicio construye el segundo. Una respuesta verbal nunca
-es, por sí sola, evidencia de que un pedido se haya modificado.
+El texto del asistente y el carrito tienen orígenes diferentes: el intérprete y
+el runtime construyen el primero; `OrderService` construye el segundo. Después
+de una mutación, el texto se genera desde el carrito validado, pero la evidencia
+del cambio sigue siendo el estado del servicio y no la frase del asistente.
 
 ## Mapa de módulos y funciones
 
@@ -69,7 +73,7 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `config/menu.json` | Catálogo local cargado al importar la API; editarlo requiere recargar el proceso. |
 | `frontend/index.html` | Panel conversacional, catálogo visual animado de bebidas y extras, formulario, controles de micrófono/voz y carrito. |
 | `frontend/app.js` | `createSession`, `connectWebSocket`, `sendMessage`, `renderCart`; captura y conversión de audio, estados visuales e integración de inactividad. |
-| `frontend/inactivity.js` | `InactivityMonitor`: avisa tras 20 y 40 segundos y solicita una nueva sesión a los 60; permite reiniciar o detener el conteo. |
+| `frontend/inactivity.js` | `InactivityMonitor`: pregunta tras 30 segundos, advierte 20 segundos después y solicita una nueva sesión tras otros 20; permite reiniciar o detener el conteo. |
 | `frontend/styles.css` | Distribución de paneles, mensajes, carrito y adaptación a pantallas pequeñas. |
 | `backend/ai/test_chat.py` | Chat manual de terminal usando el intérprete elegido por `LLM_PROVIDER` y el servicio real. |
 
@@ -91,7 +95,7 @@ metadatos, la validación ni la ejecución común de las tools.
 
 1. Al cargar la página, `createSession()` llama a `POST /api/sessions`.
 2. La API crea `Session`, `OrderService` y un `OrderInterpreter` desde fábrica y los
-   guarda en `sessions[session_id]`. Cada orquestador tiene su propio chat.
+   guarda en `sessions[session_id]`. Cada intérprete mantiene el historial de su sesión.
 3. El navegador conecta `/ws/sessions/{session_id}` y envía `user.text`.
 4. La API ejecuta `assistant.send_message()` mediante `asyncio.to_thread()` para
    no ejecutar la llamada síncrona al LLM configurado en el event loop del WebSocket.
@@ -123,7 +127,7 @@ la explicación o pedir el dato faltante.
 
 La interfaz administra además la inactividad sin consultar al LLM. Después de
 un mensaje escrito enviado o de una transcripción final de voz,
-`InactivityMonitor` pregunta `¿Seguís ahí?` tras veinte segundos, advierte el cierre
+`InactivityMonitor` pregunta `¿Seguís ahí?` tras treinta segundos, advierte el cierre
 veinte segundos después y crea una sesión vacía tras otros veinte segundos. Un
 nuevo mensaje reinicia la secuencia; una sesión nueva, un movimiento del mouse o
 un clic que no envía un pedido no inician el monitor y el conteo se detiene mientras voz o
@@ -163,12 +167,12 @@ resumen desde `OrderService`. Esto evita que una respuesta o una tool propuesta
 por un proveedor elimine varias líneas o afirme que el carrito está vacío cuando
 los datos validados indican lo contrario.
 
-El orquestador desactiva la ejecución automática de funciones del SDK. Admite
-varias function calls distintas por respuesta y las ejecuta en el orden recibido,
-hasta cinco ciclos de tools por mensaje. Rechaza una misma combinación de nombre
-y argumentos repetida dentro del turno. Esto también puede rechazar consultas
-repetidas legítimas; no es una garantía general contra duplicados entre mensajes
-o reconexiones.
+Los adaptadores no delegan la ejecución automática de funciones al SDK.
+`OrderToolsRuntime` admite varias function calls distintas por respuesta y las
+ejecuta en el orden recibido, hasta cinco ciclos de tools por mensaje. Rechaza
+una misma combinación de nombre y argumentos repetida dentro del turno. Esto
+también puede rechazar consultas repetidas legítimas; no es una garantía general
+contra duplicados entre mensajes o reconexiones.
 
 La confirmacion conversacional pasa primero la sesion a `PAYMENT_PENDING` y
 genera el numero de pedido en backend. Si la persona indica directamente un
@@ -179,7 +183,10 @@ sin URL, datos de pago ni destino real; la tarjeta tampoco se envia ni se almace
 Mientras el pago esta pendiente, `return_to_order` permite volver al carrito y
 eliminar lineas sigue pasando por `OrderService`. Tras finalizar, la interfaz
 muestra el numero de pedido y crea otra sesion al terminar la cuenta regresiva.
-Para QR y caja esa espera es de quince segundos; tarjeta conserva cinco.
+QR y caja simulan el procesamiento durante veinte segundos antes de confirmar;
+tarjeta confirma cuando la persona ingresa cualquier número y toca **Continuar**.
+En los tres casos, la confirmación y el número de pedido permanecen diez segundos
+antes de crear otra sesión.
 La confirmacion tambien puede iniciarse desde el boton del carrito sin pasar por
 el LLM configurado; las consultas de precios usan la informacion del catalogo y no mutan el
 pedido.
@@ -280,7 +287,7 @@ Ejemplo de entrada WebSocket:
 
 | Evento de salida | Contenido principal de `data` |
 | --- | --- |
-| `connection.ready` | `session_id`, `state`, `cart` para sincronizar al conectar. |
+| `connection.ready` | `session_id`, `state`, `cart` y configuración pública `voice` (`provider`, `transport` y opciones seguras) para sincronizar al conectar. |
 | `assistant.text` | `text`, `session_closed`, `cart`. |
 | `cart.updated` | `action`, `line_id`, `cart`. |
 | `payment.pending`, `payment.method_selected` | Numero de pedido, metodo cuando corresponde y `cart` con el estado actualizado. |
@@ -329,11 +336,14 @@ asíncrono y no se espera su resultado; no hay entrega garantizada ni replay.
 
 ```mermaid
 flowchart LR
-    MIC[Micrófono navegador] --> PCM[voice.js / pcm-worklet.js: PCM16 / 16 kHz]
+    MIC[Micrófono navegador] --> TR{voice.transport}
+    TR -->|backend_pcm| PCM[voice.js / pcm-worklet.js: PCM16 / 16 kHz]
     PCM --> WS[WebSocket binario]
-    WS --> T[SpeechToText configurado]
-    T <--> LIVE[Modelo STT Gemini configurado]
-    T -->|Texto definitivo| O[Orquestador de pedidos]
+    WS --> T[SpeechToText: Gemini o Vosk]
+    T --> TXT[Texto definitivo]
+    TR -->|browser_text| BSTT[Whisper o Web Speech API]
+    BSTT -->|voice.text| TXT
+    TXT --> O[OrderInterpreter configurado]
     O --> S[OrderService]
 ```
 
@@ -374,7 +384,7 @@ La guía de Adrián describe una arquitectura de producción para un kiosco fís
 | --- | --- | --- |
 | Hardware y captura | Micrófono del navegador con `echoCancellation` y `noiseSuppression`; audio PCM mono a 16 kHz. | Adecuado para validar el flujo. Falta mic array con beamforming/AEC real, equipo industrial, pantalla táctil, pinpad y ticketeadora. |
 | Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, detección de fin de habla por energía, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo kiosco/PWA, indicador de volumen, interrupciones y empaquetado de dispositivo. |
-| STT | `SpeechToText` desacopla el WebSocket; `GeminiLiveTranscriber` usa Gemini Live y `VoskTranscriber` procesa localmente PCM16 a 16 kHz. | Gemini permite validar el enfoque cloud; Vosk evita red y cobro por minuto para STT, pero requiere modelo local y evaluación real de calidad. Groq ofrece transcripción por archivo, no el streaming de esta demo. |
+| STT | `SpeechToText` desacopla el PCM recibido por el WebSocket; `GeminiLiveTranscriber` usa Gemini Live y `VoskTranscriber` procesa localmente. Whisper y Web Speech API transcriben en el navegador y envían texto final. | Hay rutas cloud, local de backend y de navegador. Todas requieren evaluación real de precisión y latencia; Groq ofrece transcripción por archivo, no el streaming incremental de esta demo. |
 | NLU y extracción | El LLM seleccionado recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM configurado propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
 | Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR escaneable de texto, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisión de ticket. |
 
@@ -384,15 +394,15 @@ Conviene conservar la separación `domain`/`services`/`ai`/`api`, porque permite
 
 ### Qué incorporar cuando el proyecto pase a piloto
 
-La siguiente etapa técnica debería definir adaptadores explícitos para
-`SpeechToText`, interpretación LLM, POS, KDS, pagos y ticket, medir la latencia
-por etapa y probar el frontend con el micrófono elegido. Los adaptadores de voz e
-interpretación permitirían comparar proveedores o seleccionar uno alternativo
-sin cambiar `OrderService`. Después habría que agregar almacenamiento durable e
-idempotencia de pedidos, métricas de cuota y disponibilidad del proveedor,
-continuidad por pantalla/escritura y un flujo de pago certificado. El número de
-tarjeta no debe capturarse en el navegador en una integración real: debe utilizarse
-un pinpad o tokenización del proveedor.
+La siguiente etapa técnica debería conservar los contratos ya implementados de
+`SpeechToText` y `OrderInterpreter`, completar la comparación real de sus
+adaptadores y definir contratos equivalentes para POS, KDS, pagos y ticket.
+También debe medir la latencia por etapa y probar el frontend con el micrófono
+elegido. Después habría que agregar almacenamiento durable e idempotencia de
+pedidos, métricas de cuota y disponibilidad del proveedor, continuidad por
+pantalla/escritura y un flujo de pago certificado. El número de tarjeta no debe
+capturarse en el navegador en una integración real: debe utilizarse un pinpad o
+tokenización del proveedor.
 
 El proyecto no debe incorporar hardware Edge, una PWA, un POS real o una pasarela real solo para parecerse a la guía. Cada integración debe entrar cuando exista un entorno de prueba y un contrato verificable.
 
@@ -417,8 +427,9 @@ mantiene como alternativa para comparar precisión y comportamiento de streaming
 
 Vosk evita la red en la transcripción, pero su modelo pequeño todavía debe
 evaluarse con español rioplatense y ruido real. Gemini depende de red, cuota y
-disponibilidad del proveedor. La separación `SpeechToText` permite comparar ambas
-opciones sin cambiar el dominio ni el frontend.
+disponibilidad del proveedor. Whisper y Web Speech API agregan rutas de
+navegador con límites propios. El contrato y el atributo de transporte permiten
+comparar estas opciones sin cambiar el dominio.
 
 ### Por qué el frontend es web y el estado vive en backend
 
@@ -479,18 +490,23 @@ flowchart LR
     A[Audio PCM Gemini o Vosk] --> CS[conversation_socket.py]
     WB[Audio Whisper en navegador] --> WW[whisper-browser.js y Worker]
     WW -->|voice.text final| CS
-    CS --> F1[create_speech_to_text]
+    SA[Audio Web Speech API] --> SW[web-speech-browser.js]
+    SW -->|voice.text final| CS
+    CS -->|backend_pcm| F1[create_speech_to_text]
     F1 --> C1[SpeechToText]
     C1 --> G1[GeminiLiveTranscriber]
     G1 --> GT[Gemini Live Transcribe]
     C1 --> V1[VoskTranscriber]
     V1 --> VM[Modelo Vosk local]
     C1 --> T[Texto final]
+    CS -->|browser_text| T
     T --> F2[create_order_interpreter]
     F2 --> C2[OrderInterpreter]
     C2 --> G2[LLMOrderInterpreter configurado]
     G2 --> GC[Proveedor LLM + function calls]
-    G2 --> TO[tools autorizadas]
+    G2 --> RT[OrderToolsRuntime]
+    RT --> SP[order_tool_specs]
+    RT --> TO[tools autorizadas]
     TO --> OS[OrderService]
     OS --> CA[Menu, Cart y Session]
 ```
@@ -573,7 +589,7 @@ configuraciones que el código acepte.
 | STT cloud | Google Cloud Speech-to-Text | Credenciales de Google Cloud y cliente de streaming, distinto de la clave Gemini | Investigado; sin código ni prueba real. |
 | STT cloud | Azure Speech | Clave o identidad de Azure, región y cliente de reconocimiento continuo | Investigado; sin código ni prueba real. |
 | STT local navegador | Whisper con Transformers.js | Modelo de Hugging Face, WebGPU o WebAssembly, Worker y texto final al WebSocket | Implementado con `onnx-community/whisper-tiny`; pruebas simuladas de transporte, falta comparación real de calidad y latencia. |
-| STT local | Vosk | `VOSK_MODEL_PATH`, modelo Vosk y PCM16 a 16 kHz | Adaptador implementado y probado con simulaciones; falta prueba real con modelo y micrófono. |
+| STT local | Vosk | `VOSK_MODEL_PATH`, modelo Vosk y PCM16 a 16 kHz | Adaptador implementado con pruebas automáticas y corridas exploratorias reales; confundió términos como Sprite y QR, por lo que falta una comparación controlada. |
 | LLM cloud | OpenAI | `OPENAI_API_KEY`, mapeo de function calling a las mismas tools autorizadas | Adaptador implementado y probado con simulaciones; la prueba real quedó bloqueada por falta de saldo API. |
 | LLM cloud | Anthropic | `ANTHROPIC_API_KEY`, mapeo de tool use a las mismas tools autorizadas | Investigado; sin código ni prueba real. |
 | LLM local | Ollama con un modelo compatible | Servicio/modelo local y adaptación de tool calling; no API key cloud por defecto | Investigado; sin código ni prueba real. |
@@ -610,6 +626,14 @@ correcto de errores por proveedor, límite de mensajes y timeouts de STT. Sigue
 siendo evidencia automática: no prueba proveedores reales ni el audio de un
 micrófono físico.
 
+Después de consolidar prompts, esquemas de tools, ejecución posterior a una
+mutación, ciclo PCM y selección de transporte, el 21/09/2026 se ejecutaron 107
+pruebas automáticas sin red ni credenciales. La cobertura nueva compara la
+instrucción común y los esquemas entregados a Gemini, OpenAI y Groq, comprueba
+la respuesta determinística posterior a las tools y verifica el enrutamiento
+`backend_pcm`/`browser_text`. Continúan siendo simulaciones: no demuestran
+disponibilidad ni comportamiento de los servicios remotos o micrófonos reales.
+
 La prueba adicional de navegador con Edge usa un micrófono sintético que emite
 voz y luego silencio. Comprueba que el frontend no cierre antes de detectar voz,
 envíe un único `audio.stop` después de 1,4 segundos silenciosos y actualice el
@@ -618,12 +642,15 @@ carrito sin pulsar **Enviar audio**. No sustituye la corrida con micrófono real
 
 ### OpenAI LLM: implementacion y evidencia
 
-`LLM_PROVIDER=openai` crea `OpenAIOrderInterpreter`. El adaptador envia el
-catalogo, traduce function calls de OpenAI a las tools autorizadas y devuelve los
-resultados al historial antes de pedir la respuesta final. `OrderToolsRuntime`
-conserva ejecucion, proteccion contra duplicados y sanitizacion sin depender de
-un SDK de IA. STT sigue en Gemini; `STT_PROVIDER=openai` continua rechazado hasta
-implementar un adaptador de streaming separado.
+`LLM_PROVIDER=openai` crea `OpenAIOrderInterpreter`. El adaptador envía la
+instrucción común y traduce entre las function calls de OpenAI y las llamadas
+neutrales definidas en `order_tool_specs.py`. `OrderToolsRuntime` conserva la
+ejecución, la protección contra duplicados, la detección de mutaciones y la
+sanitización sin depender de un SDK de IA. Después de una mutación válida, el
+runtime construye la confirmación desde el carrito real sin pedir otra respuesta
+al proveedor; un resultado sin mutación sí puede volver al modelo para completar
+la conversación. `STT_PROVIDER=openai` continúa rechazado hasta implementar un
+adaptador de voz separado.
 
 La cuenta consultada expone `gpt-4.1-mini`, `gpt-4.1`, `gpt-4o`, `gpt-4o-mini`,
 `gpt-5-mini`, `gpt-5` y otros. Se eligio `gpt-4.1-mini` como primer modelo de

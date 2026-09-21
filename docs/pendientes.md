@@ -15,7 +15,7 @@ registrar la corrida final.
   Gemini, interpretación Groq, altas y eliminaciones, cantidades agrupadas,
   vuelta desde un método al selector, selección de QR, tarjeta y caja, cierre
   del pedido y creación de una sesión nueva. También se escuchó la síntesis del
-  navegador. Las 92 pruebas automáticas cubren reglas, adaptadores, transporte,
+  navegador. Las 107 pruebas automáticas vigentes cubren reglas, adaptadores, transporte,
   caché del frontend y pago mediante simulaciones. Antes de la demostración
   falta registrar en una sola corrida real, con el modelo elegido para exponer,
   producto incompleto, producto agotado, reemplazo, varios extras y finalización
@@ -44,8 +44,10 @@ registrar la corrida final.
 ## Para un piloto de kiosco
 
 - **Evaluación de proveedores ya desacoplados:** los contratos `SpeechToText` y
-  `OrderInterpreter`, las fábricas y los adaptadores Gemini, OpenAI y Groq ya
-  están implementados. Para sumar **Anthropic u otro LLM**, crear cliente y
+  `OrderInterpreter` y sus fábricas ya están implementados. STT dispone de
+  adaptadores de backend para Gemini y Vosk y capturadores de navegador para
+  Whisper y Web Speech API; LLM dispone de Gemini, OpenAI y Groq. Para sumar
+  **Anthropic u otro LLM**, crear cliente y
   lectura segura de su clave, configuración de modelo, clase `OrderInterpreter`
   que traduzca tool use a las tools existentes, rama en `backend/ai/factories.py`,
   manejo de errores y pruebas simuladas; luego ejecutar la matriz manual real.
@@ -54,7 +56,9 @@ registrar la corrida final.
   cancelación y cierre, configuración y rama en la fábrica STT; después validar
   audio real, latencia, ruido y reconexión. No seleccionar un proveedor futuro
   en `.env` hasta que su adaptador y pruebas existan. Vosk ya cumple ese contrato
-  y puede seleccionarse; su validación con modelo y micrófono reales sigue pendiente.
+  y puede seleccionarse. Las corridas exploratorias con modelo y micrófono reales
+  detectaron confusiones con términos del menú como «Sprite» y «QR»; sigue
+  pendiente una comparación controlada de precisión, ruido y latencia.
 - **Selección de STT sin costo de uso o con cuota limitada:** la investigación del
   18/09/2026 no encontró un STT cloud ilimitado y gratis que sea adecuado para
   producción. Las alternativas locales no cobran por minuto: **Vosk** funciona
@@ -64,8 +68,9 @@ registrar la corrida final.
   descargar el modelo y consumir CPU/GPU. Vosk fue el primer candidato local
   evaluado porque su reconocimiento incremental se adapta naturalmente a los
   fragmentos y parciales de `SpeechToText`; el adaptador quedó implementado el
-  18/09/2026 con pruebas simuladas. Falta medir su precisión con español
-  rioplatense, ruido y el micrófono real. `whisper_browser` ya implementa
+  18/09/2026 con pruebas simuladas. Las primeras corridas reales mostraron
+  errores en vocabulario del menú; falta medirlos de forma repetible con español
+  rioplatense, ruido y el mismo micrófono. `whisper_browser` ya implementa
   Whisper al finalizar el turno, sin enviar PCM al servidor; falta su matriz
   real. Whisper/faster-whisper en backend seguirían siendo alternativas futuras
   que requerirían modelo instalado, adaptador `SpeechToText` y una estrategia de
