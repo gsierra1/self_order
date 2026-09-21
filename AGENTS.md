@@ -2,9 +2,9 @@
 
 ## Objetivo y alcance
 
-Construir un autoservicio conversacional de pedidos por voz, con escritura
-alternativa y actualización visual del pedido. Consultar `docs/README.md`
-antes de modificar comportamiento o arquitectura.
+Consultar `docs/README.md` y la documentación relacionada únicamente cuando el 
+cambio afecte comportamiento, contratos o arquitectura. Para cambios locales, 
+inspeccionar solo los archivos necesarios.
 
 ## Documentación obligatoria
 
@@ -15,15 +15,14 @@ antes de modificar comportamiento o arquitectura.
 - En JavaScript, documentar funciones nuevas o modificadas mediante comentarios
   JSDoc con propósito, parámetros, retorno y efectos relevantes; es la adaptación
   de la misma exigencia de documentación al lenguaje.
-- Todo cambio de comportamiento, contratos, módulos o configuración debe incluir
-  la actualización de los documentos afectados en `docs/` y, si corresponde,
-  del README. Registrar pendientes en `docs/pendientes.md` y la validacion en el documento afectado o el README cuando corresponda.
-- Registrar decisiones de arquitectura con contexto, alternativas, motivos,
-  consecuencias y estado en `docs/decisiones.md`. Diferenciar intención expresada
-  por la autora, comportamiento comprobado e interpretación de decisiones previas.
+- Actualizar docs/ y README cuando el cambio altere comportamiento documentado, 
+  contratos, configuración, arquitectura o instrucciones de uso. No modificar 
+  documentación por cambios internos que no alteren lo documentado.
+- Registrar una decisión arquitectónica únicamente cuando se adopte una decisión 
+  nueva o se cambie una existente.
 - Explicar los cambios en español, conectando el problema, la solución y sus
   límites. No presentar propuestas como implementaciones ni pruebas simuladas
-  como verificaciones reales de Gemini.
+  como verificaciones reales del funcionamiento del LLM o STT.
 
 ## Commits y seguimiento de cada etapa
 
@@ -34,14 +33,13 @@ antes de modificar comportamiento o arquitectura.
   cambios con objetivos distintos; no incluir modificaciones ajenas por accidente.
 - Informar al finalizar los identificadores de los commits y qué se verificó.
   Un commit local no implica publicar los cambios mediante push.
-- Antes de cada etapa, explicar qué se hará y para qué. Durante el trabajo,
-  comunicar hallazgos y resultados de pruebas de forma comprensible.
+- Trabajar de forma concisa. Antes de realizar un cambio de alcance amplio o 
+  potencialmente riesgoso, explicar brevemente el plan. Para cambios locales, 
+  proceder directamente. Al finalizar, resumir qué cambió, qué se verificó y 
+  cualquier riesgo o pendiente.
 - Entregar comandos exactos para PowerShell en la terminal integrada de VS Code,
   indicando directorio, URL del frontend, acciones de prueba y resultados esperados.
   Si el cambio no tiene efecto visual, explicar cómo verificarlo por terminal.
-- Al dar comandos para ejecutar Python o levantar el bot, incluir primero la
-  activación del entorno en PowerShell: `.\.venv\Scripts\Activate.ps1` desde
-  la raíz del proyecto. Recordar que se activa en cada terminal nueva.
 - Diferenciar pruebas automáticas, pruebas manuales con el proveedor real y
   pruebas con simulaciones. No dar por ejecutadas las pruebas propuestas a la autora.
 
@@ -58,3 +56,17 @@ antes de modificar comportamiento o arquitectura.
   voz. Son etapas posteriores según la prioridad expresada por la autora.
 - No exponer claves ni incorporar `.env`, conversaciones locales o audio de
   usuarios a documentación/versionado sin una necesidad explícita.
+
+## Uso eficiente del contexto
+
+- No recorrer todo el repositorio por defecto.
+- Empezar por los archivos mencionados por la autora y sus dependencias directas.
+- Usar docs/arquitectura.md como índice para localizar responsabilidades antes 
+  de explorar archivos adicionales.
+- No leer documentos completos si solo se necesita una sección concreta.
+- No ejecutar la suite completa cuando una prueba específica permita verificar el 
+  cambio, salvo cambios transversales o solicitud explícita.
+- No volver a inspeccionar archivos cuyo contenido relevante ya esté disponible en 
+  el contexto, salvo que hayan cambiado.
+- Ampliar la exploración solamente cuando aparezca evidencia de que el cambio afecta 
+  otros módulos.
