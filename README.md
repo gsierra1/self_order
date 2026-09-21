@@ -13,9 +13,11 @@ configurado que el chat.
 La respuesta puede leerse con la voz del navegador si el mismo está habilitado.
 La confirmación y el pago son demostraciones locales, sin integración POS ni
 procesamiento real de tarjetas. El QR es escaneable, pero contiene solo texto de demostracion sin URL ni pago real.
+QR y caja esperan 20 segundos antes de mostrar la confirmación y el número de
+pedido; esa pantalla final permanece 10 segundos antes de iniciar otra sesión.
 
 Si la persona deja de interactuar después de iniciar el pedido, la interfaz
-pregunta si sigue allí a los 20 segundos, avisa que cerrará la sesión 20 segundos
+pregunta si sigue allí a los 30 segundos, avisa que cerrará la sesión 20 segundos
 después y crea una sesión nueva tras otros 20 segundos. Una sesión recién creada
 no inicia este conteo hasta que alguien envíe un mensaje escrito o finalice una
 transcripción de voz. Mover el mouse, enfocar un campo o tocar un control sin

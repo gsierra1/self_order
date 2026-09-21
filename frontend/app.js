@@ -18,6 +18,9 @@ let reconnectAttempts = 0;
 let currentCart = null;
 let hasUserInteracted = false;
 
+const PAYMENT_PROCESSING_SECONDS = 20;
+const SESSION_RESET_SECONDS = 10;
+
 const conversation = document.getElementById("conversation");
 const messageForm = document.getElementById("message-form");
 const messageInput = document.getElementById("message-input");
@@ -480,6 +483,27 @@ function createExtraRow(lineId, detail, editable) {
     return extraRow;
 }
 
+/**
+ * Muestra la espera simulada y completa el pago al terminar la cuenta regresiva.
+ * @param {string} elementId Identificador del texto visible que muestra los segundos.
+ * @returns {void}
+ * @effects Conserva el método elegido durante veinte segundos y luego confirma
+ * el pago mediante el backend.
+ */
+function startPaymentCompletionCountdown(elementId) {
+    let remaining = PAYMENT_PROCESSING_SECONDS;
+    paymentTimer = setInterval(() => {
+        remaining -= 1;
+        const element = document.getElementById(elementId);
+        if (remaining <= 0) {
+            clearInterval(paymentTimer);
+            void completePayment();
+        } else if (element) {
+            element.textContent = `Confirmando pago… ${remaining}.`;
+        }
+    }, 1000);
+}
+
 /** Muestra el selector y el estado del pago de demostracion.
  * @param {Object} cart Snapshot validado con estado y metodo de pago.
  * @returns {void} Actualiza el panel de pago y sus controles.
@@ -487,6 +511,7 @@ function createExtraRow(lineId, detail, editable) {
  * sin URL ni instruccion de pago real. */
 function renderPayment(cart) {
     clearTimeout(paymentTimer);
+    clearInterval(paymentTimer);
     clearInterval(countdownTimer);
     paymentPanel.hidden = cart.state !== "PAYMENT_PENDING";
     if (paymentPanel.hidden) {
@@ -514,10 +539,10 @@ function renderPayment(cart) {
                 una URL ni inicia un pago real.</p>
             <img class="demo-qr" src="/static/assets/qr-demostracion.svg"
                 alt="C\u00f3digo QR de demostraci\u00f3n sin pago real">
-            <p>Procesando pago...</p>
+            <p id="qr-payment-countdown">Confirmando pago… ${PAYMENT_PROCESSING_SECONDS}.</p>
             <button type="button" class="payment-action" id="payment-back">ATR\u00c1S</button>`;
         document.getElementById("payment-back").addEventListener("click", returnToPaymentMethods);
-        paymentTimer = setTimeout(() => completePayment(), 5000);
+        startPaymentCompletionCountdown("qr-payment-countdown");
     } else if (method === "CARD") {
         paymentContent.innerHTML = `
             <label for="card-number">Ingresá el número de tu tarjeta (demo)</label>
@@ -537,22 +562,10 @@ function renderPayment(cart) {
     } else {
         paymentContent.innerHTML = `
             <p>Pago en caja seleccionado.</p>
-            <p>Tu número de pedido es <strong>${cart.order_number}</strong>.</p>
-            <p>Acercate a caja, indicá ese número y realizá el pago.</p>
-            <p id="cash-countdown">Esta sesión finalizará en 15.</p>
+            <p id="cash-payment-countdown">Confirmando pago… ${PAYMENT_PROCESSING_SECONDS}.</p>
             <button type="button" class="payment-action" id="payment-back">ATRÁS</button>`;
         document.getElementById("payment-back").addEventListener("click", returnToPaymentMethods);
-        let remaining = 15;
-        paymentTimer = setInterval(() => {
-            remaining -= 1;
-            const element = document.getElementById("cash-countdown");
-            if (remaining <= 0) {
-                clearInterval(paymentTimer);
-                completePayment({ resetImmediately: true });
-            } else if (element) {
-                element.textContent = `Esta sesión finalizará en ${remaining}.`;
-            }
-        }, 1000);
+        startPaymentCompletionCountdown("cash-payment-countdown");
     }
 }
 
@@ -560,6 +573,7 @@ function renderPayment(cart) {
  * @returns {Promise<void>} Actualiza la pantalla con el carrito editable. */
 async function returnToOrder() {
     clearTimeout(paymentTimer);
+    clearInterval(paymentTimer);
     try {
         const response = await fetch(`/api/sessions/${sessionId}/payment/back`, { method: "POST" });
         const data = await response.json();
@@ -627,24 +641,18 @@ async function startPaymentFromCart() {
 }
 
 /** Completa el pago demo y muestra el número para retirar en caja.
- * @param {Object} options Opciones de cierre de la sesión.
- * @param {boolean} [options.resetImmediately=false] Reinicia al completar el pago.
  * @returns {Promise<void>} Finaliza el pedido o muestra el error recibido.
- * @effects Para QR conserva la pantalla final durante quince segundos; para
- * caja, el contador previo ya controla el reinicio. */
-async function completePayment(options = {}) {
+ * @effects Conserva la confirmación y el número de pedido durante diez segundos. */
+async function completePayment() {
     clearTimeout(paymentTimer);
+    clearInterval(paymentTimer);
     try {
         const response = await fetch(`/api/sessions/${sessionId}/payment/complete`, { method: "POST" });
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "No se pudo completar el pago.");
-        if (options.resetImmediately) {
-            await startNewSession();
-            return;
-        }
         sessionClosed = true;
         voice.dispose();
-        const resetSeconds = data.payment_method === "QR" ? 15 : 5;
+        const resetSeconds = SESSION_RESET_SECONDS;
         paymentPanel.hidden = false;
         paymentContent.innerHTML = `
             <p class="payment-success">Pago confirmado.</p>
@@ -1019,6 +1027,7 @@ async function startNewSession() {
     inactivityMonitor.stop();
     hasUserInteracted = false;
     clearTimeout(paymentTimer);
+    clearInterval(paymentTimer);
     clearInterval(countdownTimer);
     voice.dispose();
     window.speechSynthesis?.cancel();

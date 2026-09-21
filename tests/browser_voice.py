@@ -250,7 +250,7 @@ class BrowserVoiceTests(unittest.TestCase):
                         )
                         self.assertEqual(
                             inactivity_result["delays"],
-                            [20000, 20000, 20000, 20000, 20000],
+                            [30000, 20000, 30000, 20000, 20000],
                         )
                         detector_result = page.evaluate("""
                             async () => {

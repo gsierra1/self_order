@@ -1,4 +1,7 @@
-/** Intervalo entre avisos consecutivos de inactividad. */
+/** Espera inicial antes de preguntar si la persona continúa presente. */
+export const INACTIVITY_PROMPT_DELAY_MS = 30000;
+
+/** Intervalo entre la pregunta, la advertencia y el cierre por inactividad. */
 export const INACTIVITY_INTERVAL_MS = 20000;
 
 /** Coordina avisos escalonados y el cierre de una sesión sin actividad. */
@@ -9,7 +12,8 @@ export class InactivityMonitor {
      * @param {() => void} options.onPrompt Acción del primer intervalo.
      * @param {() => void} options.onWarning Acción del segundo intervalo.
      * @param {() => void} options.onTimeout Acción del tercer intervalo.
-     * @param {number} [options.intervalMs=INACTIVITY_INTERVAL_MS] Duración de cada etapa.
+     * @param {number} [options.promptDelayMs=INACTIVITY_PROMPT_DELAY_MS] Espera del primer aviso.
+     * @param {number} [options.intervalMs=INACTIVITY_INTERVAL_MS] Espera entre etapas posteriores.
      * @param {(callback: () => void, delay: number) => number} [options.schedule]
      *     Función utilizada para programar una etapa.
      * @param {(timerId: number) => void} [options.cancel] Función que cancela una etapa.
@@ -18,6 +22,7 @@ export class InactivityMonitor {
         onPrompt,
         onWarning,
         onTimeout,
+        promptDelayMs = INACTIVITY_PROMPT_DELAY_MS,
         intervalMs = INACTIVITY_INTERVAL_MS,
         schedule = (callback, delay) => window.setTimeout(callback, delay),
         cancel = timerId => window.clearTimeout(timerId),
@@ -25,6 +30,7 @@ export class InactivityMonitor {
         this.onPrompt = onPrompt;
         this.onWarning = onWarning;
         this.onTimeout = onTimeout;
+        this.promptDelayMs = promptDelayMs;
         this.intervalMs = intervalMs;
         this.schedule = schedule;
         this.cancel = cancel;
@@ -59,7 +65,8 @@ export class InactivityMonitor {
      * @effects Conserva el identificador necesario para cancelar la espera.
      */
     scheduleNext() {
-        this.timerId = this.schedule(() => this.advance(), this.intervalMs);
+        const delay = this.stage === 0 ? this.promptDelayMs : this.intervalMs;
+        this.timerId = this.schedule(() => this.advance(), delay);
     }
 
     /**
