@@ -87,12 +87,25 @@ def get_whisper_browser_device() -> str:
     return device if device in {"auto", "webgpu", "wasm"} else "auto"
 
 
+def get_speech_api_language() -> str:
+    """Obtiene el idioma solicitado a Web Speech API.
+
+    Returns:
+        Etiqueta de idioma BCP 47; ``es-AR`` cuando no se configuró otra.
+
+    Effects:
+        Carga el archivo .env local antes de consultar la configuración.
+    """
+    load_dotenv()
+    return os.getenv("SPEECH_API_LANGUAGE", "es-AR").strip() or "es-AR"
+
+
 def get_public_stt_configuration() -> dict[str, str]:
     """Construye la configuración de voz segura que puede recibir el navegador.
 
     Returns:
-        Proveedor de STT y, para Whisper local, modelo y modo de ejecución.
-        No incorpora claves ni rutas privadas del servidor.
+        Proveedor de STT y la configuración pública específica del capturador
+        de navegador seleccionado. No incorpora claves ni rutas privadas.
     """
     provider = get_stt_provider()
     configuration = {"provider": provider}
@@ -101,6 +114,8 @@ def get_public_stt_configuration() -> dict[str, str]:
             "model": get_whisper_browser_model(),
             "device": get_whisper_browser_device(),
         })
+    elif provider == "web_speech_browser":
+        configuration["language"] = get_speech_api_language()
     return configuration
 
 

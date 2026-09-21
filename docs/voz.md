@@ -8,7 +8,7 @@ Implementación inicial: 14/09/2026. Texto y voz comparten conversación y carri
 flowchart LR
     M[Micrófono] --> V{STT configurado}
     V -->|Gemini o Vosk: voice.js / pcm-worklet.js| W[conversation_socket.py]
-    V -->|Whisper local: whisper-browser.js / Worker| BT[Texto final]
+    V -->|Whisper o Web Speech API en navegador| BT[Texto final]
     BT -->|voice.text| W
     W --> T[SpeechToText]
     T --> GT[Adaptador STT configurado]
@@ -54,6 +54,12 @@ voz y lo entrega al mismo intérprete LLM.
 `backend/api/conversation_socket.py` valida eventos y entrega ese texto al
 `OrderInterpreter` elegido por `LLM_PROVIDER`. Las reglas del servicio se conservan.
 
+Cuando `STT_PROVIDER=web_speech_browser`, `frontend/web-speech-browser.js` usa
+`SpeechRecognition` o su variante prefijada. Configura el idioma con
+`SPEECH_API_LANGUAGE`, muestra resultados provisionales y envía únicamente el
+texto final mediante `voice.text`. No abre el AudioWorklet ni permite seleccionar
+un modelo: el navegador controla el motor de reconocimiento.
+
 `SessionRuntime.turn_lock` reserva un turno entre voz, texto WebSocket y mensajes
 HTTP; una segunda entrada simultánea se rechaza. `WebSocketManager` serializa
 envíos, rechaza una segunda conexión por sesión (4409) y permite recuperar el
@@ -75,7 +81,7 @@ vuelve a habilitarse al terminar, salvo si el pedido quedó confirmado.
 | `voice.transcript` | Backend → navegador: `{text, final}`; una hipótesis solo se muestra. |
 | `audio.stop` | Navegador → backend: finaliza; repetirlo no ejecuta nuevamente el pedido. |
 | `audio.cancel` | Navegador → backend: descarta transcripción que aún no llegó al intérprete LLM. |
-| `voice.text` | Navegador → backend: texto final de Whisper local. Solo se acepta con `STT_PROVIDER=whisper_browser`; no contiene audio. |
+| `voice.text` | Navegador → backend: texto final de Whisper local o Web Speech API. Solo se acepta con un STT de navegador; no contiene audio. |
 | `voice.cancelled` | Backend → navegador: cancelación atendida. |
 | `voice.error` | Backend → navegador: falla de transcripción; el audio no ejecutó un pedido. Si el proveedor informa detalles, incluye tipo, código, etapa y si se puede reintentar. |
 | `voice.retry_ready` | Backend → navegador: terminó de liberar un turno de STT fallido; se puede iniciar otro. |
@@ -129,6 +135,10 @@ puede elegir Gemini mediante `GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-l
 También se puede elegir `STT_PROVIDER=whisper_browser` con
 `WHISPER_BROWSER_MODEL=onnx-community/whisper-tiny` y
 `WHISPER_BROWSER_DEVICE=auto`, `webgpu` o `wasm`.
+Web Speech API se selecciona con `STT_PROVIDER=web_speech_browser` y
+`SPEECH_API_LANGUAGE=es-AR`. No tiene una variable de modelo porque la API no
+expone modelos seleccionables; la implementación y la posible dependencia de
+red pertenecen al navegador.
 La demo usa Groq para el chat mediante
 `GROQ_CHAT_MODEL=openai/gpt-oss-20b`; también se puede elegir Gemini u OpenAI
 con sus variables propias. Los nombres se pueden cambiar en `.env` sin modificar
@@ -260,10 +270,10 @@ WebSocket.
 
 Las implementaciones efectivas de backend son `GeminiLiveTranscriber` en
 `backend/ai/gemini_transcriber.py` y `VoskTranscriber` en
-`backend/ai/vosk_transcriber.py`. `STT_PROVIDER` admite `gemini`, `vosk` o
-`whisper_browser`. Este último se implementa en
-`frontend/whisper-browser.js`, no recibe PCM en la fábrica y publica solo
-`voice.text` cuando Whisper termina.
+`backend/ai/vosk_transcriber.py`. `STT_PROVIDER` admite `gemini`, `vosk`,
+`whisper_browser` o `web_speech_browser`. Los dos últimos se implementan en el
+frontend, no reciben PCM en la fábrica y publican solo `voice.text` cuando el
+navegador entrega el texto final.
 Vosk carga el modelo local una vez, procesa PCM16 a 16 kHz, publica hipótesis
 con `PartialResult()` y solo entrega `FinalResult()` después de `audio.stop`.
 Configurar por ahora `whisper`, `openai`, `google-cloud` o `azure` devuelve un

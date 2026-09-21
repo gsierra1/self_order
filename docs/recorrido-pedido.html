@@ -306,8 +306,8 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           <h3>4. La persona toca Hablar</h3>
           <a href="../frontend/app.js"><code>frontend/app.js</code></a>
           <small>Con Gemini o Vosk, <code>toggleMicrophone()</code> env&iacute;a <code>audio.start</code> y
-            <code>VoiceInput</code> espera <code>voice.ready</code>. Con <code>whisper_browser</code>,
-            prepara el Worker local y el micr&oacute;fono sin enviar audio al backend.</small>
+            <code>VoiceInput</code> espera <code>voice.ready</code>. Con <code>whisper_browser</code> o
+            <code>web_speech_browser</code>, prepara el capturador del navegador sin enviar audio al backend.</small>
         </article>
         <article class="step frontend">
           <h3>5. Audio del micr&oacute;fono</h3>
@@ -323,7 +323,9 @@ python -m uvicorn backend.api.app:app --reload</code></pre>
           <small>Para Gemini o Vosk, <code>SpeechToText</code> selecciona
             <code>GeminiLiveTranscriber</code> o <code>VoskTranscriber</code>. Con
             <code>whisper_browser</code>, <code>whisper-browser.js</code> y su Worker transcriben localmente
-            y env&iacute;an <code>voice.text</code> final al mismo WebSocket.</small>
+            y env&iacute;an <code>voice.text</code> final al mismo WebSocket. Con
+            <code>web_speech_browser</code>, <code>web-speech-browser.js</code> obtiene ese texto mediante
+            el motor controlado por el navegador.</small>
         </article>
         <article class="step backend">
           <h3>7. El texto entra al mismo flujo que escritura</h3>

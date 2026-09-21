@@ -1,5 +1,6 @@
 import { VoiceInput, speak } from "/static/voice.js?v=20260919-1";
 import { BrowserWhisperInput } from "/static/whisper-browser.js?v=20260919-1";
+import { BrowserSpeechApiInput } from "/static/web-speech-browser.js?v=20260921-1";
 import { InactivityMonitor } from "/static/inactivity.js?v=20260917-1";
 
 let sessionId = null;
@@ -95,8 +96,17 @@ function createServerVoiceInput() {
  * @param {string} message Estado de carga o transcripción del modelo local.
  * @returns {void} Actualiza únicamente el texto provisional de voz.
  */
-function showWhisperProgress(message) {
+function showBrowserVoiceProgress(message) {
     transcript.textContent = message;
+}
+
+/**
+ * Indica si el proveedor captura y transcribe dentro del navegador.
+ * @param {string} provider Identificador publicado por el backend.
+ * @returns {boolean} True para Whisper o Web Speech API en navegador.
+ */
+function isBrowserVoiceProvider(provider) {
+    return ["whisper_browser", "web_speech_browser"].includes(provider);
 }
 
 /**
@@ -107,14 +117,23 @@ function showWhisperProgress(message) {
  */
 function configureVoiceProvider(configuration = {}) {
     const nextProvider = configuration.provider || "gemini";
-    if (nextProvider === voiceProvider && !(nextProvider === "whisper_browser" && !voice.model)) return;
+    if (nextProvider === voiceProvider) return;
     voice.dispose();
     voiceProvider = nextProvider;
     if (nextProvider === "whisper_browser") {
         voice = new BrowserWhisperInput({
             model: configuration.model,
             device: configuration.device,
-            onProgress: showWhisperProgress,
+            onProgress: showBrowserVoiceProgress,
+            onError: failVoice,
+            onSpeechEnded: finishVoiceAfterSilence,
+        });
+        return;
+    }
+    if (nextProvider === "web_speech_browser") {
+        voice = new BrowserSpeechApiInput({
+            language: configuration.language,
+            onProgress: showBrowserVoiceProgress,
             onError: failVoice,
             onSpeechEnded: finishVoiceAfterSilence,
         });
@@ -684,7 +703,7 @@ async function finishVoiceTurn(trigger) {
     setStatus("Procesando audio...", "processing");
     try {
         const localText = await voice.finish();
-        if (voiceProvider === "whisper_browser") {
+        if (isBrowserVoiceProvider(voiceProvider)) {
             if (trigger === "silence") transcript.textContent = "Audio local terminado. Enviando texto…";
             sendEvent("voice.text", { message: localText });
         } else {
@@ -724,7 +743,7 @@ async function toggleMicrophone() {
     setStatus("Preparando micrófono y conexión...", "processing");
     transcript.textContent = "No hables hasta que aparezca «Escuchando».";
     try {
-        if (voiceProvider !== "whisper_browser") {
+        if (!isBrowserVoiceProvider(voiceProvider)) {
             sendEvent("audio.start");
             voiceTimer = setTimeout(() => failVoice(new Error("La conexión de voz tardó demasiado.")), 20000);
         } else {

@@ -97,8 +97,9 @@ saturación observada en Gemini Chat. Gemini usa una sola
 `GEMINI_API_KEY` para las dos capas; sus modelos se configuran con
 `GEMINI_TRANSCRIPTION_MODEL` y `GEMINI_CHAT_MODEL`.
 
-Gemini está implementado para STT y LLM. Vosk y `whisper_browser` están
-implementados como STT local; Groq y OpenAI están implementados solo para LLM.
+Gemini está implementado para STT y LLM. Vosk, `whisper_browser` y
+`web_speech_browser` están implementados como STT; Groq y OpenAI están
+implementados solo para LLM.
 `whisper_browser` ejecuta Whisper en un Worker del navegador y entrega texto
 final al WebSocket, mientras Vosk y Gemini reciben audio en el backend. Groq ofrece Whisper mediante un endpoint de
 archivo, pero no el streaming de fragmentos que necesita esta interfaz; por eso
@@ -168,11 +169,14 @@ u otro valor no implementado se informa claramente y no intenta usar una clave
 ajena.
 
 Los proveedores se seleccionan mediante `STT_PROVIDER` y `LLM_PROVIDER`. Hoy
-STT admite `gemini`, `vosk` y `whisper_browser`; LLM admite `gemini`, `groq` y `openai`. Cada proveedor
+STT admite `gemini`, `vosk`, `whisper_browser` y `web_speech_browser`; LLM admite `gemini`, `groq` y `openai`. Cada proveedor
 requiere sus propias variables: Gemini usa `GEMINI_API_KEY`, Groq usa
 `GROQ_API_KEY`, OpenAI usa `OPENAI_API_KEY`, Vosk usa `VOSK_MODEL_PATH` y
 Whisper local en navegador usa `WHISPER_BROWSER_MODEL` y
 `WHISPER_BROWSER_DEVICE`, sin API key.
+Web Speech API tampoco requiere una clave propia y usa
+`SPEECH_API_LANGUAGE`; el navegador controla su motor y no permite elegir un
+modelo mediante `.env`.
 Solo se exige la credencial o el modelo del proveedor elegido para esa capa. No
 compartas ni subas `.env` al repositorio.
 
@@ -254,6 +258,31 @@ ejemplo entregado para el proyecto. No prueba todavía que sea más preciso que
 Gemini o Vosk con español rioplatense, marcas del menú, ruido o el hardware del
 kiosco: esa comparación debe hacerse con la matriz manual indicada en
 `docs/pendientes.md`.
+
+### Usar Web Speech API del navegador
+
+Esta alternativa delega el reconocimiento de voz al navegador. No instala ni
+descarga un modelo elegido por el proyecto y no requiere una API key propia. En
+algunos navegadores el motor puede usar un servicio remoto, por lo que su
+disponibilidad, privacidad y funcionamiento sin internet dependen del navegador.
+
+```dotenv
+STT_PROVIDER=web_speech_browser
+SPEECH_API_LANGUAGE=es-AR
+LLM_PROVIDER=groq
+GROQ_API_KEY=tu_clave_de_groq
+GROQ_CHAT_MODEL=openai/gpt-oss-20b
+```
+
+`SPEECH_API_LANGUAGE` acepta una etiqueta BCP 47. Para esta demo se recomienda
+`es-AR`; otros ejemplos son `es-ES`, `es-MX` y `en-US`. Son idiomas o variantes
+regionales, no modelos.
+
+Web Speech API no expone una lista de modelos ni permite elegir el motor
+acústico. Por eso no existe `SPEECH_API_MODEL`: cualquier nombre colocado allí
+sería ignorado y daría una falsa impresión de control. La demo activa resultados
+provisionales, procesa un turno por interacción y pide una alternativa por
+resultado.
 
 Para consultar los modelos visibles para la cuenta OpenAI, sin imprimir la
 clave (sólo aplica a `LLM_PROVIDER=openai`):

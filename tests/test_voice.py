@@ -428,7 +428,55 @@ class ConversationTests(unittest.TestCase):
                 error = ws.receive_json()
 
         self.assertEqual(error["type"], "client.error")
-        self.assertIn("Whisper local", error["data"]["message"])
+        self.assertIn("navegador", error["data"]["message"])
+        self.assistant.send_message.assert_not_called()
+
+    def test_web_speech_text_uses_the_same_interpreter_once(self) -> None:
+        """Acepta el texto final nativo sin abrir un transcriptor de backend."""
+        configuration = {
+            "provider": "web_speech_browser",
+            "language": "es-AR",
+        }
+        with patch(
+            "backend.api.conversation_socket.get_stt_provider",
+            return_value="web_speech_browser",
+        ), patch(
+            "backend.api.conversation_socket.get_public_stt_configuration",
+            return_value=configuration,
+        ), patch(
+            "backend.api.conversation_socket.create_speech_to_text",
+        ) as factory:
+            with self.client.websocket_connect(self.url) as ws:
+                ready = ws.receive_json()
+                self.assertEqual(ready["data"]["voice"], configuration)
+                ws.send_json({
+                    "type": "voice.text",
+                    "data": {"message": "Quiero una Burger Doble con Sprite"},
+                })
+                transcript = ws.receive_json()
+                response = ws.receive_json()
+
+        self.assertEqual(transcript["type"], "voice.transcript")
+        self.assertTrue(transcript["data"]["final"])
+        self.assertEqual(response["type"], "assistant.text")
+        self.assistant.send_message.assert_called_once_with(
+            "Quiero una Burger Doble con Sprite",
+        )
+        factory.assert_not_called()
+
+    def test_web_speech_rejects_pcm_backend_turn(self) -> None:
+        """Evita abrir simultáneamente Web Speech API y el AudioWorklet."""
+        with patch(
+            "backend.api.conversation_socket.get_stt_provider",
+            return_value="web_speech_browser",
+        ):
+            with self.client.websocket_connect(self.url) as ws:
+                ws.receive_json()
+                ws.send_json({"type": "audio.start"})
+                error = ws.receive_json()
+
+        self.assertEqual(error["type"], "client.error")
+        self.assertIn("navegador", error["data"]["message"])
         self.assistant.send_message.assert_not_called()
 
     def test_cancel_preserves_cart_and_allows_text(self) -> None:

@@ -523,3 +523,35 @@ aislamiento de la captura y que el texto final recorra el mismo intérprete; no
 descargan el modelo, no llaman Hugging Face y no miden audio real. Antes de
 elegirlo para una demostración o kiosco debe compararse contra Gemini y Vosk con
 frases del menú, español rioplatense, QR, Sprite, ruido y el hardware real.
+
+## 20. Incorporar Web Speech API como STT controlado por el navegador
+
+**Estado:** adoptada e implementada con simulaciones el 21/09/2026.
+
+**Contexto:** el ejemplo técnico recibido incluye `SpeechRecognition` como ruta
+principal y la prueba con Whisper Tiny mostró baja precisión para términos del
+menú. Web Speech API puede entregar resultados provisionales y finales sin
+instalar otro modelo en el backend.
+
+**Alternativas consideradas:** mantener solo Whisper, Vosk y Gemini; instalar un
+Whisper mayor en backend; o sumar Web Speech API como otro capturador exclusivo
+del frontend. Un Whisper mayor permitiría controlar el modelo, pero exige más
+recursos y otra implementación. Web Speech API permite comparar rápidamente el
+reconocimiento disponible en el navegador sin cambiar el dominio.
+
+**Decisión adoptada:** `STT_PROVIDER=web_speech_browser` crea
+`BrowserSpeechApiInput`. La clase usa `SpeechRecognition` o
+`webkitSpeechRecognition`, solicita `SPEECH_API_LANGUAGE`, muestra hipótesis y
+publica solo texto final mediante `voice.text`. `conversation_socket.py` acepta
+ese evento para ambos STT de navegador y rechaza PCM. No se expone una variable
+de modelo porque la API no permite seleccionarlo.
+
+**Consecuencias:** menú, LLM, tools y `OrderService` permanecen iguales. No se
+necesita una API key adicional ni se descarga un modelo elegido por el proyecto.
+La implementación concreta, la calidad y la posible transmisión del audio a un
+servicio remoto quedan bajo control del navegador.
+
+**Límites:** la API tiene compatibilidad desigual y no garantiza funcionamiento
+offline. Las pruebas automáticas simulan resultados nativos; no validan el motor
+real, el micrófono, el español rioplatense ni términos como Sprite y QR. Debe
+probarse manualmente en el mismo navegador y equipo previstos para la demo.

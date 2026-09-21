@@ -140,6 +140,10 @@ class BrowserVoiceTests(unittest.TestCase):
             patch(
                 "backend.api.conversation_socket.get_public_stt_configuration",
                 return_value={"provider": "gemini"},
+            ), \
+            patch(
+                "backend.api.conversation_socket.get_stt_provider",
+                return_value="gemini",
             ):
             thread = threading.Thread(target=server.run, kwargs={"sockets": [listener]}, daemon=True)
             thread.start()
@@ -311,6 +315,44 @@ class BrowserVoiceTests(unittest.TestCase):
                             }
                         """)
                         self.assertEqual(whisper_worker_result, "texto local simulado")
+                        web_speech_result = page.evaluate("""
+                            async () => {
+                                class FakeSpeechRecognition {
+                                    start() {
+                                        queueMicrotask(() => {
+                                            const result = [{ transcript: 'texto nativo simulado' }];
+                                            result.isFinal = true;
+                                            this.onresult?.({ resultIndex: 0, results: [result] });
+                                            this.onend?.();
+                                        });
+                                    }
+                                    stop() { this.onend?.(); }
+                                    abort() {}
+                                }
+                                const original = window.SpeechRecognition;
+                                window.SpeechRecognition = FakeSpeechRecognition;
+                                try {
+                                    const { BrowserSpeechApiInput } = await import(
+                                        '/static/web-speech-browser.js?v=20260921-1'
+                                    );
+                                    const input = new BrowserSpeechApiInput({
+                                        language: 'es-AR',
+                                        onProgress: () => {},
+                                        onError: () => {},
+                                        onSpeechEnded: () => {},
+                                    });
+                                    await input.prepare();
+                                    input.start();
+                                    await new Promise(resolve => setTimeout(resolve, 0));
+                                    const text = await input.finish();
+                                    input.dispose();
+                                    return text;
+                                } finally {
+                                    window.SpeechRecognition = original;
+                                }
+                            }
+                        """)
+                        self.assertEqual(web_speech_result, "texto nativo simulado")
                         session_id = next(iter(set(api.sessions) - previous))
                         current_socket = api.websocket_manager.connections[session_id]
                         close_future = asyncio.run_coroutine_threadsafe(

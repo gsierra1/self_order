@@ -114,6 +114,19 @@ def _get_stt_label(audio: SpeechToText) -> str:
     return labels.get(audio.provider_name, audio.provider_name.capitalize())
 
 
+def _is_browser_stt_provider(provider: str) -> bool:
+    """Indica si el proveedor transcribe dentro del navegador.
+
+    Args:
+        provider: Identificador normalizado de ``STT_PROVIDER``.
+
+    Returns:
+        ``True`` para proveedores que envían texto final mediante
+        ``voice.text`` y nunca transmiten PCM al backend.
+    """
+    return provider in {"whisper_browser", "web_speech_browser"}
+
+
 async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) -> None:
     """Recibe turnos, publica resultados y limpia audio/conexión al desconectar.
 
@@ -375,13 +388,14 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                 log_event("INFO", "voice.turn_transcribed", session_id=session_id, transcript_length=len(text))
                 audio.processing_order = True
             elif is_browser_voice:
+                browser_provider = get_stt_provider()
                 await publish("voice.transcript", {"text": text, "final": True})
                 log_event(
                     "INFO",
                     "voice.turn_transcribed",
                     session_id=session_id,
                     transcript_length=len(text or ""),
-                    provider="whisper_browser",
+                    provider=browser_provider,
                 )
             await execute(text)
             return False
@@ -481,11 +495,12 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     raise ValueError("Tipo de evento no soportado.")
                 if runtime.service.session.state == SessionState.CONFIRMED:
                     raise ValueError("El pedido ya fue confirmado.")
-                if event_type == "audio.start" and get_stt_provider() == "whisper_browser":
+                stt_provider = get_stt_provider()
+                if event_type == "audio.start" and _is_browser_stt_provider(stt_provider):
                     raise ValueError(
-                        "Whisper local se prepara en el navegador; no envía audio al backend."
+                        "El STT seleccionado se ejecuta en el navegador; no envía audio al backend."
                     )
-                if event_type == "voice.text" and get_stt_provider() != "whisper_browser":
+                if event_type == "voice.text" and not _is_browser_stt_provider(stt_provider):
                     raise ValueError(
                         "La transcripción local no coincide con el proveedor de voz configurado."
                     )

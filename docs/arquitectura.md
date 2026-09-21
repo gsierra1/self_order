@@ -512,6 +512,11 @@ intérprete LLM. La configuración pública del modelo se envía en
 el `AudioWorklet` de Gemini/Vosk, por lo que nunca hay dos capturas del mismo
 micrófono.
 
+`STT_PROVIDER=web_speech_browser` reutiliza esa frontera de texto final mediante
+`BrowserSpeechApiInput`. El navegador controla el motor de reconocimiento; el
+proyecto solo publica `SPEECH_API_LANGUAGE` y no inventa una variable de modelo.
+Su audio tampoco llega al backend de la aplicación.
+
 Si se configura un proveedor futuro antes de agregar su adaptador, la fábrica
 muestra un error explícito y no intenta leer claves de otro proveedor. Así una
 combinación no queda aparentemente activa cuando en realidad no fue
@@ -526,6 +531,7 @@ implementada.
 | `STT_PROVIDER=gemini`, `LLM_PROVIDER=openai` | `GEMINI_API_KEY` y `OPENAI_API_KEY` | `GEMINI_TRANSCRIPTION_MODEL`, `OPENAI_CHAT_MODEL` |
 | `STT_PROVIDER=vosk`, `LLM_PROVIDER=groq` | `VOSK_MODEL_PATH` y `GROQ_API_KEY` | Ruta de modelo Vosk, `GROQ_CHAT_MODEL` |
 | `STT_PROVIDER=whisper_browser`, `LLM_PROVIDER=groq` | `GROQ_API_KEY`; Whisper no requiere clave | `WHISPER_BROWSER_MODEL`, `WHISPER_BROWSER_DEVICE`, `GROQ_CHAT_MODEL` |
+| `STT_PROVIDER=web_speech_browser`, `LLM_PROVIDER=groq` | `GROQ_API_KEY`; Web Speech API no requiere clave propia | `SPEECH_API_LANGUAGE`, `GROQ_CHAT_MODEL`; no existe modelo seleccionable |
 | Gemini + LLM futuro | `GEMINI_API_KEY` y la clave del LLM elegido al implementar su adaptador | Modelo Gemini STT y variable del LLM futuro |
 | STT futuro + Gemini | Credencial o modelo local del STT y `GEMINI_API_KEY` | Variable STT futura y `GEMINI_CHAT_MODEL` |
 | Ambos futuros | Solo credenciales o archivos de los proveedores seleccionados | Variables propias de los adaptadores |

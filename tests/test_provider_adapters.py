@@ -195,6 +195,25 @@ class ProviderFactoryTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "navegador"):
                 create_speech_to_text("session-test")
 
+    def test_web_speech_exposes_language_without_model_or_key(self) -> None:
+        """Publica el idioma de Web Speech API sin inventar un modelo configurable."""
+        with patch.dict(os.environ, {
+            "STT_PROVIDER": "web_speech_browser",
+            "SPEECH_API_LANGUAGE": "es-AR",
+        }, clear=False):
+            configuration = get_public_stt_configuration()
+
+        self.assertEqual(configuration, {
+            "provider": "web_speech_browser",
+            "language": "es-AR",
+        })
+
+    def test_web_speech_is_not_constructed_as_a_backend_stt_adapter(self) -> None:
+        """Impide abrir PCM cuando Web Speech API controla el micrófono."""
+        with patch.dict(os.environ, {"STT_PROVIDER": "web_speech_browser"}, clear=False):
+            with self.assertRaisesRegex(RuntimeError, "navegador"):
+                create_speech_to_text("session-test")
+
     def test_llm_prompts_forbid_clarifications_absent_from_catalog(self) -> None:
         """Impide que los intérpretes inventen variantes al pedir una aclaración."""
         service = OrderService(load_menu("config/menu.json"), Session())
