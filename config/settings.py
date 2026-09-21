@@ -26,6 +26,27 @@ def get_stt_provider() -> str:
     return _get_provider("STT_PROVIDER", "gemini")
 
 
+def get_stt_transport(provider: str | None = None) -> str:
+    """Determina cómo llega la voz al backend para el proveedor seleccionado.
+
+    Args:
+        provider: Proveedor normalizado que se desea consultar. Si se omite,
+            utiliza ``STT_PROVIDER``.
+
+    Returns:
+        ``browser_text`` si el navegador transcribe y envía texto final;
+        ``backend_pcm`` si el backend recibe fragmentos de audio.
+    """
+    selected_provider = provider or get_stt_provider()
+    transports = {
+        "gemini": "backend_pcm",
+        "vosk": "backend_pcm",
+        "whisper_browser": "browser_text",
+        "web_speech_browser": "browser_text",
+    }
+    return transports.get(selected_provider, "backend_pcm")
+
+
 def get_llm_provider() -> str:
     """Obtiene el proveedor configurado para interpretar pedidos.
 
@@ -104,11 +125,14 @@ def get_public_stt_configuration() -> dict[str, str]:
     """Construye la configuración de voz segura que puede recibir el navegador.
 
     Returns:
-        Proveedor de STT y la configuración pública específica del capturador
-        de navegador seleccionado. No incorpora claves ni rutas privadas.
+        Proveedor, transporte y configuración pública específica del capturador
+        seleccionado. No incorpora claves ni rutas privadas.
     """
     provider = get_stt_provider()
-    configuration = {"provider": provider}
+    configuration = {
+        "provider": provider,
+        "transport": get_stt_transport(provider),
+    }
     if provider == "whisper_browser":
         configuration.update({
             "model": get_whisper_browser_model(),

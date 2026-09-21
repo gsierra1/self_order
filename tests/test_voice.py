@@ -386,6 +386,7 @@ class ConversationTests(unittest.TestCase):
         """
         configuration = {
             "provider": "whisper_browser",
+            "transport": "browser_text",
             "model": "onnx-community/whisper-tiny",
             "device": "auto",
         }
@@ -419,8 +420,11 @@ class ConversationTests(unittest.TestCase):
     def test_browser_whisper_rejects_pcm_backend_turn(self) -> None:
         """Evita que Whisper local y el AudioWorklet abran el micrófono a la vez."""
         with patch(
-            "backend.api.conversation_socket.get_stt_provider",
-            return_value="whisper_browser",
+            "backend.api.conversation_socket.get_public_stt_configuration",
+            return_value={
+                "provider": "whisper_browser",
+                "transport": "browser_text",
+            },
         ):
             with self.client.websocket_connect(self.url) as ws:
                 ws.receive_json()
@@ -435,6 +439,7 @@ class ConversationTests(unittest.TestCase):
         """Acepta el texto final nativo sin abrir un transcriptor de backend."""
         configuration = {
             "provider": "web_speech_browser",
+            "transport": "browser_text",
             "language": "es-AR",
         }
         with patch(
@@ -467,8 +472,11 @@ class ConversationTests(unittest.TestCase):
     def test_web_speech_rejects_pcm_backend_turn(self) -> None:
         """Evita abrir simultáneamente Web Speech API y el AudioWorklet."""
         with patch(
-            "backend.api.conversation_socket.get_stt_provider",
-            return_value="web_speech_browser",
+            "backend.api.conversation_socket.get_public_stt_configuration",
+            return_value={
+                "provider": "web_speech_browser",
+                "transport": "browser_text",
+            },
         ):
             with self.client.websocket_connect(self.url) as ws:
                 ws.receive_json()

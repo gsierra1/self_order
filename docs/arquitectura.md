@@ -48,8 +48,10 @@ es, por sí sola, evidencia de que un pedido se haya modificado.
 | `backend/domain/session.py` | `Session`: UUID, carrito independiente y estados `ACTIVE`, `PAYMENT_PENDING` y `CONFIRMED`. |
 | `backend/services/order_service.py` | Validación y mutación mediante `add_item`, `remove_item`, `adjust_quantity`, `change_modifier`, `replace_item`, `clear_cart`, `prepare_payment`, `select_payment_method`, `return_to_payment_methods`, `return_to_order` y `complete_payment`; consulta mediante `get_cart`. |
 | `backend/ai/tools.py` | Fábricas `create_*_tool`: crean funciones ligadas al servicio de una sesión y convierten resultados a diccionarios para el LLM configurado. Incluye `clear_cart` para vaciar el carrito en una sola operación. |
-| `backend/ai/order_tools_runtime.py` | Comparte instrucciones, ejecución segura, detección de mutaciones y sanitización de respuestas entre proveedores; transforma tablas Markdown del carrito en listas legibles. |
+| `backend/ai/order_tool_specs.py` | Define una sola vez los nombres, descripciones y JSON Schema neutrales de las tools; cada adaptador los traduce al formato de su SDK. |
+| `backend/ai/order_tools_runtime.py` | Construye la única instrucción de sistema común, liga las tools a `OrderService` y centraliza validación, ejecución ordenada, detección de mutaciones, respuestas posteriores y sanitización. |
 | `backend/ai/contracts.py` | Contratos `SpeechToText` y `OrderInterpreter`, sin dependencia de menú, carrito ni pagos. |
+| `backend/ai/pcm_streaming_turn.py` | `PcmStreamingSpeechToText`: cola, límites, finalización, cancelación y cierre compartidos por los STT que reciben PCM en el backend. |
 | `backend/ai/gemini_transcriber.py` | `GeminiLiveTranscriber`: implementación Gemini del contrato STT. |
 | `backend/ai/vosk_transcriber.py` | `VoskTranscriber`: implementación STT local que reutiliza un modelo indicado por `VOSK_MODEL_PATH`. |
 | `backend/ai/gemini_llm_interpreter.py` | `GeminiOrderInterpreter`: implementación Gemini de `OrderInterpreter`, conservada para `LLM_PROVIDER=gemini`. |
@@ -75,6 +77,16 @@ El dominio no importa Gemini, FastAPI ni el frontend. El servicio sí depende de
 logger y de un callback opcional; la separación es útil pero no constituye una
 arquitectura hexagonal completa con todos sus puertos formalizados.
 
+`OrderToolsRuntime.build_system_instruction()` es la única fuente de las reglas
+conversacionales y transaccionales comunes. En cada sesión construye el texto con
+el catálogo vigente, incluidos productos, aliases, precios, disponibilidad,
+grupos de modificadores, obligatoriedad y opciones. `GeminiOrderInterpreter` lo
+entrega como `system_instruction` de Gemini; `OpenAIOrderInterpreter` lo agrega
+como mensaje `system`; `GroqOrderInterpreter` hereda este último flujo. Los
+adaptadores conservan el SDK, la traducción del formato de function calling y
+los errores propios de cada proveedor, pero no mantienen copias del prompt, los
+metadatos, la validación ni la ejecución común de las tools.
+
 ## Recorrido de un pedido escrito
 
 1. Al cargar la página, `createSession()` llama a `POST /api/sessions`.
@@ -84,13 +96,14 @@ arquitectura hexagonal completa con todos sus puertos formalizados.
 4. La API ejecuta `assistant.send_message()` mediante `asyncio.to_thread()` para
    no ejecutar la llamada síncrona al LLM configurado en el event loop del WebSocket.
 5. El LLM recibe reglas y catálogo. Puede responder directamente o pedir una tool.
-6. El orquestador verifica el nombre, ejecuta la función autorizada y devuelve
-   su resultado al LLM. `ValueError` de validación se convierte en un resultado
-   estructurado que permite al modelo explicar el problema.
+6. `OrderToolsRuntime` verifica el nombre y las repeticiones y ejecuta la función
+   autorizada. `ValueError` se convierte en un resultado estructurado. Si no hubo
+   mutación, el adaptador puede devolverlo al LLM para obtener una aclaración.
 7. Una mutación válida llama a `_log_cart_updated()` y a `_emit_event()`.
    El callback programa la publicación del snapshot por WebSocket.
 8. `renderCart()` actualiza productos e importe a partir de ese snapshot. La
-   respuesta completa del LLM llega aparte como `assistant.text`.
+   respuesta final, generada por el LLM o por el runtime, llega aparte como
+   `assistant.text`.
 
 El cambio de carrito puede llegar antes de la respuesta textual final. No hay
 streaming de tokens de respuesta ni procesamiento parcial de pedidos hablados.
@@ -101,12 +114,12 @@ como `una unidad`, separa modificadores obligatorios y agrupa los adicionales
 como `Extras`. El resumen omite precios por línea, que ya están en el carrito, y
 comunica una sola vez el total y las opciones para continuar.
 
-Con los adaptadores compatibles con Chat Completions, como Groq y OpenAI, una
-mutación válida ya no genera una segunda llamada al LLM solo para redactar la
-confirmación. `OrderToolsRuntime.get_post_mutation_response()` construye esa
-respuesta desde el estado validado, por lo que el turno termina apenas concluyen
-las tools solicitadas. Gemini conserva su protocolo actual de respuesta de función
-antes de cerrar el turno.
+En Gemini, OpenAI y Groq, una mutación válida no genera una segunda llamada al LLM
+solo para redactar la confirmación. `OrderToolsRuntime.get_post_mutation_response()`
+construye la misma respuesta desde el estado validado, por lo que el turno termina
+apenas concluyen las tools solicitadas. Los resultados sin mutación, como una
+consulta o una validación fallida, sí pueden volver al proveedor para completar
+la explicación o pedir el dato faltante.
 
 La interfaz administra además la inactividad sin consultar al LLM. Después de
 un mensaje escrito enviado o de una transcripción final de voz,
@@ -501,6 +514,14 @@ construye respectivamente `GeminiLiveTranscriber` o `VoskTranscriber`. Para chat
 Los nombres históricos `LiveTranscriber` y `OrderConversationOrchestrator`
 no se conservan en el código actual: los módulos y clases explícitos identifican
 proveedor y tipo de IA. El código de borde depende de los contratos.
+
+Gemini y Vosk heredan de `PcmStreamingSpeechToText`, que mantiene una única
+implementación de la cola acotada, los límites de fragmento y duración, el final
+del audio, la cancelación segura y el cierre. El evento `connection.ready`
+publica además `voice.transport`: `backend_pcm` indica que el navegador debe
+enviar audio, y `browser_text` que debe enviar solamente `voice.text`. Backend y
+frontend deciden la ruta mediante ese atributo, sin repetir una lista de
+proveedores de navegador.
 
 `STT_PROVIDER=whisper_browser` es una tercera ruta implementada. No se crea en
 la fábrica porque el audio no atraviesa el backend: `BrowserWhisperInput` y

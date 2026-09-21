@@ -46,9 +46,10 @@ class OpenAIOrderInterpreter(OrderInterpreter):
         self.runtime = OrderToolsRuntime(service)
         self.available_tools = self.runtime.available_tools
         self.client = self._create_client()
+        self.system_instruction = self.runtime.build_system_instruction()
         self.messages = [{
             "role": "system",
-            "content": self.runtime.build_system_instruction(),
+            "content": self.system_instruction,
         }]
         log_event(
             "INFO",
@@ -73,79 +74,22 @@ class OpenAIOrderInterpreter(OrderInterpreter):
         return create_openai_client()
 
     def _tool_definitions(self) -> list[dict]:
-        """Describe las tools autorizadas con el esquema de OpenAI.
+        """Traduce el catálogo neutral de tools al formato de OpenAI.
 
         Returns:
             Lista de definiciones JSON para Chat Completions.
         """
-        string_map = {
-            "type": "object",
-            "additionalProperties": {"type": "string"},
-        }
         return [
-            self._function("add_item", "Agrega un producto completo al carrito.", {
-                "product_id": {"type": "string"},
-                "quantity": {"type": "integer", "minimum": 1},
-                "selected_modifiers": string_map,
-            }, ["product_id"]),
-            self._function("adjust_quantity", "Suma o resta unidades de una línea sin eliminarla completa.", {
-                "line_id": {"type": "integer"},
-                "delta": {"type": "integer", "description": "Variación relativa; -1 quita una unidad."},
-            }, ["line_id", "delta"]),
-            self._function("get_cart", "Consulta el carrito validado.", {}, []),
-            self._function("change_modifier", "Cambia o quita un modificador de una linea.", {
-                "line_id": {"type": "integer"},
-                "modifier_group_id": {"type": "string"},
-                "option_id": {"type": ["string", "null"]},
-            }, ["line_id", "modifier_group_id"]),
-            self._function("replace_item", "Reemplaza una linea por otro producto.", {
-                "line_id": {"type": "integer"},
-                "new_product_id": {"type": "string"},
-                "selected_modifiers": string_map,
-            }, ["line_id", "new_product_id"]),
-            self._function("remove_item", "Elimina una linea del carrito.", {
-                "line_id": {"type": "integer"},
-            }, ["line_id"]),
-            self._function("clear_cart", "Elimina todas las lineas del carrito en una sola operacion.", {}, []),
-            self._function("confirm_order", "Prepara el pedido para seleccionar pago.", {}, []),
-            self._function("select_payment_method", "Selecciona QR, tarjeta o pago en caja.", {
-                "method": {"type": "string", "enum": ["QR", "CARD", "CASH"]},
-            }, ["method"]),
-            self._function("return_to_order", "Vuelve a editar el carrito desde pago.", {}, []),
-            self._function("return_to_payment_methods", "Descarta el método elegido y vuelve al selector de pago.", {}, []),
-        ]
-
-    def _function(
-        self,
-        name: str,
-        description: str,
-        properties: dict,
-        required: list[str],
-    ) -> dict:
-        """Construye una definicion de function calling de OpenAI.
-
-        Args:
-            name: Nombre autorizado de la tool.
-            description: Descripcion enviada al modelo.
-            properties: Parametros JSON Schema de la tool.
-            required: Parametros obligatorios del esquema.
-
-        Returns:
-            Definicion compatible con Chat Completions.
-        """
-        return {
-            "type": "function",
-            "function": {
-                "name": name,
-                "description": description,
-                "parameters": {
-                    "type": "object",
-                    "properties": properties,
-                    "required": required,
-                    "additionalProperties": False,
+            {
+                "type": "function",
+                "function": {
+                    "name": spec.name,
+                    "description": spec.description,
+                    "parameters": spec.json_schema(),
                 },
-            },
-        }
+            }
+            for spec in self.runtime.tool_specs
+        ]
 
     def _request(
         self,
@@ -348,16 +292,16 @@ class OpenAIOrderInterpreter(OrderInterpreter):
                         f"{self.provider_label} devolvio argumentos JSON invalidos."
                     ) from exc
                 calls.append(SimpleNamespace(name=call.function.name, args=arguments, call_id=call.id))
-            self.runtime.validate_calls(calls, executed_calls)
-            for call in calls:
-                signature = (call.name, json.dumps(call.args, sort_keys=True, ensure_ascii=False))
-                executed_calls.add(signature)
-                result = self.runtime.execute(call)
+            executions = self.runtime.execute_calls(calls, executed_calls)
+            for execution in executions:
+                call = execution.call
                 last_tool = call.name
-                transaction_applied = transaction_applied or self.runtime.did_mutate(call.name, result)
+                transaction_applied = (
+                    transaction_applied or execution.did_mutate
+                )
                 self.messages.append({
                     "role": "tool", "tool_call_id": call.call_id,
-                    "content": json.dumps(result, ensure_ascii=False),
+                    "content": json.dumps(execution.result, ensure_ascii=False),
                 })
             if transaction_applied:
                 response_text = self.runtime.get_post_mutation_response(last_tool)

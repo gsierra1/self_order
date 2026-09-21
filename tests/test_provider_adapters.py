@@ -8,10 +8,13 @@ from unittest.mock import ANY, Mock, patch
 from backend.ai.contracts import OrderInterpreter, SpeechToText, VoiceEventPublisher
 from backend.ai.factories import create_order_interpreter, create_speech_to_text
 from backend.ai.gemini_llm_interpreter import GeminiOrderInterpreter
+from backend.ai.gemini_transcriber import GeminiLiveTranscriber
 from backend.ai.groq_llm_interpreter import GroqOrderInterpreter
 from backend.ai.list_groq_models import list_groq_models
 from backend.ai.openai_llm_interpreter import OpenAIOrderInterpreter
 from backend.ai.order_tools_runtime import OrderToolsRuntime
+from backend.ai.pcm_streaming_turn import PcmStreamingSpeechToText
+from backend.ai.vosk_transcriber import VoskTranscriber
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
 from backend.services.order_service import OrderService
@@ -19,6 +22,7 @@ from config.settings import (
     get_llm_provider,
     get_public_stt_configuration,
     get_stt_provider,
+    get_stt_transport,
 )
 
 
@@ -185,6 +189,7 @@ class ProviderFactoryTests(unittest.TestCase):
 
         self.assertEqual(configuration, {
             "provider": "whisper_browser",
+            "transport": "browser_text",
             "model": "onnx-community/whisper-tiny",
             "device": "webgpu",
         })
@@ -205,6 +210,7 @@ class ProviderFactoryTests(unittest.TestCase):
 
         self.assertEqual(configuration, {
             "provider": "web_speech_browser",
+            "transport": "browser_text",
             "language": "es-AR",
         })
 
@@ -214,20 +220,146 @@ class ProviderFactoryTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "navegador"):
                 create_speech_to_text("session-test")
 
-    def test_llm_prompts_forbid_clarifications_absent_from_catalog(self) -> None:
-        """Impide que los intérpretes inventen variantes al pedir una aclaración."""
+    def test_stt_transport_is_defined_once_for_backend_and_browser(self) -> None:
+        """Clasifica el transporte sin repetir listas entre backend y frontend."""
+        self.assertEqual(get_stt_transport("gemini"), "backend_pcm")
+        self.assertEqual(get_stt_transport("vosk"), "backend_pcm")
+        self.assertEqual(get_stt_transport("whisper_browser"), "browser_text")
+        self.assertEqual(get_stt_transport("web_speech_browser"), "browser_text")
+
+    def test_pcm_adapters_share_the_same_turn_lifecycle(self) -> None:
+        """Confirma que Gemini y Vosk heredan cola, límites y cancelación."""
+        self.assertTrue(issubclass(GeminiLiveTranscriber, PcmStreamingSpeechToText))
+        self.assertTrue(issubclass(VoskTranscriber, PcmStreamingSpeechToText))
+
+    def test_common_llm_instruction_preserves_catalog_and_transaction_rules(self) -> None:
+        """Representa catálogo y reglas consolidadas sin depender del proveedor."""
         service = OrderService(load_menu("config/menu.json"), Session())
-        shared_instruction = OrderToolsRuntime(service).build_system_instruction()
-        gemini_interpreter = GeminiOrderInterpreter.__new__(GeminiOrderInterpreter)
-        gemini_interpreter.service = service
-        gemini_instruction = gemini_interpreter._build_system_instruction()
+        double = service.menu.get_product("BURGER_DOBLE")
+        double.available = False
+        drink = service.menu.get_product("BURGER_CLASICA").modifier_groups[0]
+        drink.options[0].available = False
 
-        for instruction in (shared_instruction, gemini_instruction):
-            self.assertIn("variantes ni opciones", instruction)
-            self.assertIn("grupos obligatorios", instruction)
-            self.assertIn("distinciones", instruction)
-            self.assertIn("Agua [id=WATER]", instruction)
+        instruction = OrderToolsRuntime(service).build_system_instruction()
 
+        self.assertIn("Burger Clásica: product_id=BURGER_CLASICA, ARS 8500, disponible", instruction)
+        self.assertIn("hamburguesa simple", instruction)
+        self.assertIn("Burger Doble: product_id=BURGER_DOBLE, ARS 10500, agotado", instruction)
+        self.assertIn("Bebida [grupo=drink] (obligatorio)", instruction)
+        self.assertIn("Coca-Cola [id=COCA] (+ARS 0, agotado)", instruction)
+        self.assertIn("Extra de tomate [grupo=extra_tomato] (opcional)", instruction)
+        self.assertIn("productos u opciones agotados", instruction)
+        self.assertIn("grupo obligatorio no tiene opciones disponibles", instruction)
+        self.assertIn("option_id=null", instruction)
+        self.assertIn("referencia a un producto o línea es ambigua", instruction)
+        self.assertIn("variantes ni opciones", instruction)
+        self.assertIn("distinciones ausentes", instruction)
+        self.assertIn("promociones", instruction)
+        self.assertIn("no cierra la sesión ni confirma", instruction)
+        self.assertIn("no menciones terminales", instruction)
+        self.assertIn("nombres visibles del catálogo", instruction)
+
+    def test_all_llm_providers_receive_the_same_common_instruction(self) -> None:
+        """Entrega exactamente el mismo prompt común a Gemini, OpenAI y Groq."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        gemini_client = Mock()
+        gemini_client.chats.create.return_value = Mock()
+        openai_client = Mock()
+        groq_client = Mock()
+        with patch(
+            "backend.ai.gemini_llm_interpreter.create_gemini_client",
+            return_value=gemini_client,
+        ), patch(
+            "backend.ai.openai_llm_interpreter.create_openai_client",
+            return_value=openai_client,
+        ), patch(
+            "backend.ai.groq_llm_interpreter.create_groq_client",
+            return_value=groq_client,
+        ):
+            gemini = GeminiOrderInterpreter(service, model="gemini-test")
+            openai = OpenAIOrderInterpreter(service, model="openai-test")
+            groq = GroqOrderInterpreter(service, model="groq-test")
+
+        expected = OrderToolsRuntime(service).build_system_instruction()
+        self.assertEqual(gemini.system_instruction, expected)
+        self.assertEqual(openai.system_instruction, expected)
+        self.assertEqual(groq.system_instruction, expected)
+        self.assertEqual(openai.messages[0]["content"], expected)
+        self.assertEqual(groq.messages[0]["content"], expected)
+        gemini_config = gemini_client.chats.create.call_args.kwargs["config"]
+        self.assertEqual(gemini_config.system_instruction, expected)
+        self.assertFalse(hasattr(GeminiOrderInterpreter, "_build_system_instruction"))
+
+    def test_common_prompt_change_reaches_every_llm_provider(self) -> None:
+        """Demuestra que cambiar el runtime alcanza a los tres adaptadores."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        marker = "INSTRUCCION COMUN MODIFICADA"
+        gemini_client = Mock()
+        gemini_client.chats.create.return_value = Mock()
+        with patch.object(
+            OrderToolsRuntime,
+            "build_system_instruction",
+            return_value=marker,
+        ), patch(
+            "backend.ai.gemini_llm_interpreter.create_gemini_client",
+            return_value=gemini_client,
+        ), patch(
+            "backend.ai.openai_llm_interpreter.create_openai_client",
+            return_value=Mock(),
+        ), patch(
+            "backend.ai.groq_llm_interpreter.create_groq_client",
+            return_value=Mock(),
+        ):
+            instructions = (
+                GeminiOrderInterpreter(service, model="gemini-test").system_instruction,
+                OpenAIOrderInterpreter(service, model="openai-test").system_instruction,
+                GroqOrderInterpreter(service, model="groq-test").system_instruction,
+            )
+
+        self.assertEqual(instructions, (marker, marker, marker))
+
+    def test_gemini_and_openai_translate_the_same_neutral_tool_specs(self) -> None:
+        """Compara nombres, descripciones y parámetros publicados por ambos SDK."""
+        service = OrderService(load_menu("config/menu.json"), Session())
+        gemini_client = Mock()
+        gemini_client.chats.create.return_value = Mock()
+        with patch(
+            "backend.ai.gemini_llm_interpreter.create_gemini_client",
+            return_value=gemini_client,
+        ), patch(
+            "backend.ai.openai_llm_interpreter.create_openai_client",
+            return_value=Mock(),
+        ):
+            gemini = GeminiOrderInterpreter(service, model="gemini-test")
+            openai = OpenAIOrderInterpreter(service, model="openai-test")
+
+        gemini_config = gemini_client.chats.create.call_args.kwargs["config"]
+        declarations = gemini_config.tools[0].function_declarations
+        gemini_specs = {
+            declaration.name: (
+                declaration.description,
+                declaration.parameters_json_schema,
+            )
+            for declaration in declarations
+        }
+        openai_specs = {
+            definition["function"]["name"]: (
+                definition["function"]["description"],
+                definition["function"]["parameters"],
+            )
+            for definition in openai._tool_definitions()
+        }
+
+        self.assertEqual(gemini_specs, openai_specs)
+        self.assertEqual(set(gemini_specs), set(gemini.runtime.available_tools))
+        for duplicated_method in (
+            "_create_tools",
+            "_execute_function_call",
+            "_validate_function_calls",
+            "_did_mutate",
+            "_sanitize_user_text",
+        ):
+            self.assertFalse(hasattr(GeminiOrderInterpreter, duplicated_method))
 
     def test_openai_interpreter_uses_the_same_tool_and_service(self) -> None:
         """OpenAI simulado agrega mediante la tool sin acceder al dominio directo."""

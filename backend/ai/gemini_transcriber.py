@@ -7,7 +7,6 @@ from contextlib import suppress
 from google.genai import errors, types
 
 from backend.ai.contracts import (
-    SpeechToText,
     SpeechToTextConnectionTimeout,
     SpeechToTextFinalizationTimeout,
     VoiceEventPublisher,
@@ -18,11 +17,12 @@ from backend.ai.errors import (
     classify_gemini_transport_error,
 )
 from backend.ai.gemini_client import create_gemini_client
+from backend.ai.pcm_streaming_turn import PcmStreamingSpeechToText
 from backend.logging.event_logger import log_event
 from config.settings import get_transcription_model
 
 
-class GeminiLiveTranscriber(SpeechToText):
+class GeminiLiveTranscriber(PcmStreamingSpeechToText):
     """Implementa SpeechToText con Gemini Live para un único turno explícito y limita audio, espera y recursos."""
 
     provider_name = "gemini"
@@ -33,75 +33,10 @@ class GeminiLiveTranscriber(SpeechToText):
         Args:
             session_id: Identificador de sesión para correlacionar eventos de voz.
         """
-        self.session_id = session_id
-        self.chunks: asyncio.Queue[bytes | None] = asyncio.Queue(maxsize=128)
-        self.ended = False
-        self.byte_count = 0
-        self._processing_order = False
-
-    @property
-    def processing_order(self) -> bool:
-        """Indica si el texto final ya ingresí al intérprete del pedido.
-
-        Returns:
-            True cuando la cancelación no debe interrumpir la interpretación.
-        """
-        return self._processing_order
-
-    @processing_order.setter
-    def processing_order(self, value: bool) -> None:
-        """Registra que el texto final comenzó o terminó de interpretarse.
-
-        Args:
-            value: Estado de procesamiento que debe conservar el turno.
-        """
-        self._processing_order = value
-
-    def cancel(self) -> None:
-        """Descarta el audio pendiente cuando todavía no se interpreta un pedido.
-
-        El WebSocket cancela además la tarea asíncrona; este método deja el
-        estado del adaptador cerrado para evitar que acepte otro fragmento.
-        """
-        if not self.processing_order:
-            self.ended = True
-
-    async def close(self) -> None:
-        """Marca el turno como cerrado; transcribe libera el cliente en su finally."""
-        self.cancel()
-
-    def feed(self, chunk: bytes) -> None:
-        """Encola PCM16 mono a 16 kHz sin bloquear el WebSocket.
-
-        Args:
-            chunk: Fragmento binario con muestras de dos bytes.
-
-        Raises:
-            ValueError: Si el turno terminó, el audio es inválido o excede límites.
-        """
-        if self.ended or not chunk or len(chunk) % 2 or len(chunk) > 32768:
-            raise ValueError("Fragmento de audio inválido o turno finalizado.")
-        self.byte_count += len(chunk)
-        if self.byte_count > 16000 * 2 * 60:
-            raise ValueError("El turno de voz supera los 60 segundos.")
-        try:
-            self.chunks.put_nowait(chunk)
-        except asyncio.QueueFull as exc:
-            raise ValueError("La conexión no permite enviar el audio a tiempo.") from exc
-
-    def finish(self) -> None:
-        """Marca el fin del audio una sola vez, conservando el orden de la cola.
-
-        Raises:
-            ValueError: Si la cola está llena y no se puede finalizar sin perder audio.
-        """
-        if self.ended:
-            return
-        self.ended = True
-        try:
-            self.chunks.put_nowait(None)
-        except asyncio.QueueFull as exc:
-            raise ValueError("No se pudo finalizar el audio; volvé a intentar.") from exc
+        super().__init__(
+            session_id,
+            queue_full_message="La conexión no permite enviar el audio a tiempo.",
+        )
 
     async def transcribe(
         self, publish: VoiceEventPublisher,

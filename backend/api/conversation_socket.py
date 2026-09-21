@@ -114,19 +114,6 @@ def _get_stt_label(audio: SpeechToText) -> str:
     return labels.get(audio.provider_name, audio.provider_name.capitalize())
 
 
-def _is_browser_stt_provider(provider: str) -> bool:
-    """Indica si el proveedor transcribe dentro del navegador.
-
-    Args:
-        provider: Identificador normalizado de ``STT_PROVIDER``.
-
-    Returns:
-        ``True`` para proveedores que envían texto final mediante
-        ``voice.text`` y nunca transmiten PCM al backend.
-    """
-    return provider in {"whisper_browser", "web_speech_browser"}
-
-
 async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) -> None:
     """Recibe turnos, publica resultados y limpia audio/conexión al desconectar.
 
@@ -434,6 +421,7 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
 
     try:
         stt_configuration = get_public_stt_configuration()
+        stt_transport = stt_configuration["transport"]
         await publish("connection.ready", {
             "session_id": session_id,
             "cart": snapshot(runtime.service),
@@ -495,12 +483,11 @@ async def handle_conversation(websocket: WebSocket, runtime, manager, snapshot) 
                     raise ValueError("Tipo de evento no soportado.")
                 if runtime.service.session.state == SessionState.CONFIRMED:
                     raise ValueError("El pedido ya fue confirmado.")
-                stt_provider = get_stt_provider()
-                if event_type == "audio.start" and _is_browser_stt_provider(stt_provider):
+                if event_type == "audio.start" and stt_transport == "browser_text":
                     raise ValueError(
                         "El STT seleccionado se ejecuta en el navegador; no envía audio al backend."
                     )
-                if event_type == "voice.text" and not _is_browser_stt_provider(stt_provider):
+                if event_type == "voice.text" and stt_transport != "browser_text":
                     raise ValueError(
                         "La transcripción local no coincide con el proveedor de voz configurado."
                     )

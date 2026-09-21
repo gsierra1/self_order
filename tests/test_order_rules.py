@@ -15,6 +15,7 @@ from backend.ai.tools import (
 )
 from backend.ai.errors import classify_gemini_api_error
 from backend.ai.gemini_llm_interpreter import GeminiOrderInterpreter
+from backend.ai.order_tools_runtime import OrderToolsRuntime
 from backend.domain.menu import load_menu
 from backend.domain.session import Session
 from backend.services.order_service import OrderService
@@ -168,11 +169,8 @@ class OrderRulesTests(unittest.TestCase):
 
     def test_user_text_hides_internal_modifier_ids_and_dollars(self) -> None:
         """La salida pública usa nombres y moneda argentinos, nunca códigos internos."""
-        orchestrator = GeminiOrderInterpreter.__new__(
-            GeminiOrderInterpreter
-        )
-        orchestrator.service = self.service
-        text = orchestrator._sanitize_user_text(
+        runtime = OrderToolsRuntime(self.service)
+        text = runtime.sanitize_user_text(
             "Elegiste ADD_CHEESE ($9,500) en BURGER_CLASICA; no es USD."
         )
         self.assertEqual(
@@ -354,7 +352,9 @@ class OrderRulesTests(unittest.TestCase):
         )
         orchestrator.service = self.service
         orchestrator.max_tool_rounds = 5
-        orchestrator.available_tools = orchestrator._create_tools()
+        orchestrator.runtime = OrderToolsRuntime(self.service)
+        orchestrator.available_tools = orchestrator.runtime.available_tools
+        orchestrator.chat = Mock()
         first_response = SimpleNamespace(
             function_calls=[
                 SimpleNamespace(
@@ -377,10 +377,7 @@ class OrderRulesTests(unittest.TestCase):
             ],
             text=None,
         )
-        final_response = SimpleNamespace(function_calls=[], text="Listo")
-        orchestrator._send_to_gemini = Mock(
-            side_effect=[first_response, final_response]
-        )
+        orchestrator._send_to_gemini = Mock(return_value=first_response)
 
         response = orchestrator.send_message(
             "Agregá una clásica con queso y Coca, y una doble con Sprite."
@@ -395,7 +392,8 @@ class OrderRulesTests(unittest.TestCase):
         self.assertIn("confirmar el pedido", response)
         self.assertEqual(response.count("¿Querés"), 1)
         self.assertEqual(len(self.service.get_cart().items), 2)
-        self.assertEqual(orchestrator._send_to_gemini.call_count, 2)
+        self.assertEqual(orchestrator._send_to_gemini.call_count, 1)
+        orchestrator.chat.record_history.assert_called_once()
 
     def test_gemini_interpreter_rejects_duplicate_operation_in_batch(self) -> None:
         """No ejecuta un lote que repite exactamente la misma operación."""
@@ -403,6 +401,8 @@ class OrderRulesTests(unittest.TestCase):
             GeminiOrderInterpreter
         )
         orchestrator.service = self.service
+        orchestrator.max_tool_rounds = 5
+        orchestrator.runtime = OrderToolsRuntime(self.service)
         calls = [
             SimpleNamespace(
                 name="add_item",
@@ -413,8 +413,12 @@ class OrderRulesTests(unittest.TestCase):
             )
         ]
 
+        orchestrator._send_to_gemini = Mock(
+            return_value=SimpleNamespace(function_calls=calls + calls, text=None),
+        )
+
         with self.assertRaises(RuntimeError):
-            orchestrator._validate_function_calls(calls + calls, set())
+            orchestrator.send_message("Agregá dos veces lo mismo")
 
         self.assertFalse(self.service.get_cart().items)
 

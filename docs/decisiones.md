@@ -16,7 +16,7 @@ las reglas del negocio y los proveedores de IA.
 `OrderService` valida y cambia objetos de dominio, es la autoridad sobre el pedido.
 De esta manera no permitimos productos o precios inventados.
 
-Las instrucciones de cada adaptador también obligan al intérprete a preguntar
+La instrucción común construida por `OrderToolsRuntime` también obliga al intérprete a preguntar
 solo por grupos obligatorios existentes y a mencionar únicamente opciones del
 catálogo. Esto evita aclaraciones inventadas, como distinguir variantes de una
 opción que el menú modela como única. Es una restricción conversacional del
@@ -29,8 +29,8 @@ es válido y cuánto cuesta».
 El modelo de conversación se configura en el .env mediante la variable del
 proveedor elegido (`GEMINI_CHAT_MODEL`, `GROQ_CHAT_MODEL` u otra equivalente).
 No se cambia automáticamente porque los logs muestran
-que la latencia también puede venir de la red, cuota o la segunda llamada después
-de una tool. La configuración permite comparar modelos con el mismo flujo y
+que la latencia también puede venir de la red, la cuota o ciclos de aclaración
+que no aplicaron una mutación. La configuración permite comparar modelos con el mismo flujo y
 mediciones antes de tomar una decisión.
 
 ## 02. Reemplazar como operación explícita
@@ -555,3 +555,74 @@ servicio remoto quedan bajo control del navegador.
 offline. Las pruebas automáticas simulan resultados nativos; no validan el motor
 real, el micrófono, el español rioplatense ni términos como Sprite y QR. Debe
 probarse manualmente en el mismo navegador y equipo previstos para la demo.
+
+## 21. Unificar instrucciones, tools y cierre de los intérpretes LLM
+
+**Estado:** adoptada e implementada con pruebas automáticas el 21/09/2026.
+
+**Contexto:** OpenAI construía sus instrucciones mediante
+`OrderToolsRuntime.build_system_instruction()` y Groq reutilizaba ese flujo por
+herencia. Gemini conservaba otra construcción dentro de su adaptador. Ambas
+versiones describían el mismo catálogo, pero habían evolucionado con reglas
+distintas de disponibilidad, aclaración, formato y uso de tools. Mantenerlas en
+paralelo permitía que una corrección alcanzara a un proveedor y no a los demás.
+
+**Alternativas consideradas:** conservar prompts separados; extraer un texto
+estático sin acceso al menú; o construir una única instrucción dinámica y dejar
+en cada adaptador solamente su protocolo. Los prompts separados duplicaban
+reglas. Un texto estático no podía representar el catálogo y la disponibilidad
+vigentes de la sesión.
+
+**Decisión adoptada:** `OrderToolsRuntime.build_system_instruction()` es la única
+fuente de reglas y catálogo comunes para Gemini, OpenAI y Groq. Antes de retirar
+la copia de Gemini se incorporaron al runtime sus reglas válidas sobre productos
+agotados, grupos obligatorios sin opciones, aliases, consultas sin mutación,
+modificadores, cantidades relativas, ambigüedad y flujo de pago. Gemini entrega
+el resultado mediante `GenerateContentConfig.system_instruction`; OpenAI lo usa
+como mensaje `system`; Groq reutiliza el flujo de OpenAI.
+
+**Consecuencias:** una modificación del prompt común alcanza a los tres
+proveedores y todos reciben la misma representación de productos, aliases,
+precios, disponibilidad y modificadores. `OrderService` sigue siendo la autoridad
+que valida cualquier operación: compartir instrucciones no convierte al LLM en
+fuente de verdad del pedido.
+
+La consolidación se extendió a `order_tool_specs.py`, que define nombres,
+descripciones y parámetros una sola vez. Gemini traduce esos metadatos a
+`FunctionDeclaration`; OpenAI y Groq a las definiciones de Chat Completions.
+`OrderToolsRuntime` concentra las funciones ligadas a `OrderService`, el rechazo
+de duplicados, la ejecución ordenada, la detección de mutaciones y la
+sanitización. Después de una mutación, los tres proveedores usan la misma
+respuesta determinística y no realizan otra llamada solo para redactar el cierre.
+
+**Límites:** cada SDK todavía necesita traducir y leer su representación de una
+function call. Los errores de transporte también continúan en cada adaptador.
+Las pruebas simulan clientes de los tres proveedores y comparan los esquemas que
+reciben; no demuestran que un modelo remoto vaya a obedecerlos siempre.
+
+## 22. Compartir el ciclo PCM y declarar el transporte de cada STT
+
+**Estado:** adoptada e implementada con pruebas automáticas el 21/09/2026.
+
+**Contexto:** Gemini y Vosk repetían cola, límites, finalización, cancelación y
+cierre del mismo protocolo PCM. Backend y frontend también mantenían listas
+separadas para decidir qué proveedores transcribían dentro del navegador.
+
+**Alternativas consideradas:** conservar la duplicación; crear una clase base
+solo para PCM; o combinar esa clase con un atributo de transporte público. La
+clase base evita que los límites diverjan, mientras el atributo permite agregar
+otro STT de navegador sin modificar condicionales en ambos extremos.
+
+**Decisión adoptada:** `PcmStreamingSpeechToText` implementa el ciclo común y es
+la base de `GeminiLiveTranscriber` y `VoskTranscriber`. `config/settings.py`
+clasifica cada proveedor como `backend_pcm` o `browser_text` y publica el valor
+en `connection.ready`. El WebSocket valida `audio.start` o `voice.text` mediante
+ese valor; el frontend elige la ruta de captura por el mismo atributo.
+
+**Consecuencias:** cambiar límites o reglas de cancelación de PCM requiere una
+sola modificación. Los nombres de proveedor siguen seleccionando el adaptador
+concreto, pero ya no se usan para inferir el transporte en varios archivos.
+
+**Límites:** Whisper y Web Speech API mantienen implementaciones distintas porque
+usan motores y ciclos de captura propios del navegador. Las pruebas verifican el
+enrutamiento y el aislamiento, pero no miden micrófonos ni proveedores reales.

@@ -139,7 +139,10 @@ class BrowserVoiceTests(unittest.TestCase):
             patch("backend.api.conversation_socket.create_speech_to_text", BrowserTranscriber), \
             patch(
                 "backend.api.conversation_socket.get_public_stt_configuration",
-                return_value={"provider": "gemini"},
+                return_value={
+                    "provider": "gemini",
+                    "transport": "backend_pcm",
+                },
             ), \
             patch(
                 "backend.api.conversation_socket.get_stt_provider",

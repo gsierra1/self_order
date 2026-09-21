@@ -10,12 +10,12 @@ from pathlib import Path
 from vosk import KaldiRecognizer, Model
 
 from backend.ai.contracts import (
-    SpeechToText,
     SpeechToTextConfigurationError,
     SpeechToTextFinalizationTimeout,
     VoiceEventPublisher,
 )
 from backend.logging.event_logger import log_event
+from backend.ai.pcm_streaming_turn import PcmStreamingSpeechToText
 
 _MODEL_CACHE: dict[str, Model] = {}
 _MODEL_LOCK = threading.Lock()
@@ -118,7 +118,7 @@ def _normalize_menu_vocabulary(text: str) -> str:
     return normalized
 
 
-class VoskTranscriber(SpeechToText):
+class VoskTranscriber(PcmStreamingSpeechToText):
     """Implementa SpeechToText local con Vosk y un modelo instalado por la persona usuaria."""
 
     provider_name = "vosk"
@@ -130,76 +130,13 @@ class VoskTranscriber(SpeechToText):
             session_id: Identificador de sesión utilizado para correlacionar logs.
             model_path: Directorio local del modelo Vosk seleccionado en .env.
         """
-        self.session_id = session_id
+        super().__init__(
+            session_id,
+            queue_full_message=(
+                "La transcripción local no procesa el audio a tiempo."
+            ),
+        )
         self.model_path = model_path
-        self.chunks: asyncio.Queue[bytes | None] = asyncio.Queue(maxsize=128)
-        self.ended = False
-        self.byte_count = 0
-        self._processing_order = False
-
-    @property
-    def processing_order(self) -> bool:
-        """Indica si el texto final ya ingresó al intérprete del pedido.
-
-        Returns:
-            True si cancelar podría interrumpir una operación; False mientras el
-            turno todavía contiene solo audio o transcripción local pendiente.
-        """
-        return self._processing_order
-
-    @processing_order.setter
-    def processing_order(self, value: bool) -> None:
-        """Actualiza el estado de entrega del texto final al intérprete.
-
-        Args:
-            value: Estado que debe persistir para el turno actual.
-        """
-        self._processing_order = value
-
-    def feed(self, chunk: bytes) -> None:
-        """Encola PCM16 mono de 16 kHz sin bloquear el WebSocket.
-
-        Args:
-            chunk: Fragmento binario con muestras de dos bytes enviado por el
-                navegador.
-
-        Raises:
-            ValueError: Si el turno terminó, el fragmento no es PCM16 válido o
-                excede los límites de duración y cola.
-        """
-        if self.ended or not chunk or len(chunk) % 2 or len(chunk) > 32768:
-            raise ValueError("Fragmento de audio inválido o turno finalizado.")
-        self.byte_count += len(chunk)
-        if self.byte_count > 16000 * 2 * 60:
-            raise ValueError("El turno de voz supera los 60 segundos.")
-        try:
-            self.chunks.put_nowait(chunk)
-        except asyncio.QueueFull as exc:
-            raise ValueError("La transcripción local no procesa el audio a tiempo.") from exc
-
-    def finish(self) -> None:
-        """Marca el final de audio y conserva su posición posterior a los fragmentos.
-
-        Raises:
-            ValueError: Si la cola está llena y no se puede terminar sin perder
-                audio ya recibido.
-        """
-        if self.ended:
-            return
-        self.ended = True
-        try:
-            self.chunks.put_nowait(None)
-        except asyncio.QueueFull as exc:
-            raise ValueError("No se pudo finalizar el audio; volvé a intentar.") from exc
-
-    def cancel(self) -> None:
-        """Descarta audio pendiente mientras el texto final no llegó al pedido.
-
-        Effects:
-            Impide aceptar nuevos fragmentos en este turno sin alterar el carrito.
-        """
-        if not self.processing_order:
-            self.ended = True
 
     async def transcribe(self, publish: VoiceEventPublisher) -> str:
         """Reconoce audio localmente, publica parciales y devuelve texto final.
@@ -288,11 +225,3 @@ class VoskTranscriber(SpeechToText):
             total_duration_ms=round((time.perf_counter() - started_at) * 1000),
         )
         return text
-
-    async def close(self) -> None:
-        """Marca el turno Vosk como cerrado y descarta audio aún no interpretado.
-
-        Effects:
-            Evita que un adaptador finalizado reciba fragmentos posteriores.
-        """
-        self.cancel()

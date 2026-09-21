@@ -2,6 +2,7 @@
 
 import json
 import re
+from dataclasses import dataclass
 from types import SimpleNamespace
 
 from backend.ai.tools import (
@@ -17,9 +18,25 @@ from backend.ai.tools import (
     create_return_to_payment_methods_tool,
     create_select_payment_method_tool,
 )
+from backend.ai.order_tool_specs import ORDER_TOOL_SPECS, OrderToolSpec
 from backend.domain.session import SessionState
 from backend.logging.event_logger import log_event
 from backend.services.order_service import OrderService
+
+
+@dataclass(frozen=True)
+class ToolExecution:
+    """Conserva el resultado común de una tool ya validada y ejecutada.
+
+    Attributes:
+        call: Llamada neutral solicitada por el proveedor.
+        result: Resultado estructurado devuelto por la tool.
+        did_mutate: Indica si la operación cambió el pedido.
+    """
+
+    call: SimpleNamespace
+    result: dict
+    did_mutate: bool
 
 
 class OrderToolsRuntime:
@@ -48,6 +65,35 @@ class OrderToolsRuntime:
             "return_to_payment_methods": create_return_to_payment_methods_tool(service),
         }
 
+    @property
+    def tool_specs(self) -> tuple[OrderToolSpec, ...]:
+        """Expone los metadatos neutrales de las tools autorizadas.
+
+        Returns:
+            Definiciones compartidas que cada adaptador traduce a su SDK.
+        """
+        return ORDER_TOOL_SPECS
+
+    @staticmethod
+    def call_signature(call: SimpleNamespace) -> tuple[str, str]:
+        """Construye una firma estable para detectar repeticiones.
+
+        Args:
+            call: Llamada neutral con nombre y argumentos.
+
+        Returns:
+            Nombre y argumentos JSON ordenados de la operación.
+        """
+        return (
+            call.name,
+            json.dumps(
+                call.args,
+                sort_keys=True,
+                ensure_ascii=False,
+                default=str,
+            ),
+        )
+
     def build_system_instruction(self) -> str:
         """Construye el contexto de menu y reglas valido para cualquier LLM.
 
@@ -64,24 +110,36 @@ class OrderToolsRuntime:
                 catalog.append(f"  - {group.name} [grupo={group.id}] ({'obligatorio' if group.required else 'opcional'}): {options}")
         return """Sos la interfaz conversacional de un autoservicio de pedidos.
 Interpreta al usuario y usa tools solo cuando corresponde.
-No inventes precios, descuentos, disponibilidad, stock, productos, grupos, variantes ni opciones. OrderService, las tools y el CATALOGO ACTUAL son la autoridad.
+No inventes precios, descuentos, promociones, disponibilidad, stock, productos, grupos, variantes ni opciones. OrderService, las tools y el CATALOGO ACTUAL son la autoridad.
+No modifiques directamente ningun dato del pedido.
+No uses add_item, replace_item ni change_modifier con productos u opciones agotados. Informá que existen pero no están disponibles.
+Si un grupo obligatorio no tiene opciones disponibles, explicá que el producto no puede completarse; no pidas una elección imposible.
+Si una opción está agotada, informalo y ofrece solo alternativas disponibles del mismo grupo.
+Interpretá los aliases del catálogo como el producto u opción correspondiente.
 Solo pregunta por grupos obligatorios que existan en el CATALOGO ACTUAL y que el usuario todavia no haya respondido. Al preguntar, ofrece unicamente opciones listadas para ese grupo.
 Si el usuario ya indico un producto y todos sus grupos obligatorios mediante nombres o aliases del catalogo, usa add_item inmediatamente. No preguntes subtipos, presentaciones ni distinciones ausentes del catalogo.
 No agregues ni reemplaces productos con modificadores obligatorios faltantes: pregunta antes.
-No uses add_item para consultar precios o menu. Usa get_cart para consultar el pedido.
-Usa change_modifier para modificar o quitar un adicional opcional y replace_item para cambiar producto.
-Usa adjust_quantity con delta=-1 si la persona pide quitar una unidad de una línea con varias unidades. Usa remove_item solamente si pide eliminar toda la línea y clear_cart para vaciar todo el carrito de una sola vez.
-confirm_order solo prepara pago. En PAYMENT_PENDING usa select_payment_method o return_to_order; no repitas confirm_order.
+Nunca elijas un modificador obligatorio por defecto ni supongas una opción que la persona no indicó.
+Si faltan varios grupos obligatorios, podés preguntarlos juntos. Conservá las elecciones ya indicadas mientras completás la misma solicitud.
+Si una referencia a un producto o línea es ambigua, pedí una aclaración antes de ejecutar una mutación.
+Si el usuario consulta precios, menú u opciones, respondé usando el CATALOGO ACTUAL y no uses add_item para calcular o mostrar información.
+Usa get_cart para consultar el pedido o conocer su estado actual.
+Usa add_item para agregar un producto completo.
+Usa change_modifier para cambiar una opción o quitar un adicional opcional con option_id=null; usa replace_item para cambiar el producto de una línea.
+Usa adjust_quantity con una variación relativa para sumar o quitar unidades. Por ejemplo, delta=-1 quita una unidad de una línea con varias. Usa remove_item solamente si pide eliminar toda la línea y clear_cart para vaciar todo el carrito de una sola vez.
+Para finalizar el armado del pedido usa confirm_order.
+confirm_order solo prepara pago: no cierra la sesión ni confirma que el pago fue realizado. En PAYMENT_PENDING usa select_payment_method o return_to_order; no repitas confirm_order.
 Si ya hay un método y la persona quiere ver o cambiar las opciones de pago, usa return_to_payment_methods. Usa return_to_order solamente si quiere modificar los productos del carrito.
-Para CASH di siempre "En caja". Para CARD indica que debe ingresar el numero de tarjeta.
-No uses tablas Markdown ni numeres líneas o alternativas: presentá el carrito como una lista directa.
+Para CASH di siempre "En caja". Para CARD indica que debe ingresar el numero de tarjeta y no menciones terminales.
+No uses tablas Markdown ni numeres líneas o alternativas: presentá el carrito como una lista directa con producto, cantidad, modificadores y precio.
 Nunca digas solamente "el carrito queda así" o "queda de esta forma": enumerá
 el contenido real o preguntá explícitamente el modificador obligatorio faltante.
 No respondas con fragmentos ni cortesías aisladas: ejecutá la tool necesaria o
 formulá una pregunta completa cuando falte un dato obligatorio.
 No describas productos como "la opción mejor" ni agregues valoraciones no solicitadas.
-Puedes solicitar varias tools distintas en una frase, pero nunca repitas la misma operacion con los mismos argumentos.
-Responde siempre en espanol. Mostrá los montos como "$12.500 pesos argentinos": símbolo $, punto de miles y moneda explícita. Nunca muestres IDs internos.
+Decí "etcétera" en lugar de "etc.".
+Puedes solicitar varias tools distintas en una frase; se ejecutan en el orden recibido. Nunca repitas la misma operacion con los mismos argumentos.
+Responde siempre en espanol. Mostrá los montos como "$12.500 pesos argentinos": símbolo $, punto de miles y moneda explícita; no uses USD ni dólares. Usa los nombres visibles del catálogo y nunca muestres IDs internos.
 
 CATALOGO ACTUAL:
 """ + "\n".join(catalog)
@@ -98,10 +156,79 @@ CATALOGO ACTUAL:
         """
         batch = set()
         for call in calls:
-            signature = (call.name, json.dumps(call.args, sort_keys=True, ensure_ascii=False))
+            signature = self.call_signature(call)
             if signature in executed or signature in batch:
+                log_event(
+                    "ERROR",
+                    "llm.duplicate_tool_call",
+                    session_id=self.service.session.session_id,
+                    tool=call.name,
+                    arguments=call.args,
+                )
                 raise RuntimeError("El modelo intento repetir una operacion. Se detuvo para evitar duplicados.")
             batch.add(signature)
+
+    def execute_calls(
+        self,
+        calls: list[SimpleNamespace],
+        executed: set,
+    ) -> list[ToolExecution]:
+        """Valida y ejecuta un lote en el mismo orden para cualquier LLM.
+
+        Args:
+            calls: Operaciones neutrales traducidas por el adaptador.
+            executed: Firmas que ya se ejecutaron durante el turno.
+
+        Returns:
+            Resultados ordenados con el indicador de mutación correspondiente.
+
+        Raises:
+            RuntimeError: Si una llamada se repite o no está autorizada.
+            Exception: Si una tool produce una falla interna inesperada.
+
+        Effects:
+            Puede modificar el pedido exclusivamente mediante las tools ligadas
+            a ``OrderService`` y registra cada resultado relevante.
+        """
+        self.validate_calls(calls, executed)
+        results = []
+        for call in calls:
+            executed.add(self.call_signature(call))
+            log_event(
+                "DEBUG",
+                "tool.requested",
+                session_id=self.service.session.session_id,
+                tool=call.name,
+                arguments=call.args,
+            )
+            result = self.execute(call)
+            did_mutate = self.did_mutate(call.name, result)
+            payload = result.get("result", {})
+            if (
+                result.get("ok")
+                and isinstance(payload, dict)
+                and payload.get("status") == "needs_clarification"
+            ):
+                log_event(
+                    "INFO",
+                    "tool.needs_clarification",
+                    session_id=self.service.session.session_id,
+                    tool=call.name,
+                    missing_modifier_groups=payload.get(
+                        "missing_modifier_groups",
+                        [],
+                    ),
+                )
+            elif result.get("ok"):
+                log_event(
+                    "INFO",
+                    "tool.completed",
+                    session_id=self.service.session.session_id,
+                    tool=call.name,
+                    transaction_applied=did_mutate,
+                )
+            results.append(ToolExecution(call, result, did_mutate))
+        return results
 
     def execute(self, call: SimpleNamespace) -> dict:
         """Ejecuta una tool autorizada y conserva errores de validacion.
@@ -124,6 +251,20 @@ CATALOGO ACTUAL:
         except ValueError as exc:
             log_event("WARN", "tool.validation_error", session_id=self.service.session.session_id, tool=call.name, arguments=call.args, error=str(exc))
             return {"ok": False, "error": str(exc)}
+        except Exception as exc:
+            log_event(
+                "ERROR",
+                "internal.error",
+                exception=exc,
+                session_id=self.service.session.session_id,
+                component="OrderToolsRuntime",
+                stage="TOOL_EXECUTION",
+                tool=call.name,
+                arguments=call.args,
+                exception_type=type(exc).__name__,
+                exception_message=str(exc),
+            )
+            raise
 
     def did_mutate(self, tool_name: str, result: dict) -> bool:
         """Indica si un resultado de tool cambio el estado del pedido.

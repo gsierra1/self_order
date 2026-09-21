@@ -40,6 +40,7 @@ const paymentTitle = paymentPanel.querySelector("h3");
 
 let voice = createServerVoiceInput();
 let voiceProvider = "gemini";
+let voiceTransport = "backend_pcm";
 
 const inactivityMonitor = new InactivityMonitor({
     onPrompt: () => showInactivityMessage("¿Seguís ahí?"),
@@ -104,12 +105,11 @@ function showBrowserVoiceProgress(message) {
 }
 
 /**
- * Indica si el proveedor captura y transcribe dentro del navegador.
- * @param {string} provider Identificador publicado por el backend.
- * @returns {boolean} True para Whisper o Web Speech API en navegador.
+ * Indica si el transporte configurado entrega texto desde el navegador.
+ * @returns {boolean} True cuando no deben enviarse fragmentos PCM al backend.
  */
-function isBrowserVoiceProvider(provider) {
-    return ["whisper_browser", "web_speech_browser"].includes(provider);
+function usesBrowserVoiceTransport() {
+    return voiceTransport === "browser_text";
 }
 
 /**
@@ -120,9 +120,11 @@ function isBrowserVoiceProvider(provider) {
  */
 function configureVoiceProvider(configuration = {}) {
     const nextProvider = configuration.provider || "gemini";
-    if (nextProvider === voiceProvider) return;
+    const nextTransport = configuration.transport || "backend_pcm";
+    if (nextProvider === voiceProvider && nextTransport === voiceTransport) return;
     voice.dispose();
     voiceProvider = nextProvider;
+    voiceTransport = nextTransport;
     if (nextProvider === "whisper_browser") {
         voice = new BrowserWhisperInput({
             model: configuration.model,
@@ -711,7 +713,7 @@ async function finishVoiceTurn(trigger) {
     setStatus("Procesando audio...", "processing");
     try {
         const localText = await voice.finish();
-        if (isBrowserVoiceProvider(voiceProvider)) {
+        if (usesBrowserVoiceTransport()) {
             if (trigger === "silence") transcript.textContent = "Audio local terminado. Enviando texto…";
             sendEvent("voice.text", { message: localText });
         } else {
@@ -751,7 +753,7 @@ async function toggleMicrophone() {
     setStatus("Preparando micrófono y conexión...", "processing");
     transcript.textContent = "No hables hasta que aparezca «Escuchando».";
     try {
-        if (!isBrowserVoiceProvider(voiceProvider)) {
+        if (!usesBrowserVoiceTransport()) {
             sendEvent("audio.start");
             voiceTimer = setTimeout(() => failVoice(new Error("La conexión de voz tardó demasiado.")), 20000);
         } else {
