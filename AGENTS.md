@@ -31,7 +31,7 @@ inspeccionar solo los archivos necesarios.
   un commit, revisar previamente el diff y ejecutar las verificaciones apropiadas.
 - Incluir código y documentación correspondiente en el mismo commit. Separar
   cambios con objetivos distintos; no incluir modificaciones ajenas por accidente.
-- Informar al finalizar los identificadores de los commits y qué se verificó.
+- Cuando se haya realizado un commit, informar su identificador y qué se verificó.
   Un commit local no implica publicar los cambios mediante push.
 - Trabajar de forma concisa. Antes de realizar un cambio de alcance amplio o 
   potencialmente riesgoso, explicar brevemente el plan. Para cambios locales, 
@@ -40,7 +40,7 @@ inspeccionar solo los archivos necesarios.
 - Cuando sea necesaria una verificación manual por parte de la autora, proporcionar 
   los comandos exactos para PowerShell desde la raíz del proyecto, junto con las acciones 
   y resultados esperados. Si requiere Python, indicar primero la activación del entorno
-  con .\.venv\Scripts\Activate.ps1.
+  con `.\.venv\Scripts\Activate.ps1`.
 - Diferenciar pruebas automáticas, pruebas manuales con el proveedor real y
   pruebas con simulaciones. No dar por ejecutadas las pruebas propuestas a la autora.
 
@@ -71,3 +71,7 @@ inspeccionar solo los archivos necesarios.
   el contexto, salvo que hayan cambiado.
 - Ampliar la exploración solamente cuando aparezca evidencia de que el cambio afecta 
   otros módulos.
+- No releer documentación que ya esté disponible en el contexto y no haya cambiado.
+- No realizar refactors, mejoras, limpieza de código, cambios visuales ni ampliaciones 
+  de alcance no solicitadas, salvo que sean imprescindibles para completar correctamente 
+  la tarea; en ese caso, explicarlo antes.
