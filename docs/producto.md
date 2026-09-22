@@ -1,10 +1,5 @@
 # Producto y alcance
 
-## Contexto
-
-El proyecto surge de una propuesta de SIA Interactive [sitio oficial](https://www.siainteractive.com/es/),
-para explorar pedidos por voz. 
-
 ## Experiencia deseada
 
 - La persona puede hablar o escribir dentro de una misma sesión de pedido.

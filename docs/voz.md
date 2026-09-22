@@ -1,7 +1,5 @@
 # Voz por turnos
 
-Implementación inicial: 14/09/2026. Texto y voz comparten conversación y carrito.
-
 ## Recorrido y responsabilidades
 
 ```mermaid
