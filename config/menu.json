@@ -9,7 +9,7 @@
           "id": "COCA",
           "name": "Coca-Cola",
           "price_delta": 0,
-          "available": false
+          "available": true
         },
         {
           "id": "SPRITE",
@@ -34,6 +34,19 @@
           "id": "ADD_TOMATO",
           "name": "Tomate",
           "price_delta": 1000,
+          "available": true
+        }
+      ]
+    },
+    {
+      "id": "extra_papas_grandes",
+      "name": "Extra de Papas grandes",
+      "required": false,
+      "options": [
+        {
+          "id": "ADD_FRIES",
+          "name": "Papas Fritas Grandes",
+          "price_delta": 1099,
           "available": true
         }
       ]
@@ -79,6 +92,26 @@
     }
   ],
   "products": [
+    {
+      "id": "BURGER_BIGMAC",
+      "name": "Big Mac",
+      "category": "hamburguesas",
+      "base_price": 7050,
+      "available": true,
+      "aliases": [
+        "combo big mac",
+        "bigmac",
+        "big mac"
+      ],
+      "modifier_group_ids": [
+        "drink",
+        "extra_tomato",
+        "extra_lettuce",
+        "extra_ham",
+        "extra_cheese",
+        "extra_papas_grandes"
+      ]
+    },
     {
       "id": "BURGER_CLASICA",
       "name": "Burger Clásica",
