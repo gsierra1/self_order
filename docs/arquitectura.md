@@ -12,8 +12,9 @@ el inicio del turno. Los STT de navegador preparan su propio capturador.
 
 Es una aplicación Python modular con FastAPI, un frontend de HTML/CSS/JavaScript
 y proveedores configurables para transcripción e interpretación. La configuración
-de ejemplo usa Vosk local como STT y Groq como LLM; Gemini Transcribe Live sigue
-disponible como alternativa cloud. No son microservicios: los
+de ejemplo usa Web Speech API como STT y Groq como LLM; los STT contemplados son 
+Web Speech API, Whisper en navegador, Vosk y Gemini Transcribe Live. Para interpretación 
+del pedido están Gemini, OpenAI y Groq.. No son microservicios: los
 módulos del backend comparten un proceso y las sesiones viven en memoria.
 
 ```mermaid
@@ -376,21 +377,21 @@ si falló la transcripción en vivo; los detalles técnicos completos permanecen
 los logs. Así la persona puede corregir la configuración sin interpretar un
 mensaje genérico de API y sin que el audio llegue a modificar el pedido.
 
-## Comparación con la arquitectura objetivo del kiosco
+## Comparación con la arquitectura objetivo del sistema
 
-La guía de Adrián describe una arquitectura de producción para un kiosco físico. El repositorio actual implementa una prueba de concepto avanzada y cubre principalmente las capas de interfaz, reconocimiento, comprensión y reglas transaccionales. La diferencia es de etapa y de alcance; no implica que el diseño actual contradiga la guía.
+La guía de Adrián describe una arquitectura de producción para un sistema físico. El repositorio actual implementa una prueba de concepto avanzada y cubre principalmente las capas de interfaz, reconocimiento, comprensión y reglas transaccionales. La diferencia es de etapa y de alcance; no implica que el diseño actual contradiga la guía.
 
 | Capa de la guía | Implementación actual | Evaluación |
 | --- | --- | --- |
 | Hardware y captura | Micrófono del navegador con `echoCancellation` y `noiseSuppression`; audio PCM mono a 16 kHz. | Adecuado para validar el flujo. Falta mic array con beamforming/AEC real, equipo industrial, pantalla táctil, pinpad y ticketeadora. |
-| Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, detección de fin de habla por energía, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo kiosco/PWA, indicador de volumen, interrupciones y empaquetado de dispositivo. |
+| Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, detección de fin de habla por energía, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo sistema/PWA, indicador de volumen, interrupciones y empaquetado de dispositivo. |
 | STT | `SpeechToText` desacopla el PCM recibido por el WebSocket; `GeminiLiveTranscriber` usa Gemini Live y `VoskTranscriber` procesa localmente. Whisper y Web Speech API transcriben en el navegador y envían texto final. | Hay rutas cloud, local de backend y de navegador. Todas requieren evaluación real de precisión y latencia; Groq ofrece transcripción por archivo, no el streaming incremental de esta demo. |
 | NLU y extracción | El LLM seleccionado recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM configurado propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
 | Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR escaneable de texto, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisión de ticket. |
 
 ### Qué conservar
 
-Conviene conservar la separación `domain`/`services`/`ai`/`api`, porque permite cambiar Gemini, la interfaz de voz o el proveedor de pago sin trasladar reglas de negocio. También conviene conservar el mismo `OrderService` para texto, voz y controles de pantalla, la validación server-side y la separación entre transcripción provisional y carrito confirmado.
+Conviene conservar la separación `domain`/`services`/`ai`/`api`, porque permite cambiar el LLM, la interfaz de voz o el proveedor de pago sin trasladar reglas de negocio. También conviene conservar el mismo `OrderService` para texto, voz y controles de pantalla, la validación server-side y la separación entre transcripción provisional y carrito confirmado.
 
 ### Qué incorporar cuando el proyecto pase a piloto
 
@@ -406,10 +407,6 @@ tokenización del proveedor.
 
 El proyecto no debe incorporar hardware Edge, una PWA, un POS real o una pasarela real solo para parecerse a la guía. Cada integración debe entrar cuando exista un entorno de prueba y un contrato verificable.
 
-## Justificación de las decisiones frente a la guía de Adrián
-
-La guía propone un kiosco físico completo. El repositorio se encuentra en una etapa de validación del núcleo de software, por lo que cada decisión prioriza comprobar el recorrido de pedido antes de incorporar infraestructura externa.
-
 ### Por qué el LLM usa tools y no genera el JSON final
 
 El LLM configurado se utiliza como intérprete de lenguaje y no como autoridad del pedido. Recibe el catálogo y solicita operaciones estructuradas mediante function calls. Cada operación es ejecutada por una tool adaptadora y validada por `OrderService`.
@@ -417,27 +414,6 @@ El LLM configurado se utiliza como intérprete de lenguaje y no como autoridad d
 Esta elección se tomó porque un JSON generado libremente por el modelo todavía puede contener productos inexistentes, precios inventados, modificadores inválidos o cantidades ambiguas. Con tools, el modelo expresa una intención y el backend decide si esa intención es válida. El mismo servicio puede ser utilizado por texto, voz, botones y futuras integraciones, sin duplicar reglas.
 
 La alternativa de JSON puede evaluarse más adelante como contrato de intercambio con un POS u otro servicio, pero no debe reemplazar la validación central del dominio.
-
-### Por qué el STT es configurable en esta etapa
-
-Gemini Transcribe Live permitió validar primero el flujo cloud con el micrófono
-disponible. Después se incorporó Vosk local para que la demo pueda transcribir
-sin una API key ni cobro por minuto. El `.env.example` prioriza Vosk; Gemini se
-mantiene como alternativa para comparar precisión y comportamiento de streaming.
-
-Vosk evita la red en la transcripción, pero su modelo pequeño todavía debe
-evaluarse con español rioplatense y ruido real. Gemini depende de red, cuota y
-disponibilidad del proveedor. Whisper y Web Speech API agregan rutas de
-navegador con límites propios. El contrato y el atributo de transporte permiten
-comparar estas opciones sin cambiar el dominio.
-
-### Por qué el frontend es web y el estado vive en backend
-
-Una interfaz web permite probar rápidamente escritura, voz, carrito y pagos simulados desde cualquier equipo. El backend conserva el estado y valida las mutaciones para que la pantalla no pueda convertirse en la autoridad de precios o disponibilidad. En una instalación futura, esta misma interfaz puede ejecutarse en modo kiosco o empaquetarse como PWA sin cambiar `OrderService`.
-
-### Por qué los pagos, POS y hardware quedan fuera de la demo
-
-Una integración real depende del proveedor, del país, de certificaciones, del hardware disponible y del contrato con el local. Simular un pinpad, un POS o una pasarela como si fueran reales daría una falsa sensación de seguridad. Por eso el proyecto deja puntos de integración claros y usa pagos demo hasta contar con contratos y entornos de prueba verificables.
 
 ### Disponibilidad en el catalogo
 
@@ -604,94 +580,3 @@ Las fuentes de cada candidato son la documentación oficial de
 y [Ollama tool calling](https://docs.ollama.com/capabilities/tool-calling).
 La documentación prueba que esas tecnologías existen y describe sus protocolos;
 no prueba que rindan bien para este menú, micrófono, ruido o cuenta.
-
-### Validación de esta arquitectura
-
-El 17/09/2026 se ejecutaron 69 pruebas automáticas sin red ni credenciales: una
-simulación del SDK Live de Gemini, los flujos de WebSocket de voz, reglas del
-pedido y pago, y una prueba nueva que conecta `AlternateSpeechToText` y
-`AlternateOrderInterpreter` simulados con `OrderService` real. La última prueba
-comprueba que el cambio de adaptador conserva el cálculo real de ARS 8.500 y que
-un parcial no muta el carrito. La suite también cubre consultas de medios de
-pago sin selección automática y recuperación de respuestas LLM incompletas sin
-duplicar una mutación. No llama a Gemini, OpenAI, Groq, Anthropic, Whisper, Vosk
-ni a otro proveedor; por lo tanto no mide disponibilidad, 503, latencia, costo
-ni precisión de reconocimiento.
-
-En la auditoría local del 18/09/2026, la suite creció a 92 pruebas sin red ni
-credenciales. Agrega cobertura para IDs de líneas no reutilizables,
-consolidación tras cambiar extras o reemplazar productos, revalidación de
-disponibilidad antes de pagar, catálogo JSON con referencias inválidas, origen
-correcto de errores por proveedor, límite de mensajes y timeouts de STT. Sigue
-siendo evidencia automática: no prueba proveedores reales ni el audio de un
-micrófono físico.
-
-Después de consolidar prompts, esquemas de tools, ejecución posterior a una
-mutación, ciclo PCM y selección de transporte, el 21/09/2026 se ejecutaron 107
-pruebas automáticas sin red ni credenciales. La cobertura nueva compara la
-instrucción común y los esquemas entregados a Gemini, OpenAI y Groq, comprueba
-la respuesta determinística posterior a las tools y verifica el enrutamiento
-`backend_pcm`/`browser_text`. Continúan siendo simulaciones: no demuestran
-disponibilidad ni comportamiento de los servicios remotos o micrófonos reales.
-
-La prueba adicional de navegador con Edge usa un micrófono sintético que emite
-voz y luego silencio. Comprueba que el frontend no cierre antes de detectar voz,
-envíe un único `audio.stop` después de 1,4 segundos silenciosos y actualice el
-carrito sin pulsar **Enviar audio**. No sustituye la corrida con micrófono real.
-
-
-### OpenAI LLM: implementacion y evidencia
-
-`LLM_PROVIDER=openai` crea `OpenAIOrderInterpreter`. El adaptador envía la
-instrucción común y traduce entre las function calls de OpenAI y las llamadas
-neutrales definidas en `order_tool_specs.py`. `OrderToolsRuntime` conserva la
-ejecución, la protección contra duplicados, la detección de mutaciones y la
-sanitización sin depender de un SDK de IA. Después de una mutación válida, el
-runtime construye la confirmación desde el carrito real sin pedir otra respuesta
-al proveedor; un resultado sin mutación sí puede volver al modelo para completar
-la conversación. `STT_PROVIDER=openai` continúa rechazado hasta implementar un
-adaptador de voz separado.
-
-La cuenta consultada expone `gpt-4.1-mini`, `gpt-4.1`, `gpt-4o`, `gpt-4o-mini`,
-`gpt-5-mini`, `gpt-5` y otros. Se eligio `gpt-4.1-mini` como primer modelo de
-prueba por estar disponible y soportar function calling. El comando
-`python -m backend.ai.list_openai_models` consulta la lista de la cuenta sin
-revelar la clave.
-
-La conexion real alcanzo OpenAI, que respondio `429 credit_balance_exhausted`.
-La clave es valida pero la cuenta no posee creditos API: no hay prueba manual de
-tools aprobada hasta agregar saldo. Ese error se clasifica como
-`CREDIT_BALANCE_EXHAUSTED`, no como saturacion transitoria. Las simulaciones si
-verifican OpenAI -> tool -> OrderService.
-
-### Ajuste de cuota gratuita de Groq
-
-La primera llamada real del 16/09/2026 autentico la cuenta Groq, pero recibio
-429 antes de ejecutar tools: el valor predeterminado del SDK esperaba hasta
-2.048 tokens de salida y el límite gratuito del modelo era 1.000. El adaptador
-`GroqOrderInterpreter` establece `max_tokens=800`; la correccion conserva el
-mismo contrato y las mismas tools. Las corridas posteriores comprobaron la
-conexión real y el recorrido del pedido.
-
-**Evidencia manual de Groq (16/09/2026):** con `openai/gpt-oss-20b`, una
-conversación de terminal real agregó una Burger Clásica con Agua mediante
-`add_item`; `OrderService` devolvió una línea por ARS 8.500. Una secuencia
-posterior también aplicó el agregado y eliminación de tomate. La prueba fue
-contra la API real.
-
-Con `qwen/qwen3.8-27b`, las corridas de navegador y micrófono físico del 16 y
-17/09/2026 comprobaron transcripción Gemini, altas y eliminación de líneas,
-cantidades agrupadas, vuelta desde un método al selector, QR, tarjeta y caja,
-cierre y creación de una sesión nueva. Los logs
-registran turnos de voz completos entre aproximadamente 3,4 y 8,6 segundos,
-incluyendo el tiempo durante el cual habló la persona. La interpretación varió
-desde cerca de 1 segundo en altas simples hasta 21 segundos en una eliminación
-y 56 segundos en una consulta que el modelo interpretó incorrectamente como
-pago QR. Es evidencia funcional, pero no un benchmark controlado; confirma la
-necesidad de repetir una matriz formal con el modelo elegido para la demo y
-medir una serie representativa antes de un piloto.
-
-Las respuestas conversacionales pasan por `OrderToolsRuntime.sanitize_user_text`
-antes de llegar al frontend. Además de ocultar IDs internos, normaliza separadores
-Unicode entre miles y presenta los importes como `$12.500 pesos argentinos`; no
-calcula ni altera el total del carrito, que continúa saliendo de `OrderService`.
