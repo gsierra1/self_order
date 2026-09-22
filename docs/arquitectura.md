@@ -1,13 +1,5 @@
 # Arquitectura y contratos actuales
 
-Última revisión: 21/09/2026. Incluye [voz por turnos](voz.md), adaptadores de
-proveedores y componentes compartidos de prompts, tools y transporte STT.
-
-Con transporte `backend_pcm`, la captura y el adaptador STT se preparan en
-paralelo. El frontend no habilita el envío hasta recibir `voice.ready` y
-completar la preparación local, evitando perder las primeras palabras durante
-el inicio del turno. Los STT de navegador preparan su propio capturador.
-
 ## Visión general
 
 Es una aplicación Python modular con FastAPI, un frontend de HTML/CSS/JavaScript
@@ -78,7 +70,7 @@ del cambio sigue siendo el estado del servicio y no la frase del asistente.
 | `frontend/styles.css` | Distribución de paneles, mensajes, carrito y adaptación a pantallas pequeñas. |
 | `backend/ai/test_chat.py` | Chat manual de terminal usando el intérprete elegido por `LLM_PROVIDER` y el servicio real. |
 
-El dominio no importa Gemini, FastAPI ni el frontend. El servicio sí depende del
+El dominio no importa el LLM, el STT, FastAPI o el frontend. El servicio sí depende del
 logger y de un callback opcional; la separación es útil pero no constituye una
 arquitectura hexagonal completa con todos sus puertos formalizados.
 
@@ -377,22 +369,6 @@ si falló la transcripción en vivo; los detalles técnicos completos permanecen
 los logs. Así la persona puede corregir la configuración sin interpretar un
 mensaje genérico de API y sin que el audio llegue a modificar el pedido.
 
-## Comparación con la arquitectura objetivo del sistema
-
-La guía de Adrián describe una arquitectura de producción para un sistema físico. El repositorio actual implementa una prueba de concepto avanzada y cubre principalmente las capas de interfaz, reconocimiento, comprensión y reglas transaccionales. La diferencia es de etapa y de alcance; no implica que el diseño actual contradiga la guía.
-
-| Capa de la guía | Implementación actual | Evaluación |
-| --- | --- | --- |
-| Hardware y captura | Micrófono del navegador con `echoCancellation` y `noiseSuppression`; audio PCM mono a 16 kHz. | Adecuado para validar el flujo. Falta mic array con beamforming/AEC real, equipo industrial, pantalla táctil, pinpad y ticketeadora. |
-| Interfaz/VUI | HTML, CSS y JavaScript servidos por FastAPI; WebSocket, detección de fin de habla por energía, transcripción provisional y respuesta hablada con `speechSynthesis`. | Resuelve la demo web y texto/voz por turnos. Faltan modo sistema/PWA, indicador de volumen, interrupciones y empaquetado de dispositivo. |
-| STT | `SpeechToText` desacopla el PCM recibido por el WebSocket; `GeminiLiveTranscriber` usa Gemini Live y `VoskTranscriber` procesa localmente. Whisper y Web Speech API transcriben en el navegador y envían texto final. | Hay rutas cloud, local de backend y de navegador. Todas requieren evaluación real de precisión y latencia; Groq ofrece transcripción por archivo, no el streaming incremental de esta demo. |
-| NLU y extracción | El LLM seleccionado recibe el catálogo y solicita function calls; las tools delegan en `OrderService`. | En vez de confiar en un JSON libre, el LLM configurado propone operaciones y el backend valida producto, disponibilidad, modificadores y precios. Esta separación protege el carrito y debe conservarse. |
-| Negocio, pago y salida | `OrderService`, sesiones en memoria y pago demo con QR escaneable de texto, tarjeta simulada o caja. | La autoridad transaccional ya existe. Faltan persistencia, stock real, POS, KDS, pasarela certificada y emisión de ticket. |
-
-### Qué conservar
-
-Conviene conservar la separación `domain`/`services`/`ai`/`api`, porque permite cambiar el LLM, la interfaz de voz o el proveedor de pago sin trasladar reglas de negocio. También conviene conservar el mismo `OrderService` para texto, voz y controles de pantalla, la validación server-side y la separación entre transcripción provisional y carrito confirmado.
-
 ### Qué incorporar cuando el proyecto pase a piloto
 
 La siguiente etapa técnica debería conservar los contratos ya implementados de
@@ -514,6 +490,11 @@ publica además `voice.transport`: `backend_pcm` indica que el navegador debe
 enviar audio, y `browser_text` que debe enviar solamente `voice.text`. Backend y
 frontend deciden la ruta mediante ese atributo, sin repetir una lista de
 proveedores de navegador.
+
+Con transporte `backend_pcm`, la captura y el adaptador STT se preparan en
+paralelo. El frontend no habilita el envío hasta recibir `voice.ready` y
+completar la preparación local, evitando perder las primeras palabras durante
+el inicio del turno. Los STT de navegador preparan su propio capturador.
 
 `STT_PROVIDER=whisper_browser` es una tercera ruta implementada. No se crea en
 la fábrica porque el audio no atraviesa el backend: `BrowserWhisperInput` y
