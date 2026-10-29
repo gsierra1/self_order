@@ -138,22 +138,24 @@ cancela la lectura, manteniendo el texto disponible.
 
 ## Configuración y decisión
 
-El `.env.example` usa `STT_PROVIDER=vosk`, que requiere el modelo local indicado
-por `VOSK_MODEL_PATH` y no necesita API key para la transcripción. También se
-puede elegir Gemini mediante `GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live`.
-También se puede elegir `STT_PROVIDER=whisper_browser` con
+La configuración recomendada y distribuida en `.env.example` usa
+`STT_PROVIDER=web_speech_browser`, `SPEECH_API_LANGUAGE=es-AR` y Groq como
+intérprete LLM. Web Speech API no tiene una variable de modelo ni necesita una
+API key propia: el navegador controla el motor de reconocimiento y su posible
+dependencia de red.
+
+Como alternativas, Vosk requiere el modelo local indicado por
+`VOSK_MODEL_PATH` y no necesita API key para la transcripción; Gemini usa
+`GEMINI_TRANSCRIPTION_MODEL=gemini-3.5-transcribe-live`; y Whisper en navegador
+se selecciona con `STT_PROVIDER=whisper_browser`,
 `WHISPER_BROWSER_MODEL=onnx-community/whisper-tiny` y
 `WHISPER_BROWSER_DEVICE=auto`, `webgpu` o `wasm`.
-Web Speech API se selecciona con `STT_PROVIDER=web_speech_browser` y
-`SPEECH_API_LANGUAGE=es-AR`. No tiene una variable de modelo porque la API no
-expone modelos seleccionables; la implementación y la posible dependencia de
-red pertenecen al navegador.
-La demo usa Groq para el chat mediante
+La demo usa Groq para interpretar el pedido mediante
 `GROQ_CHAT_MODEL=openai/gpt-oss-20b`; también se puede elegir Gemini u OpenAI
 con sus variables propias. Los nombres se pueden cambiar en `.env` sin modificar
 el código y las credenciales quedan en backend. La descarga, verificación y
 configuración del modelo Vosk están explicadas paso a paso en el
-[README principal](../README.md#usar-vosk-como-stt-local).
+[README principal](../README.md#vosk-como-stt-local).
 Para consultar los modelos Gemini habilitados para la cuenta local, ejecutar
 `python -m backend.ai.list_gemini_models` con el entorno virtual activo. La salida es
 informativa y muestra todos los modelos junto con sus acciones: `generateContent`
@@ -165,9 +167,10 @@ logs locales. Los experimentos Live anteriores que dejaron de aportar valor no
 se conservan como scripts de uso del proyecto.
 
 Un modelo con `bidiGenerateContent` requiere además comprobar que entregue la
-transcripción de entrada usada por este adaptador. En la prueba del 15/09/2026,
+transcripción de entrada usada por este adaptador. Una prueba manual local con
 `gemini-3.5-live-translate-preview` abrió la conexión pero agotó la espera sin
-texto final; no debe sustituir a `gemini-3.5-transcribe-live` sin otra prueba.
+texto final; no debe sustituir a `gemini-3.5-transcribe-live` sin una nueva
+verificación con el proveedor real.
 
 Para este adaptador STT, un candidato necesita cuatro condiciones: aparecer
 con `bidiGenerateContent` en la cuenta, estar documentado como **Live
@@ -197,7 +200,12 @@ python -m uvicorn backend.api.app:app --reload
 ```
 
 Abrir `http://127.0.0.1:8000/` y recargar con `Ctrl+F5`. La captura requiere permiso
-y localhost o HTTPS. Si PowerShell bloquea la activacion, usar la solucion temporal indicada en el README principal.
+y localhost o HTTPS. Si PowerShell bloquea la activación, iniciar el servidor
+sin activar el entorno:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn backend.api.app:app --reload
+```
 
 1. Tocar **Hablar**, permitir micrófono y esperar **Escuchando**.
 2. Decir «Quiero una Burger Clásica» y guardar silencio. Debe enviar el audio
@@ -270,7 +278,7 @@ precios por producto permanecen disponibles en el carrito visual.
 
 ## Adaptador de transcripción y selección de proveedor
 
-Desde el 16/09/2026, `conversation_socket.py` depende de `SpeechToText`, no de
+Actualmente, `conversation_socket.py` depende de `SpeechToText`, no de
 una clase Gemini. Al recibir `audio.start` pide el adaptador a
 `create_speech_to_text()`. El contrato recibe PCM con `feed()`, anuncia el fin
 con `finish()`, publica parciales y devuelve el texto definitivo con

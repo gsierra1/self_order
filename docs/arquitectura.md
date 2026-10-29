@@ -186,6 +186,10 @@ El pago actual es una simulación. El QR contiene texto de demostración; la tar
 | `POST /api/sessions` | Crea una sesión y devuelve su estado inicial. |
 | `GET /api/sessions/{id}/cart` | Devuelve el snapshot del carrito. |
 | `POST /api/sessions/{id}/messages` | Entrada de texto alternativa al WebSocket. |
+| `POST /api/sessions/{id}/payment/start` | Prepara el pago, bloquea la edición y devuelve el pedido pendiente. |
+| `POST /api/sessions/{id}/payment/complete` | Completa el pago simulado después de elegir un método. |
+| `POST /api/sessions/{id}/payment/back` | Devuelve el pedido pendiente al carrito editable. |
+| `POST /api/sessions/{id}/payment/method/back` | Quita el método elegido y vuelve al selector sin habilitar el carrito. |
 | `DELETE /api/sessions/{id}/cart/items/{line_id}` | Elimina una línea mediante el servicio. |
 | `DELETE /api/sessions/{id}/cart/items/{line_id}/modifiers/{group_id}` | Elimina un modificador opcional mediante el servicio. |
 | `/ws/sessions/{id}` | Conversación, audio y eventos de estado. |

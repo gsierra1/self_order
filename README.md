@@ -14,6 +14,10 @@ Las reglas para trabajar sobre el repositorio están en [AGENTS.md](AGENTS.md). 
 
 ## Ejecutar en Windows / PowerShell
 
+Requiere Python 3.10 o posterior. Para la configuración recomendada de la demo,
+el navegador debe implementar Web Speech API y permitir el uso del micrófono en
+`localhost`.
+
 Desde la raíz del repositorio, crear un entorno virtual si todavía no existe:
 
 ```powershell
@@ -26,13 +30,26 @@ Instalar las dependencias:
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Crear `.env` a partir de `.env.example` solo si todavía no existe. Las credenciales locales no deben versionarse.
+Crear `.env` a partir de `.env.example` solo si todavía no existe y reemplazar
+el placeholder de `GROQ_API_KEY`. Las credenciales locales no deben versionarse.
+
+```powershell
+Copy-Item .env.example .env
+```
 
 Iniciar el servidor:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 python -m uvicorn backend.api.app:app --reload
+```
+
+Si PowerShell bloquea la activación del entorno, no es necesario cambiar la
+política de ejecución. Se puede iniciar el servidor con el intérprete del
+entorno virtual de forma directa:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn backend.api.app:app --reload
 ```
 
 Abrir `http://127.0.0.1:8000/`. FastAPI sirve también el frontend. `http://127.0.0.1:8000/docs` muestra los endpoints HTTP. `/api/health` verifica la API, pero no garantiza acceso a proveedores externos.
@@ -52,6 +69,10 @@ GROQ_CHAT_MODEL=openai/gpt-oss-20b
 ```
 
 Web Speech API no necesita una API key propia. El navegador controla el motor de reconocimiento y puede utilizar un servicio remoto. Groq requiere una clave local de API, que permanece en backend.
+
+`.env.example` distribuye esta misma combinación. Los valores Gemini definidos
+como fallback interno en `config/settings.py` solo se aplican si faltan
+`STT_PROVIDER` o `LLM_PROVIDER`; no representan la configuración recomendada.
 
 ## Proveedores implementados
 
